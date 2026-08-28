@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { UserButton } from "@clerk/nextjs";
 import type {
   ActivityItem,
   AiProvider,
@@ -379,8 +380,11 @@ export function Dashboard() {
           </motion.button>
         </div>
 
-        <div className="flex flex-col items-start gap-2 sm:items-end">
-          <ProviderToggle value={provider} onChange={handleProviderChange} />
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-2">
+            <ProviderToggle value={provider} onChange={handleProviderChange} />
+            <UserButton />
+          </div>
           <a
             href="https://app.clickup.com/9007062280/v/l/6-901328264773-1"
             target="_blank"
