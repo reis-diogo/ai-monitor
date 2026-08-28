@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { analyzeProjectScope } from "@/lib/ai";
 import { getCachedProjectAnalysis, setCachedProjectAnalysis } from "@/lib/project-analysis-cache";
 import { getProjects } from "@/lib/projects-store";
+import { isAllowedUser } from "@/lib/require-allowed-user";
 import type { AiProvider, AnalyzedProjectRecord } from "@/lib/types";
 
 function parseProvider(value: unknown): AiProvider {
@@ -13,6 +14,10 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!(await isAllowedUser())) {
+    return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
+  }
+
   const { id } = await params;
   const body = await request.json().catch(() => null);
   const provider = parseProvider(body?.provider);

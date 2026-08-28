@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { addRepo, getRepos } from "@/lib/repos-store";
+import { isAllowedUser } from "@/lib/require-allowed-user";
 
 export async function GET() {
+  if (!(await isAllowedUser())) {
+    return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
+  }
+
   const repos = await getRepos();
   return NextResponse.json({ repos });
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await isAllowedUser())) {
+    return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
+  }
+
   const body = await request.json().catch(() => null);
   const url = body?.url;
 

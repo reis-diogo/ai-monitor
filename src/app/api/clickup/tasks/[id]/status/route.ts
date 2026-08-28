@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateTaskStatus } from "@/lib/clickup";
+import { isAllowedUser } from "@/lib/require-allowed-user";
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!(await isAllowedUser())) {
+    return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
+  }
+
   const { id } = await params;
   const body = await request.json().catch(() => null);
   const status = body?.status;

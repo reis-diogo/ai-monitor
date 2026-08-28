@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { getSupabase } from "@/lib/supabase";
+import { isAllowedUser } from "@/lib/require-allowed-user";
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_TYPES: Record<string, string> = {
@@ -11,6 +12,10 @@ const ALLOWED_TYPES: Record<string, string> = {
 };
 
 export async function POST(request: NextRequest) {
+  if (!(await isAllowedUser())) {
+    return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
+  }
+
   const formData = await request.formData().catch(() => null);
   const file = formData?.get("file");
 

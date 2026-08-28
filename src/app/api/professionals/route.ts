@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getProfessionals, upsertProfessional } from "@/lib/professionals-store";
+import { isAllowedUser } from "@/lib/require-allowed-user";
 
 export async function GET() {
+  if (!(await isAllowedUser())) {
+    return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
+  }
+
   const professionals = await getProfessionals();
   return NextResponse.json({ professionals });
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await isAllowedUser())) {
+    return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
+  }
+
   const body = await request.json().catch(() => null);
   const authorName = body?.authorName;
   const role = body?.role;

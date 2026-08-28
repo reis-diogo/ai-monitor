@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { UserButton } from "@clerk/nextjs";
 import type {
   ActivityItem,
   AiProvider,
@@ -262,17 +263,29 @@ export function Dashboard() {
     [activityItems, dateRange, projectFilter]
   );
 
+  const resolvedAnalyzedActivities = useMemo(
+    () =>
+      analyzedActivities.map((record) => ({
+        ...record,
+        authorName: resolveAuthorName(record.authorName, professionals),
+      })),
+    [analyzedActivities, professionals]
+  );
+
   const filteredAnalyzedActivities = useMemo(
     () =>
-      analyzedActivities
+      resolvedAnalyzedActivities
         .filter((record) => isWithinRange(record.date, dateRange))
         .filter((record) => !projectFilter || record.location === projectFilter),
-    [analyzedActivities, dateRange, projectFilter]
+    [resolvedAnalyzedActivities, dateRange, projectFilter]
   );
 
   const projectFilteredAnalyzedActivities = useMemo(
-    () => analyzedActivities.filter((record) => !projectFilter || record.location === projectFilter),
-    [analyzedActivities, projectFilter]
+    () =>
+      resolvedAnalyzedActivities.filter(
+        (record) => !projectFilter || record.location === projectFilter
+      ),
+    [resolvedAnalyzedActivities, projectFilter]
   );
 
   const buildRanking = useCallback(
@@ -379,8 +392,11 @@ export function Dashboard() {
           </motion.button>
         </div>
 
-        <div className="flex flex-col items-start gap-2 sm:items-end">
-          <ProviderToggle value={provider} onChange={handleProviderChange} />
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-2">
+            <ProviderToggle value={provider} onChange={handleProviderChange} />
+            <UserButton />
+          </div>
           <a
             href="https://app.clickup.com/9007062280/v/l/6-901328264773-1"
             target="_blank"
