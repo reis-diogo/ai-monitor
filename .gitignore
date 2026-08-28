@@ -33,6 +33,14 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# local data storage
+/data/*.json
+!/data/.gitkeep
+
+# locally uploaded avatars
+/public/avatars/*
+!/public/avatars/.gitkeep
+
 # vercel
 .vercel
 
