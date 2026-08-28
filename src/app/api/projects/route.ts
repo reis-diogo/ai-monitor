@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { addProject, getProjects } from "@/lib/projects-store";
+import { isAllowedUser } from "@/lib/require-allowed-user";
 
 export async function GET() {
+  if (!(await isAllowedUser())) {
+    return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
+  }
+
   const projects = await getProjects();
   return NextResponse.json({ projects });
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await isAllowedUser())) {
+    return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
+  }
+
   const body = await request.json().catch(() => null);
   const name = body?.name;
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getRepos } from "@/lib/repos-store";
 import { fetchAllCommitsWithStats } from "@/lib/github";
 import { getCachedCommits, setCachedCommits } from "@/lib/commit-cache";
+import { isAllowedUser } from "@/lib/require-allowed-user";
 import type { AuthorActivity, CommitActivity } from "@/lib/types";
 
 async function fetchRepoCommits(owner: string, name: string): Promise<CommitActivity[]> {
@@ -12,6 +13,10 @@ async function fetchRepoCommits(owner: string, name: string): Promise<CommitActi
 }
 
 export async function GET() {
+  if (!(await isAllowedUser())) {
+    return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
+  }
+
   const repos = await getRepos();
 
   const results = await Promise.allSettled(

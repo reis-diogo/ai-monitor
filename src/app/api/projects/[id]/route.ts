@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { removeProject, setProjectScope } from "@/lib/projects-store";
 import { removeProjectAnalyses } from "@/lib/project-analysis-cache";
+import { isAllowedUser } from "@/lib/require-allowed-user";
 
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!(await isAllowedUser())) {
+    return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
+  }
+
   const { id } = await params;
   await removeProject(id);
   await removeProjectAnalyses(id);
@@ -16,6 +21,10 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!(await isAllowedUser())) {
+    return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
+  }
+
   const { id } = await params;
   const body = await request.json().catch(() => null);
   const scope = body?.scope;

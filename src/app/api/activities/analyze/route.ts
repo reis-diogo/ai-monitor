@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeActivity } from "@/lib/ai";
 import { getCachedAnalysis, setCachedAnalysis } from "@/lib/analysis-cache";
+import { isAllowedUser } from "@/lib/require-allowed-user";
 import type { ActivitySource, AiProvider, AnalyzedActivityRecord } from "@/lib/types";
 
 function parseProvider(value: unknown): AiProvider {
@@ -21,6 +22,10 @@ function numOrNull(value: unknown): number | null {
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await isAllowedUser())) {
+    return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
+  }
+
   const body = await request.json().catch(() => null);
   const id = body?.id;
   const title = body?.title;

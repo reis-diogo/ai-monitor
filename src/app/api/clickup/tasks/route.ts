@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { fetchListTasks } from "@/lib/clickup";
 import { ensurePoFromClickupEmail } from "@/lib/professionals-store";
+import { isAllowedUser } from "@/lib/require-allowed-user";
 
 export async function GET() {
+  if (!(await isAllowedUser())) {
+    return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
+  }
+
   const listId = process.env.CLICKUP_LIST_ID;
   if (!listId) {
     return NextResponse.json({ tasks: [], error: "CLICKUP_LIST_ID não configurado." });
