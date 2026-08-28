@@ -1,28 +1,26 @@
-import { promises as fs } from "fs";
-import path from "path";
-import { randomUUID } from "crypto";
+import { getSupabase } from "@/lib/supabase";
 import type { RegisteredRepo } from "@/lib/types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const DATA_FILE = path.join(DATA_DIR, "repos.json");
+type RepoRow = {
+  id: string;
+  owner: string;
+  name: string;
+  url: string;
+  added_at: string;
+};
 
-async function ensureDataFile() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  try {
-    await fs.access(DATA_FILE);
-  } catch {
-    await fs.writeFile(DATA_FILE, "[]", "utf-8");
-  }
+function rowToRepo(row: RepoRow): RegisteredRepo {
+  return { id: row.id, owner: row.owner, name: row.name, url: row.url, addedAt: row.added_at };
 }
 
 export async function getRepos(): Promise<RegisteredRepo[]> {
-  await ensureDataFile();
-  const raw = await fs.readFile(DATA_FILE, "utf-8");
-  return JSON.parse(raw) as RegisteredRepo[];
-}
+  const { data, error } = await getSupabase()
+    .from("repos")
+    .select("*")
+    .order("added_at", { ascending: true });
 
-async function saveRepos(repos: RegisteredRepo[]) {
-  await fs.writeFile(DATA_FILE, JSON.stringify(repos, null, 2), "utf-8");
+  if (error) throw new Error(`Erro ao listar repositórios: ${error.message}`);
+  return (data ?? []).map((row) => rowToRepo(row as RepoRow));
 }
 
 export function parseRepoUrl(input: string): { owner: string; name: string } | null {
@@ -52,27 +50,29 @@ export async function addRepo(input: string): Promise<RegisteredRepo> {
 
   const repos = await getRepos();
   const alreadyExists = repos.some(
-    (r) => r.owner.toLowerCase() === parsed.owner.toLowerCase() && r.name.toLowerCase() === parsed.name.toLowerCase()
+    (r) =>
+      r.owner.toLowerCase() === parsed.owner.toLowerCase() &&
+      r.name.toLowerCase() === parsed.name.toLowerCase()
   );
   if (alreadyExists) {
     throw new Error("Esse repositório já está cadastrado.");
   }
 
-  const repo: RegisteredRepo = {
-    id: randomUUID(),
-    owner: parsed.owner,
-    name: parsed.name,
-    url: `https://github.com/${parsed.owner}/${parsed.name}`,
-    addedAt: new Date().toISOString(),
-  };
+  const { data, error } = await getSupabase()
+    .from("repos")
+    .insert({
+      owner: parsed.owner,
+      name: parsed.name,
+      url: `https://github.com/${parsed.owner}/${parsed.name}`,
+    })
+    .select("*")
+    .single();
 
-  repos.push(repo);
-  await saveRepos(repos);
-  return repo;
+  if (error) throw new Error(`Erro ao cadastrar repositório: ${error.message}`);
+  return rowToRepo(data as RepoRow);
 }
 
 export async function removeRepo(id: string): Promise<void> {
-  const repos = await getRepos();
-  const next = repos.filter((r) => r.id !== id);
-  await saveRepos(next);
+  const { error } = await getSupabase().from("repos").delete().eq("id", id);
+  if (error) throw new Error(`Erro ao remover repositório: ${error.message}`);
 }

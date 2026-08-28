@@ -1,41 +1,52 @@
-import { promises as fs } from "fs";
-import path from "path";
+import { getSupabase } from "@/lib/supabase";
 import type { CommitActivity } from "@/lib/types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const CACHE_FILE = path.join(DATA_DIR, "commit-cache.json");
+type CommitCacheRow = {
+  repo_owner: string;
+  repo_name: string;
+  sha: string;
+  message: string;
+  author_name: string;
+  author_avatar_url: string | null;
+  url: string;
+  date: string;
+  additions: number;
+  deletions: number;
+  diff: string;
+};
 
-function cacheKey(owner: string, name: string, sha: string): string {
-  return `${owner}/${name}:${sha}`;
-}
-
-async function ensureFile() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  try {
-    await fs.access(CACHE_FILE);
-  } catch {
-    await fs.writeFile(CACHE_FILE, "{}", "utf-8");
-  }
-}
-
-async function readCache(): Promise<Record<string, CommitActivity>> {
-  await ensureFile();
-  const raw = await fs.readFile(CACHE_FILE, "utf-8");
-  return JSON.parse(raw) as Record<string, CommitActivity>;
+function rowToCommit(row: CommitCacheRow): CommitActivity {
+  return {
+    sha: row.sha,
+    message: row.message,
+    authorName: row.author_name,
+    authorAvatarUrl: row.author_avatar_url,
+    url: row.url,
+    date: row.date,
+    additions: row.additions,
+    deletions: row.deletions,
+    diff: row.diff,
+    repoOwner: row.repo_owner,
+    repoName: row.repo_name,
+  };
 }
 
 export async function getCachedCommits(
   owner: string,
   name: string
 ): Promise<Map<string, CommitActivity>> {
-  const cache = await readCache();
-  const prefix = `${owner}/${name}:`;
+  const { data, error } = await getSupabase()
+    .from("commit_cache")
+    .select("*")
+    .eq("repo_owner", owner)
+    .eq("repo_name", name);
+
+  if (error) throw new Error(`Erro ao ler cache de commits: ${error.message}`);
+
   const map = new Map<string, CommitActivity>();
-
-  for (const [key, commit] of Object.entries(cache)) {
-    if (key.startsWith(prefix)) map.set(commit.sha, commit);
+  for (const row of (data ?? []) as CommitCacheRow[]) {
+    map.set(row.sha, rowToCommit(row));
   }
-
   return map;
 }
 
@@ -44,9 +55,25 @@ export async function setCachedCommits(
   name: string,
   commits: CommitActivity[]
 ): Promise<void> {
-  const cache = await readCache();
-  for (const commit of commits) {
-    cache[cacheKey(owner, name, commit.sha)] = commit;
-  }
-  await fs.writeFile(CACHE_FILE, JSON.stringify(cache, null, 2), "utf-8");
+  if (commits.length === 0) return;
+
+  const rows: CommitCacheRow[] = commits.map((c) => ({
+    repo_owner: owner,
+    repo_name: name,
+    sha: c.sha,
+    message: c.message,
+    author_name: c.authorName,
+    author_avatar_url: c.authorAvatarUrl,
+    url: c.url,
+    date: c.date,
+    additions: c.additions,
+    deletions: c.deletions,
+    diff: c.diff,
+  }));
+
+  const { error } = await getSupabase()
+    .from("commit_cache")
+    .upsert(rows, { onConflict: "repo_owner,repo_name,sha" });
+
+  if (error) throw new Error(`Erro ao salvar cache de commits: ${error.message}`);
 }

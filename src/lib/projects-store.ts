@@ -1,28 +1,20 @@
-import { promises as fs } from "fs";
-import path from "path";
-import { randomUUID } from "crypto";
+import { getSupabase } from "@/lib/supabase";
 import type { Project } from "@/lib/types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const DATA_FILE = path.join(DATA_DIR, "projects.json");
+type ProjectRow = {
+  id: string;
+  name: string;
+  scope: string | null;
+};
 
-async function ensureDataFile() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  try {
-    await fs.access(DATA_FILE);
-  } catch {
-    await fs.writeFile(DATA_FILE, "[]", "utf-8");
-  }
+function rowToProject(row: ProjectRow): Project {
+  return { id: row.id, name: row.name, ...(row.scope ? { scope: row.scope } : {}) };
 }
 
 export async function getProjects(): Promise<Project[]> {
-  await ensureDataFile();
-  const raw = await fs.readFile(DATA_FILE, "utf-8");
-  return JSON.parse(raw) as Project[];
-}
-
-async function saveProjects(projects: Project[]) {
-  await fs.writeFile(DATA_FILE, JSON.stringify(projects, null, 2), "utf-8");
+  const { data, error } = await getSupabase().from("projects").select("*").order("name");
+  if (error) throw new Error(`Erro ao listar projetos: ${error.message}`);
+  return (data ?? []).map((row) => rowToProject(row as ProjectRow));
 }
 
 export async function addProject(name: string): Promise<Project> {
@@ -37,25 +29,30 @@ export async function addProject(name: string): Promise<Project> {
     throw new Error("Esse projeto já está cadastrado.");
   }
 
-  const project: Project = { id: randomUUID(), name: trimmed };
-  projects.push(project);
-  await saveProjects(projects);
-  return project;
+  const { data, error } = await getSupabase()
+    .from("projects")
+    .insert({ name: trimmed })
+    .select("*")
+    .single();
+
+  if (error) throw new Error(`Erro ao cadastrar projeto: ${error.message}`);
+  return rowToProject(data as ProjectRow);
 }
 
 export async function removeProject(id: string): Promise<void> {
-  const projects = await getProjects();
-  const next = projects.filter((p) => p.id !== id);
-  await saveProjects(next);
+  const { error } = await getSupabase().from("projects").delete().eq("id", id);
+  if (error) throw new Error(`Erro ao remover projeto: ${error.message}`);
 }
 
 export async function setProjectScope(id: string, scope: string): Promise<Project> {
-  const projects = await getProjects();
-  const project = projects.find((p) => p.id === id);
-  if (!project) {
-    throw new Error("Projeto não encontrado.");
-  }
-  project.scope = scope;
-  await saveProjects(projects);
-  return project;
+  const { data, error } = await getSupabase()
+    .from("projects")
+    .update({ scope })
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
+
+  if (error) throw new Error(`Erro ao salvar escopo: ${error.message}`);
+  if (!data) throw new Error("Projeto não encontrado.");
+  return rowToProject(data as ProjectRow);
 }

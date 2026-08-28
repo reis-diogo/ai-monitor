@@ -1,35 +1,57 @@
-import { promises as fs } from "fs";
-import path from "path";
+import { getSupabase } from "@/lib/supabase";
 import type { AiProvider, AnalyzedActivityRecord } from "@/lib/types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const CACHE_FILE = path.join(DATA_DIR, "analysis-cache.json");
+type AnalysisCacheRow = {
+  provider: AiProvider;
+  activity_id: string;
+  source: AnalyzedActivityRecord["source"];
+  intent: string;
+  score: number;
+  critique: string;
+  author_name: string;
+  author_avatar_url: string | null;
+  title: string;
+  url: string;
+  date: string;
+  location: string;
+  additions: number | null;
+  deletions: number | null;
+  analyzed_at: string;
+};
 
-function cacheKey(provider: AiProvider, id: string): string {
-  return `${provider}:${id}`;
-}
-
-async function ensureFile() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  try {
-    await fs.access(CACHE_FILE);
-  } catch {
-    await fs.writeFile(CACHE_FILE, "{}", "utf-8");
-  }
-}
-
-async function readCache(): Promise<Record<string, AnalyzedActivityRecord>> {
-  await ensureFile();
-  const raw = await fs.readFile(CACHE_FILE, "utf-8");
-  return JSON.parse(raw) as Record<string, AnalyzedActivityRecord>;
+function rowToRecord(row: AnalysisCacheRow): AnalyzedActivityRecord {
+  return {
+    id: row.activity_id,
+    source: row.source,
+    intent: row.intent,
+    score: row.score,
+    critique: row.critique,
+    provider: row.provider,
+    authorName: row.author_name,
+    authorAvatarUrl: row.author_avatar_url,
+    title: row.title,
+    url: row.url,
+    date: row.date,
+    location: row.location,
+    additions: row.additions,
+    deletions: row.deletions,
+    analyzedAt: row.analyzed_at,
+  };
 }
 
 export async function getCachedAnalysis(
   provider: AiProvider,
   id: string
 ): Promise<AnalyzedActivityRecord | null> {
-  const cache = await readCache();
-  return cache[cacheKey(provider, id)] ?? null;
+  const { data, error } = await getSupabase()
+    .from("analysis_cache")
+    .select("*")
+    .eq("provider", provider)
+    .eq("activity_id", id)
+    .maybeSingle();
+
+  if (error) throw new Error(`Erro ao ler cache de análise: ${error.message}`);
+  return data ? rowToRecord(data as AnalysisCacheRow) : null;
 }
 
 export async function setCachedAnalysis(
@@ -37,14 +59,37 @@ export async function setCachedAnalysis(
   id: string,
   record: AnalyzedActivityRecord
 ): Promise<void> {
-  const cache = await readCache();
-  cache[cacheKey(provider, id)] = record;
-  await fs.writeFile(CACHE_FILE, JSON.stringify(cache, null, 2), "utf-8");
+  const row: AnalysisCacheRow = {
+    provider,
+    activity_id: id,
+    source: record.source,
+    intent: record.intent,
+    score: record.score,
+    critique: record.critique,
+    author_name: record.authorName,
+    author_avatar_url: record.authorAvatarUrl,
+    title: record.title,
+    url: record.url,
+    date: record.date,
+    location: record.location,
+    additions: record.additions,
+    deletions: record.deletions,
+    analyzed_at: record.analyzedAt,
+  };
+
+  const { error } = await getSupabase()
+    .from("analysis_cache")
+    .upsert(row, { onConflict: "provider,activity_id" });
+
+  if (error) throw new Error(`Erro ao salvar cache de análise: ${error.message}`);
 }
 
 export async function listAnalyzedActivities(): Promise<AnalyzedActivityRecord[]> {
-  const cache = await readCache();
-  return Object.values(cache).sort(
-    (a, b) => new Date(b.analyzedAt).getTime() - new Date(a.analyzedAt).getTime()
-  );
+  const { data, error } = await getSupabase()
+    .from("analysis_cache")
+    .select("*")
+    .order("analyzed_at", { ascending: false });
+
+  if (error) throw new Error(`Erro ao listar análises: ${error.message}`);
+  return (data ?? []).map((row) => rowToRecord(row as AnalysisCacheRow));
 }
