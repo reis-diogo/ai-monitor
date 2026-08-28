@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
 import { randomUUID } from "crypto";
+import { getSupabase } from "@/lib/supabase";
 
-const AVATARS_DIR = path.join(process.cwd(), "public", "avatars");
 const MAX_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -32,11 +30,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Imagem muito grande (máx. 5MB)." }, { status: 400 });
   }
 
-  await fs.mkdir(AVATARS_DIR, { recursive: true });
-
   const filename = `${randomUUID()}.${extension}`;
   const buffer = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(path.join(AVATARS_DIR, filename), buffer);
 
-  return NextResponse.json({ url: `/avatars/${filename}` });
+  const { error } = await getSupabase()
+    .storage.from("avatars")
+    .upload(filename, buffer, { contentType: file.type });
+
+  if (error) {
+    return NextResponse.json({ error: `Erro ao enviar imagem: ${error.message}` }, { status: 502 });
+  }
+
+  const { data } = getSupabase().storage.from("avatars").getPublicUrl(filename);
+  return NextResponse.json({ url: data.publicUrl });
 }
