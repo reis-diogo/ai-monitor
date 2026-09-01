@@ -43,11 +43,13 @@ export type AuthorActivity = {
 
 export type ClickUpTaskActivity = {
   id: string;
+  customId: string | null;
   name: string;
   description: string;
   authorName: string;
   authorEmail: string;
   authorAvatarUrl: string | null;
+  authorClickupId: number | null;
   url: string;
   date: string;
   location: string;
@@ -67,8 +69,10 @@ export type ActivitySource = "commit" | "clickup";
 export type ActivityItem = {
   id: string;
   source: ActivitySource;
+  customId: string | null;
   authorName: string;
   authorAvatarUrl: string | null;
+  authorClickupId: number | null;
   title: string;
   content: string;
   url: string;

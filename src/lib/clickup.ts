@@ -46,6 +46,7 @@ type ClickUpDropdownField = {
 
 type ClickUpTaskResponse = {
   id: string;
+  custom_id?: string | null;
   name: string;
   description?: string;
   text_content?: string;
@@ -90,11 +91,13 @@ export async function fetchListTasks(listId: string): Promise<ClickUpTaskActivit
 
   return taskData.tasks.map((task) => ({
     id: task.id,
+    customId: task.custom_id ?? null,
     name: task.name,
     description: task.text_content || task.description || "",
     authorName: task.creator.username ?? task.creator.email,
     authorEmail: task.creator.email,
     authorAvatarUrl: task.creator.profilePicture,
+    authorClickupId: task.creator.id,
     url: task.url,
     date: new Date(Number(task.date_created)).toISOString(),
     location: resolveProjectName(task) ?? fallbackLocation,
@@ -117,5 +120,21 @@ export async function updateTaskStatus(taskId: string, status: string): Promise<
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status }),
+  });
+}
+
+export async function createTaskComment(
+  taskId: string,
+  text: string,
+  mentionUserId: number | null
+): Promise<void> {
+  const comment = mentionUserId
+    ? [{ type: "tag", user: { id: mentionUserId } }, { text: ` ${text}` }]
+    : [{ text }];
+
+  await clickupFetch(`/task/${taskId}/comment`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ comment }),
   });
 }

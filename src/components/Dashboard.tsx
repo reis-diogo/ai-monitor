@@ -188,8 +188,10 @@ export function Dashboard() {
     const commitItems: ActivityItem[] = allCommits.map((commit) => ({
       id: commit.sha,
       source: "commit",
+      customId: null,
       authorName: resolveAuthorName(commit.authorName, professionals),
       authorAvatarUrl: commit.authorAvatarUrl,
+      authorClickupId: null,
       title: commit.message,
       content: commit.diff,
       url: commit.url,
@@ -215,8 +217,10 @@ export function Dashboard() {
         return {
           id: task.id,
           source: "clickup",
+          customId: task.customId,
           authorName: resolveAuthorName(owner.authorName, professionals),
           authorAvatarUrl: task.authorAvatarUrl,
+          authorClickupId: task.authorClickupId,
           title: task.name,
           content: task.description,
           url: task.url,
