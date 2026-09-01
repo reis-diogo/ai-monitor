@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { ActivityItem, AiProvider, AnalyzedActivityRecord, ClickUpStatusOption } from "@/lib/types";
 import { scoreColor } from "@/lib/score-color";
-import { splitCardTitle, truncate } from "@/lib/truncate";
+import { truncate } from "@/lib/truncate";
 import { ScoreIcon } from "@/components/ScoreIcon";
 import { AiIcon } from "@/components/AiIcon";
 import { RefreshIcon } from "@/components/icons";
@@ -113,12 +113,9 @@ export function ActivityTableRow({
               title={item.title}
               className="hover:underline"
             >
-              {(() => {
-                const { code, description } = splitCardTitle(item.title);
-                return code
-                  ? `${code} - ${truncate(description, 24).toLowerCase()}`
-                  : truncate(item.title, 24).toLowerCase();
-              })()}
+              {item.customId
+                ? `${item.customId} - ${truncate(item.title, 24).toLowerCase()}`
+                : truncate(item.title, 24).toLowerCase()}
             </button>
           )}
         </td>

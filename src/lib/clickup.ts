@@ -46,6 +46,7 @@ type ClickUpDropdownField = {
 
 type ClickUpTaskResponse = {
   id: string;
+  custom_id?: string | null;
   name: string;
   description?: string;
   text_content?: string;
@@ -90,6 +91,7 @@ export async function fetchListTasks(listId: string): Promise<ClickUpTaskActivit
 
   return taskData.tasks.map((task) => ({
     id: task.id,
+    customId: task.custom_id ?? null,
     name: task.name,
     description: task.text_content || task.description || "",
     authorName: task.creator.username ?? task.creator.email,
