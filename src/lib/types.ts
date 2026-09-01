@@ -49,6 +49,7 @@ export type ClickUpTaskActivity = {
   authorName: string;
   authorEmail: string;
   authorAvatarUrl: string | null;
+  authorClickupId: number | null;
   url: string;
   date: string;
   location: string;
@@ -71,6 +72,7 @@ export type ActivityItem = {
   customId: string | null;
   authorName: string;
   authorAvatarUrl: string | null;
+  authorClickupId: number | null;
   title: string;
   content: string;
   url: string;

@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { analyzeActivity } from "@/lib/ai";
 import { getCachedAnalysis, setCachedAnalysis } from "@/lib/analysis-cache";
 import { isAllowedUser } from "@/lib/require-allowed-user";
+import { createTaskComment, updateTaskStatus } from "@/lib/clickup";
 import type { ActivitySource, AiProvider, AnalyzedActivityRecord } from "@/lib/types";
+
+const LOW_SCORE_THRESHOLD = 7;
+const REFINE_STATUS = "para refinar";
 
 function parseProvider(value: unknown): AiProvider {
   if (value === "openai" || value === "gemini") return value;
@@ -19,6 +23,14 @@ function str(value: unknown, fallback = ""): string {
 
 function numOrNull(value: unknown): number | null {
   return typeof value === "number" ? value : null;
+}
+
+async function flagLowScoreClickupTask(record: AnalyzedActivityRecord, mentionUserId: number | null) {
+  const comment = `Análise de IA (${record.score}/10): ${record.critique}`;
+  await Promise.all([
+    createTaskComment(record.id, comment, mentionUserId),
+    updateTaskStatus(record.id, REFINE_STATUS),
+  ]);
 }
 
 export async function POST(request: NextRequest) {
@@ -67,6 +79,16 @@ export async function POST(request: NextRequest) {
     };
 
     await setCachedAnalysis(provider, id, record);
+
+    if (source === "clickup" && record.score < LOW_SCORE_THRESHOLD) {
+      const mentionUserId = typeof body?.authorClickupId === "number" ? body.authorClickupId : null;
+      try {
+        await flagLowScoreClickupTask(record, mentionUserId);
+      } catch (clickupError) {
+        console.error("Erro ao sinalizar tarefa no ClickUp:", clickupError);
+      }
+    }
+
     return NextResponse.json({ analysis: record, cached: false });
   } catch (error) {
     const messageText = error instanceof Error ? error.message : "Erro ao analisar atividade.";

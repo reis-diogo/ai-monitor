@@ -60,6 +60,7 @@ export function ActivityTableRow({
           provider,
           authorName: item.authorName,
           authorAvatarUrl: item.authorAvatarUrl,
+          authorClickupId: item.authorClickupId,
           url: item.url,
           date: item.date,
           location: item.location,
