@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { ActivityItem, AiProvider, AnalyzedActivityRecord, ClickUpStatusOption } from "@/lib/types";
 import { scoreColor } from "@/lib/score-color";
-import { truncate } from "@/lib/truncate";
+import { splitCardTitle, truncate } from "@/lib/truncate";
 import { ScoreIcon } from "@/components/ScoreIcon";
 import { AiIcon } from "@/components/AiIcon";
 import { RefreshIcon } from "@/components/icons";
@@ -108,8 +108,17 @@ export function ActivityTableRow({
           {item.source === "commit" ? (
             <span className="font-mono text-black/40 dark:text-white/40">{item.id.slice(0, 7)}</span>
           ) : (
-            <button onClick={() => setShowDetail(true)} className="hover:underline">
-              {truncate(item.title, 24).toLowerCase()}
+            <button
+              onClick={() => setShowDetail(true)}
+              title={item.title}
+              className="hover:underline"
+            >
+              {(() => {
+                const { code, description } = splitCardTitle(item.title);
+                return code
+                  ? `${code} - ${truncate(description, 24).toLowerCase()}`
+                  : truncate(item.title, 24).toLowerCase();
+              })()}
             </button>
           )}
         </td>
