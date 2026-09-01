@@ -328,8 +328,7 @@ export function Dashboard() {
   const poRanking = useMemo(() => buildRanking("po"), [buildRanking]);
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 pb-16">
-      <div className="sticky top-0 z-40 -mx-6 flex flex-col gap-8 border-b border-border bg-background px-6 pt-16 pb-6">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-16">
       <motion.header
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -435,7 +434,6 @@ export function Dashboard() {
           }}
         />
       </motion.div>
-      </div>
 
       <AnimatePresence>
         {errors.length > 0 && (
