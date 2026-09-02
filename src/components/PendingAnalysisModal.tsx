@@ -15,10 +15,12 @@ function PendingAnalysisRow({
   item,
   provider,
   onAnalyzed,
+  onStatusUpdate,
 }: {
   item: ActivityItem;
   provider: AiProvider;
   onAnalyzed: () => void;
+  onStatusUpdate?: (taskId: string, status: string) => void;
 }) {
   const [status, setStatus] = useState<RowStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +53,9 @@ function PendingAnalysisRow({
       if (!res.ok) throw new Error(data.error ?? "Erro ao analisar atividade.");
       setAnalysis(data.analysis);
       setStatus("idle");
+      if (data.clickupStatusUpdate) {
+        onStatusUpdate?.(item.id, data.clickupStatusUpdate);
+      }
       onAnalyzed();
     } catch (err) {
       setStatus("error");
@@ -112,11 +117,13 @@ export function PendingAnalysisModal({
   provider,
   onClose,
   onAnalyzed,
+  onStatusUpdate,
 }: {
   items: ActivityItem[] | null;
   provider: AiProvider;
   onClose: () => void;
   onAnalyzed: () => void;
+  onStatusUpdate?: (taskId: string, status: string) => void;
 }) {
   const [mounted, setMounted] = useState(false);
 
@@ -173,6 +180,7 @@ export function PendingAnalysisModal({
                   item={item}
                   provider={provider}
                   onAnalyzed={onAnalyzed}
+                  onStatusUpdate={onStatusUpdate}
                 />
               ))}
             </ul>

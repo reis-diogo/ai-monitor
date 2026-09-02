@@ -80,16 +80,18 @@ export async function POST(request: NextRequest) {
 
     await setCachedAnalysis(provider, id, record);
 
+    let clickupStatusUpdate: string | null = null;
     if (source === "clickup" && record.score < LOW_SCORE_THRESHOLD) {
       const mentionUserId = typeof body?.authorClickupId === "number" ? body.authorClickupId : null;
       try {
         await flagLowScoreClickupTask(record, mentionUserId);
+        clickupStatusUpdate = REFINE_STATUS;
       } catch (clickupError) {
         console.error("Erro ao sinalizar tarefa no ClickUp:", clickupError);
       }
     }
 
-    return NextResponse.json({ analysis: record, cached: false });
+    return NextResponse.json({ analysis: record, cached: false, clickupStatusUpdate });
   } catch (error) {
     const messageText = error instanceof Error ? error.message : "Erro ao analisar atividade.";
     return NextResponse.json({ error: messageText }, { status: 502 });

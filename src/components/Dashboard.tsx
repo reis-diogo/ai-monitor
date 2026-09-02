@@ -99,6 +99,24 @@ export function Dashboard() {
     setClickupStatuses(data.statuses ?? []);
   }, []);
 
+  const updateClickupTaskStatus = useCallback(
+    (taskId: string, status: string) => {
+      setClickupTasks((prev) =>
+        prev.map((task) =>
+          task.id === taskId
+            ? {
+                ...task,
+                status,
+                statusColor:
+                  clickupStatuses.find((s) => s.status === status)?.color ?? task.statusColor,
+              }
+            : task
+        )
+      );
+    },
+    [clickupStatuses]
+  );
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchAnalyzed();
@@ -509,7 +527,7 @@ export function Dashboard() {
               clickupStatuses={clickupStatuses}
               onActivityAnalyzed={fetchAnalyzed}
               onProjectAnalyzed={fetchProjectAnalyses}
-              onTaskStatusChanged={fetchClickupTasks}
+              onTaskStatusUpdate={updateClickupTaskStatus}
             />
           </motion.div>
         )}

@@ -27,7 +27,7 @@ export function ActivityTableRow({
   clickupStatuses = [],
   onAnalyzed,
   onSelect,
-  onStatusChanged,
+  onStatusUpdate,
 }: {
   item: ActivityItem;
   provider: AiProvider;
@@ -36,7 +36,7 @@ export function ActivityTableRow({
   clickupStatuses?: ClickUpStatusOption[];
   onAnalyzed: () => void;
   onSelect: (record: AnalyzedActivityRecord) => void;
-  onStatusChanged?: () => void;
+  onStatusUpdate?: (taskId: string, status: string) => void;
 }) {
   const columnCount = showLocation ? 8 : 7;
   const [status, setStatus] = useState<Status>("idle");
@@ -73,6 +73,9 @@ export function ActivityTableRow({
       if (!res.ok) throw new Error(data.error ?? "Erro ao analisar atividade.");
       setLocalAnalysis(data.analysis);
       setStatus("idle");
+      if (data.clickupStatusUpdate) {
+        onStatusUpdate?.(item.id, data.clickupStatusUpdate);
+      }
       onAnalyzed();
     } catch (err) {
       setStatus("error");
@@ -128,7 +131,7 @@ export function ActivityTableRow({
               status={item.status}
               statusColor={item.statusColor}
               statuses={clickupStatuses}
-              onChanged={() => onStatusChanged?.()}
+              onOptimisticChange={(next) => onStatusUpdate?.(item.id, next)}
             />
           ) : (
             <span className="text-black/20 dark:text-white/20">—</span>

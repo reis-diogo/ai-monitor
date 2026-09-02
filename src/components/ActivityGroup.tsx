@@ -38,7 +38,7 @@ export function ActivityGroup({
   clickupStatuses,
   onProjectAnalyzed,
   onSelectProjectAnalysis,
-  onTaskStatusChanged,
+  onTaskStatusUpdate,
 }: {
   project: string;
   items: ActivityItem[];
@@ -54,7 +54,7 @@ export function ActivityGroup({
   clickupStatuses?: ClickUpStatusOption[];
   onProjectAnalyzed?: () => void;
   onSelectProjectAnalysis?: (record: AnalyzedProjectRecord) => void;
-  onTaskStatusChanged?: () => void;
+  onTaskStatusUpdate?: (taskId: string, status: string) => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [showPendingTasks, setShowPendingTasks] = useState(false);
@@ -316,7 +316,7 @@ export function ActivityGroup({
                         clickupStatuses={clickupStatuses}
                         onAnalyzed={onActivityAnalyzed}
                         onSelect={onSelect}
-                        onStatusChanged={onTaskStatusChanged}
+                        onStatusUpdate={onTaskStatusUpdate}
                       />
                     ))}
                   </AnimatePresence>
@@ -342,6 +342,7 @@ export function ActivityGroup({
         provider={provider}
         onClose={() => setShowPendingAnalysis(false)}
         onAnalyzed={() => onActivityAnalyzed()}
+        onStatusUpdate={onTaskStatusUpdate}
       />
     </motion.div>
   );
