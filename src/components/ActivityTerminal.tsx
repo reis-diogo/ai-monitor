@@ -35,7 +35,7 @@ export function ActivityTerminal({
   const totalDoneLastHour = doneLastHour.reduce((sum, d) => sum + d.count, 0);
 
   return (
-    <div className="w-full overflow-hidden rounded-lg border border-white/10 bg-black/60 font-mono text-[11px] backdrop-blur-md">
+    <div className="w-full overflow-hidden rounded-lg border border-white/15 bg-black/35 font-mono text-[11px] shadow-lg shadow-black/20 backdrop-blur-xl backdrop-saturate-150">
       <div className="flex items-center gap-1.5 border-b border-white/10 bg-white/[0.04] px-3 py-2">
         <span className="h-2 w-2 rounded-full bg-red-500/70" />
         <span className="h-2 w-2 rounded-full bg-yellow-500/70" />
