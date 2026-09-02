@@ -264,36 +264,25 @@ export function Dashboard() {
       statusColor: null,
     }));
 
-    const poProfessionals = professionals.filter((p) => p.role === "po" && p.clickupEmail);
-
     const taskItems: ActivityItem[] = clickupTasks
-      .map((task): ActivityItem | null => {
-        if (task.status.toLowerCase() === "concluído") return null;
-
-        const owner = poProfessionals.find(
-          (p) => p.clickupEmail?.toLowerCase() === task.authorEmail.toLowerCase()
-        );
-        if (!owner) return null;
-
-        return {
-          id: task.id,
-          source: "clickup",
-          customId: task.customId,
-          authorName: resolveAuthorName(owner.authorName, professionals),
-          authorAvatarUrl: task.authorAvatarUrl,
-          authorClickupId: task.authorClickupId,
-          title: task.name,
-          content: task.description,
-          url: task.url,
-          date: task.date,
-          location: normalizeLocation(task.location, projectNames),
-          additions: null,
-          deletions: null,
-          status: task.status,
-          statusColor: task.statusColor,
-        };
-      })
-      .filter((item): item is ActivityItem => item !== null);
+      .filter((task) => task.status.toLowerCase() !== "concluído")
+      .map((task): ActivityItem => ({
+        id: task.id,
+        source: "clickup",
+        customId: task.customId,
+        authorName: resolveAuthorName(task.authorName, professionals),
+        authorAvatarUrl: task.authorAvatarUrl,
+        authorClickupId: task.authorClickupId,
+        title: task.name,
+        content: task.description,
+        url: task.url,
+        date: task.date,
+        location: normalizeLocation(task.location, projectNames),
+        additions: null,
+        deletions: null,
+        status: task.status,
+        statusColor: task.statusColor,
+      }));
 
     return [...commitItems, ...taskItems];
   }, [allCommits, clickupTasks, professionals, projects]);

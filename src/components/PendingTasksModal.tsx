@@ -10,9 +10,11 @@ import { ExternalLinkIcon } from "@/components/icons";
 export function PendingTasksModal({
   items,
   onClose,
+  label = "para desenvolver",
 }: {
   items: ActivityItem[] | null;
   onClose: () => void;
+  label?: string;
 }) {
   const [selected, setSelected] = useState<ActivityItem | null>(null);
 
@@ -52,7 +54,7 @@ export function PendingTasksModal({
             >
               <div className="flex shrink-0 items-center justify-between gap-4">
                 <p className="text-sm text-black/70 dark:text-white/70">
-                  {items.length} tarefa{items.length > 1 ? "s" : ""} para desenvolver
+                  {items.length} tarefa{items.length > 1 ? "s" : ""} {label}
                 </p>
                 <button
                   onClick={handleClose}

@@ -30,12 +30,12 @@ export function ActivityTerminal({
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [entries.length]);
+  }, [entries]);
 
   const totalDoneLastHour = doneLastHour.reduce((sum, d) => sum + d.count, 0);
 
   return (
-    <div className="w-full overflow-hidden rounded-lg border border-white/15 bg-black/90 font-mono text-[11px] shadow-lg shadow-black/20 backdrop-blur-xl backdrop-brightness-50 backdrop-saturate-150">
+    <div className="w-full shadow shadow-lg overflow-hidden rounded-lg border border-white/15 bg-black/90 font-mono text-[11px] shadow-lg shadow-black/20 backdrop-blur-xl backdrop-brightness-50 backdrop-saturate-150">
       <div className="flex items-center gap-1.5 border-b border-white/10 bg-white/[0.04] px-3 py-2">
         <span className="h-2 w-2 rounded-full bg-red-500/70" />
         <span className="h-2 w-2 rounded-full bg-yellow-500/70" />
