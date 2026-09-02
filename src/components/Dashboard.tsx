@@ -372,7 +372,6 @@ export function Dashboard() {
       }
 
       if (candidate) {
-        visitedIds.add(candidate.id);
         const label = candidate.customId ?? candidate.id.slice(0, 7);
         const email = userEmailRef.current ?? "desconhecido";
 
@@ -393,6 +392,7 @@ export function Dashboard() {
 
         try {
           const data = await analyzeActivityItemRef.current(candidate, activeProvider);
+          visitedIds.add(candidate.id);
           await sleep(300);
           pushLine(
             `análise concluída pela IA (${data.analysis.provider}): nota ${data.analysis.score}/10 — "${truncate(data.analysis.critique, 120)}"`,
@@ -420,10 +420,10 @@ export function Dashboard() {
             );
           }
         } catch (err) {
-          console.error("Erro na análise automática de card:", err);
+          console.warn("Falha na análise automática (será tentada novamente):", err);
           await sleep(300);
           pushLine(
-            `falha ao analisar ${label}: ${err instanceof Error ? err.message : "erro desconhecido"}. o card permanece em "para desenvolver" e será tentado novamente na próxima varredura`,
+            `falha ao analisar ${label}: ${err instanceof Error ? err.message : "erro desconhecido"}. será tentado novamente numa próxima varredura`,
             "error"
           );
         }
