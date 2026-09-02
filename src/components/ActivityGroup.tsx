@@ -90,7 +90,7 @@ export function ActivityGroup({
   );
   const pendingTaskCount = pendingTaskItems.length;
   const refiningTaskItems = items.filter(
-    (item) => item.source === "clickup" && item.status?.toLowerCase() === "para refinar"
+    (item) => item.source === "clickup" && item.status?.toLowerCase() === "refinar po"
   );
   const refiningTaskCount = refiningTaskItems.length;
 
@@ -164,10 +164,10 @@ export function ActivityGroup({
                 setShowRefiningTasks(true);
               }}
               className="flex items-center gap-1 rounded-full border border-rose-400/30 bg-rose-400/10 px-2 py-0.5 font-medium text-rose-700 dark:text-rose-300 hover:bg-rose-400/20"
-              title={`${refiningTaskCount} tarefa${refiningTaskCount > 1 ? "s" : ""} com status "para refinar"`}
+              title={`${refiningTaskCount} tarefa${refiningTaskCount > 1 ? "s" : ""} com status "refinar po"`}
             >
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-400" />
-              {refiningTaskCount} para refinar
+              {refiningTaskCount} refinar po
             </button>
           )}
 
@@ -354,7 +354,7 @@ export function ActivityGroup({
       <PendingTasksModal
         items={showRefiningTasks ? refiningTaskItems : null}
         onClose={() => setShowRefiningTasks(false)}
-        label="para refinar"
+        label="refinar po"
       />
 
       <PendingPullRequestsModal

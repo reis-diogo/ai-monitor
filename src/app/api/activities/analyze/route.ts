@@ -7,7 +7,7 @@ import type { ActivitySource, AiProvider, AnalyzedActivityRecord } from "@/lib/t
 
 const LOW_SCORE_THRESHOLD = 7;
 const PENDING_DEV_STATUS = "para desenvolver";
-const REFINE_STATUS = "para refinar";
+const REFINE_STATUS = "refinar po";
 const DEV_RELEASED_STATUS = "dev liberado";
 
 function parseProvider(value: unknown): AiProvider {
