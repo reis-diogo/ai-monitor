@@ -290,6 +290,7 @@ export function Dashboard() {
   }, [allCommits, clickupTasks, professionals, projects]);
 
   const activityItemsRef = useRef(activityItems);
+  const analyzedActivitiesRef = useRef(analyzedActivities);
   const providerRef = useRef(provider);
   const analyzeActivityItemRef = useRef(analyzeActivityItem);
   const userEmailRef = useRef<string | null>(null);
@@ -297,6 +298,10 @@ export function Dashboard() {
   useEffect(() => {
     activityItemsRef.current = activityItems;
   }, [activityItems]);
+
+  useEffect(() => {
+    analyzedActivitiesRef.current = analyzedActivities;
+  }, [analyzedActivities]);
 
   useEffect(() => {
     providerRef.current = provider;
@@ -331,13 +336,20 @@ export function Dashboard() {
       if (cancelled) return;
 
       pushLine(
-        'verificando cards com status "para desenvolver" no ClickUp em busca de pendências de análise...',
+        'verificando cards do ClickUp em "para desenvolver" e cards ainda sem análise de IA...',
         "info"
       );
 
       const activeProvider = providerRef.current;
+      const analyzedIds = new Set(
+        analyzedActivitiesRef.current
+          .filter((record) => record.provider === activeProvider)
+          .map((record) => record.id)
+      );
       const pendingItems = activityItemsRef.current.filter(
-        (item) => item.source === "clickup" && item.status?.toLowerCase() === AUTO_ANALYZE_STATUS
+        (item) =>
+          item.source === "clickup" &&
+          (item.status?.toLowerCase() === AUTO_ANALYZE_STATUS || !analyzedIds.has(item.id))
       );
 
       const pendingIds = new Set(pendingItems.map((item) => item.id));
@@ -350,10 +362,10 @@ export function Dashboard() {
       if (!candidate) {
         await sleep(300);
         if (pendingItems.length === 0) {
-          pushLine('nenhum card em "para desenvolver" no momento', "info");
+          pushLine('nenhum card em "para desenvolver" ou sem análise no momento', "info");
         } else {
           pushLine(
-            `todos os ${pendingItems.length} card(s) em "para desenvolver" já foram verificados nesta sessão — aguardando novos cards ou mudanças de status`,
+            `todos os ${pendingItems.length} card(s) pendentes (em "para desenvolver" ou sem análise) já foram verificados nesta sessão — aguardando novos cards ou mudanças`,
             "info"
           );
         }
@@ -368,9 +380,12 @@ export function Dashboard() {
           `card encontrado: ${label} - "${truncate(candidate.title, 60)}" (projeto: ${candidate.location}, responsável: ${candidate.authorName}). iniciando análise de IA para avaliar a qualidade da entrega...`,
           "info"
         );
+        const isPendingDev = candidate.status?.toLowerCase() === AUTO_ANALYZE_STATUS;
         await sleep(400);
         pushLine(
-          `requisição autenticada com o usuário logado (${email}) — este e-mail será registrado no comentário do ClickUp caso a nota fique abaixo do limite`,
+          isPendingDev
+            ? `requisição autenticada com o usuário logado (${email}) — este e-mail será registrado no comentário do ClickUp caso a nota fique abaixo do limite`
+            : `requisição autenticada com o usuário logado (${email}) — card fora de "para desenvolver" (status atual: "${candidate.status}"), então apenas a nota será registrada, sem comentário nem mudança de status`,
           "info"
         );
 
