@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { UserButton } from "@clerk/nextjs";
+import { UserButton, useUser } from "@clerk/nextjs";
 import type {
   ActivityItem,
   AiProvider,
@@ -17,7 +17,7 @@ import type {
   RankingEntry,
 } from "@/lib/types";
 import { RepoManager } from "@/components/RepoManager";
-import { AutoAnalyzeLog, type AutoAnalyzeLogEntry } from "@/components/AutoAnalyzeLog";
+import { ActivityTerminal, type TerminalLogEntry } from "@/components/ActivityTerminal";
 import { ProviderToggle } from "@/components/ProviderToggle";
 import { ActivityTable } from "@/components/ActivityTable";
 import { Ranking } from "@/components/Ranking";
@@ -59,7 +59,8 @@ export function Dashboard() {
   const [repoPullRequests, setRepoPullRequests] = useState<
     { owner: string; name: string; pullRequests: PullRequestInfo[] }[]
   >([]);
-  const [autoAnalyzeLog, setAutoAnalyzeLog] = useState<AutoAnalyzeLogEntry[]>([]);
+  const [terminalLog, setTerminalLog] = useState<TerminalLogEntry[]>([]);
+  const { user } = useUser();
 
   const fetchProjects = useCallback(async () => {
     const res = await fetch("/api/projects");
@@ -209,13 +210,12 @@ export function Dashboard() {
     fetchActivity();
   }, [fetchActivity]);
 
-  const [, setRelativeTimeTick] = useState(0);
+  const [nowTick, setNowTick] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(
-      () => setRelativeTimeTick((tick) => tick + 1),
-      RELATIVE_TIME_TICK_MS
-    );
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNowTick(Date.now());
+    const interval = setInterval(() => setNowTick(Date.now()), RELATIVE_TIME_TICK_MS);
     return () => clearInterval(interval);
   }, []);
 
@@ -301,6 +301,7 @@ export function Dashboard() {
   const analyzedActivitiesRef = useRef(analyzedActivities);
   const providerRef = useRef(provider);
   const analyzeActivityItemRef = useRef(analyzeActivityItem);
+  const userEmailRef = useRef<string | null>(null);
 
   useEffect(() => {
     activityItemsRef.current = activityItems;
@@ -319,8 +320,24 @@ export function Dashboard() {
   }, [analyzeActivityItem]);
 
   useEffect(() => {
+    userEmailRef.current = user?.primaryEmailAddress?.emailAddress ?? null;
+  }, [user]);
+
+  useEffect(() => {
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout>;
+
+    function pushLine(text: string, tone: TerminalLogEntry["tone"]) {
+      setTerminalLog((prev) =>
+        [...prev, { id: `${Date.now()}-${Math.random()}`, timestamp: new Date().toISOString(), text, tone }].slice(
+          -30
+        )
+      );
+    }
+
+    function sleep(ms: number) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
 
     async function tick() {
       if (cancelled) return;
@@ -339,37 +356,32 @@ export function Dashboard() {
       );
 
       if (candidate) {
+        const label = candidate.customId ?? candidate.id.slice(0, 7);
+        const email = userEmailRef.current ?? "desconhecido";
+
+        pushLine(`analisando ${label} - "${candidate.title.slice(0, 50)}"...`, "info");
+        await sleep(400);
+        pushLine(`usuário: ${email}`, "info");
+
         try {
           const data = await analyzeActivityItemRef.current(candidate, activeProvider);
-          setAutoAnalyzeLog((prev) =>
-            [
-              {
-                id: `${candidate.id}-${Date.now()}`,
-                timestamp: new Date().toISOString(),
-                title: candidate.title,
-                customId: candidate.customId,
-                score: data.analysis.score,
-                flagged: !!data.clickupStatusUpdate,
-                error: null,
-              },
-              ...prev,
-            ].slice(0, 20)
-          );
+          await sleep(300);
+          pushLine(`nota da IA: ${data.analysis.score}/10`, "info");
+          await sleep(300);
+          if (data.clickupStatusUpdate) {
+            pushLine(
+              `nota abaixo de 7 → comentário adicionado e status alterado para "${data.clickupStatusUpdate}" no ClickUp`,
+              "warning"
+            );
+          } else {
+            pushLine("nota dentro do esperado, nenhuma alteração necessária", "success");
+          }
         } catch (err) {
           console.error("Erro na análise automática de card:", err);
-          setAutoAnalyzeLog((prev) =>
-            [
-              {
-                id: `${candidate.id}-${Date.now()}`,
-                timestamp: new Date().toISOString(),
-                title: candidate.title,
-                customId: candidate.customId,
-                score: null,
-                flagged: false,
-                error: err instanceof Error ? err.message : "Erro ao analisar atividade.",
-              },
-              ...prev,
-            ].slice(0, 20)
+          await sleep(300);
+          pushLine(
+            `erro ao analisar ${label}: ${err instanceof Error ? err.message : "erro desconhecido"}`,
+            "error"
           );
         }
       }
@@ -385,6 +397,24 @@ export function Dashboard() {
       clearTimeout(timeoutId);
     };
   }, []);
+
+  const pendingDevelopmentCount = useMemo(
+    () =>
+      activityItems.filter(
+        (item) => item.source === "clickup" && item.status?.toLowerCase() === AUTO_ANALYZE_STATUS
+      ).length,
+    [activityItems]
+  );
+
+  const doneLastHour = useMemo(() => {
+    const oneHourAgo = nowTick - 60 * 60 * 1000;
+    const counts = new Map<string, number>();
+    for (const record of analyzedActivities) {
+      if (new Date(record.analyzedAt).getTime() < oneHourAgo) continue;
+      counts.set(record.authorName, (counts.get(record.authorName) ?? 0) + 1);
+    }
+    return Array.from(counts.entries()).map(([authorName, count]) => ({ authorName, count }));
+  }, [analyzedActivities, nowTick]);
 
   const projectNames = useMemo(
     () => Array.from(new Set(activityItems.map((item) => item.location))).sort((a, b) => a.localeCompare(b)),
@@ -561,6 +591,12 @@ export function Dashboard() {
         </div>
       </motion.header>
 
+      <ActivityTerminal
+        entries={terminalLog}
+        pendingCount={pendingDevelopmentCount}
+        doneLastHour={doneLastHour}
+      />
+
       {projectNames.length > 1 && (
         <motion.div
           initial={{ opacity: 0, y: -6 }}
@@ -663,8 +699,6 @@ export function Dashboard() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <AutoAnalyzeLog entries={autoAnalyzeLog} />
 
       <ProfessionalsManager commits={allCommits} onChange={fetchProfessionals} />
 
