@@ -336,7 +336,7 @@ export function Dashboard() {
       if (cancelled) return;
 
       pushLine(
-        'verificando cards do ClickUp em "para desenvolver" e cards ainda sem análise de IA...',
+        'verificando cards em "para desenvolver" no ClickUp e atividades (commits de dev e cards de PO) ainda sem análise de IA...',
         "info"
       );
 
@@ -348,8 +348,8 @@ export function Dashboard() {
       );
       const pendingItems = activityItemsRef.current.filter(
         (item) =>
-          item.source === "clickup" &&
-          (item.status?.toLowerCase() === AUTO_ANALYZE_STATUS || !analyzedIds.has(item.id))
+          (item.source === "clickup" && item.status?.toLowerCase() === AUTO_ANALYZE_STATUS) ||
+          !analyzedIds.has(item.id)
       );
 
       const pendingIds = new Set(pendingItems.map((item) => item.id));
@@ -362,10 +362,10 @@ export function Dashboard() {
       if (!candidate) {
         await sleep(300);
         if (pendingItems.length === 0) {
-          pushLine('nenhum card em "para desenvolver" ou sem análise no momento', "info");
+          pushLine('nenhum card em "para desenvolver" ou atividade sem análise no momento', "info");
         } else {
           pushLine(
-            `todos os ${pendingItems.length} card(s) pendentes (em "para desenvolver" ou sem análise) já foram verificados nesta sessão — aguardando novos cards ou mudanças`,
+            `todas as ${pendingItems.length} atividade(s) pendentes (cards em "para desenvolver" ou sem análise) já foram verificadas nesta sessão — aguardando novas pendências`,
             "info"
           );
         }
@@ -377,7 +377,7 @@ export function Dashboard() {
         const email = userEmailRef.current ?? "desconhecido";
 
         pushLine(
-          `card encontrado: ${label} - "${truncate(candidate.title, 60)}" (projeto: ${candidate.location}, responsável: ${candidate.authorName}). iniciando análise de IA para avaliar a qualidade da entrega...`,
+          `atividade encontrada: ${label} - "${truncate(candidate.title, 60)}" (projeto: ${candidate.location}, responsável: ${candidate.authorName}). iniciando análise de IA para avaliar a qualidade da entrega...`,
           "info"
         );
         const isPendingDev = candidate.status?.toLowerCase() === AUTO_ANALYZE_STATUS;
@@ -385,7 +385,9 @@ export function Dashboard() {
         pushLine(
           isPendingDev
             ? `requisição autenticada com o usuário logado (${email}) — este e-mail será registrado no comentário do ClickUp caso a nota fique abaixo do limite`
-            : `requisição autenticada com o usuário logado (${email}) — card fora de "para desenvolver" (status atual: "${candidate.status}"), então apenas a nota será registrada, sem comentário nem mudança de status`,
+            : candidate.source === "commit"
+              ? `requisição autenticada com o usuário logado (${email}) — é um commit de dev, então apenas a nota será registrada (sem comentário nem mudança de status no ClickUp)`
+              : `requisição autenticada com o usuário logado (${email}) — card fora de "para desenvolver" (status atual: "${candidate.status}"), então apenas a nota será registrada, sem comentário nem mudança de status`,
           "info"
         );
 
