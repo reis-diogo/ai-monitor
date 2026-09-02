@@ -142,6 +142,7 @@ export function Dashboard() {
           location: item.location,
           additions: item.additions,
           deletions: item.deletions,
+          status: item.status,
           force: true,
         }),
       });
@@ -381,16 +382,23 @@ export function Dashboard() {
             "info"
           );
           await sleep(300);
-          if (data.clickupStatusUpdate) {
+          if (data.clickupStatusUpdate && data.analysis.score < 7) {
             pushLine(
               `nota ${data.analysis.score}/10 está abaixo do limite mínimo (7 pontos): adicionando comentário com a crítica da IA, marcando ${candidate.authorName} e alterando o status do card de "para desenvolver" para "${data.clickupStatusUpdate}" no ClickUp...`,
               "warning"
             );
             await sleep(300);
             pushLine(`comentário publicado e status atualizado com sucesso no card ${label}`, "success");
+          } else if (data.clickupStatusUpdate) {
+            pushLine(
+              `nota ${data.analysis.score}/10 está dentro do esperado (≥ 7 pontos): alterando o status do card de "para desenvolver" para "${data.clickupStatusUpdate}" no ClickUp, para não ficar em looping nas próximas varreduras...`,
+              "success"
+            );
+            await sleep(300);
+            pushLine(`status atualizado com sucesso no card ${label}`, "success");
           } else {
             pushLine(
-              `nota ${data.analysis.score}/10 está dentro do esperado (≥ 7 pontos): nenhuma alteração será feita no card ${label}`,
+              `nota ${data.analysis.score}/10 processada; nenhuma alteração de status foi necessária no card ${label}`,
               "success"
             );
           }
