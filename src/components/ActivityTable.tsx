@@ -29,7 +29,7 @@ export function ActivityTable({
   clickupStatuses,
   onActivityAnalyzed,
   onProjectAnalyzed,
-  onTaskStatusChanged,
+  onTaskStatusUpdate,
 }: {
   items: ActivityItem[];
   allItems: ActivityItem[];
@@ -41,7 +41,7 @@ export function ActivityTable({
   clickupStatuses: ClickUpStatusOption[];
   onActivityAnalyzed: () => void;
   onProjectAnalyzed: () => void;
-  onTaskStatusChanged: () => void;
+  onTaskStatusUpdate: (taskId: string, status: string) => void;
 }) {
   const [selected, setSelected] = useState<AnalyzedActivityRecord | null>(null);
   const [selectedProjectAnalysis, setSelectedProjectAnalysis] = useState<AnalyzedProjectRecord | null>(
@@ -153,7 +153,7 @@ export function ActivityTable({
             pendingPullRequests={pendingPrsByProject.get(group.project) ?? []}
             clickupStatuses={clickupStatuses}
             onProjectAnalyzed={onProjectAnalyzed}
-            onTaskStatusChanged={onTaskStatusChanged}
+            onTaskStatusUpdate={onTaskStatusUpdate}
             onSelectProjectAnalysis={setSelectedProjectAnalysis}
           />
         ))}

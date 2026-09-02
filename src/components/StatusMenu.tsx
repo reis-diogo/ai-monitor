@@ -10,13 +10,13 @@ export function StatusMenu({
   status,
   statusColor,
   statuses,
-  onChanged,
+  onOptimisticChange,
 }: {
   taskId: string;
   status: string;
   statusColor: string;
   statuses: ClickUpStatusOption[];
-  onChanged: () => void;
+  onOptimisticChange: (status: string) => void;
 }) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -37,28 +37,34 @@ export function StatusMenu({
     setOpen(true);
   }
 
-  async function handleSelect(next: string) {
+  function handleSelect(next: string) {
     if (next === status) {
       setOpen(false);
       return;
     }
-    setUpdating(true);
+    setOpen(false);
     setError(null);
-    try {
-      const res = await fetch(`/api/clickup/tasks/${taskId}/status`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: next }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Erro ao atualizar status.");
-      setOpen(false);
-      onChanged();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao atualizar status.");
-    } finally {
-      setUpdating(false);
-    }
+
+    const previous = status;
+    // Optimistic update: reflect the new status immediately, don't wait for the network.
+    onOptimisticChange(next);
+
+    setUpdating(true);
+    fetch(`/api/clickup/tasks/${taskId}/status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: next }),
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Erro ao atualizar status.");
+      })
+      .catch((err) => {
+        onOptimisticChange(previous);
+        setError(err instanceof Error ? err.message : "Erro ao atualizar status.");
+        setTimeout(() => setError(null), 4000);
+      })
+      .finally(() => setUpdating(false));
   }
 
   return (
@@ -109,13 +115,24 @@ export function StatusMenu({
                   {s.status === status && <span className="ml-auto text-black/30 dark:text-white/30">✓</span>}
                 </button>
               ))}
-              {error && (
-                <p className="mt-1 rounded-md border border-red-500/20 bg-red-500/5 px-2 py-1 text-[10px] text-red-700 dark:text-red-300">
-                  {error}
-                </p>
-              )}
             </motion.div>
           </AnimatePresence>,
+          document.body
+        )}
+
+      {!open &&
+        error &&
+        menuPosition &&
+        createPortal(
+          <motion.p
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            style={{ position: "fixed", top: menuPosition.top, left: menuPosition.left }}
+            className="z-50 max-w-[220px] rounded-md border border-red-500/20 bg-red-500/5 px-2 py-1 text-[10px] text-red-700 dark:text-red-300 shadow-xl"
+          >
+            {error}
+          </motion.p>,
           document.body
         )}
     </>
