@@ -142,6 +142,7 @@ export function Dashboard() {
           location: item.location,
           additions: item.additions,
           deletions: item.deletions,
+          force: true,
         }),
       });
       const data = await res.json();
