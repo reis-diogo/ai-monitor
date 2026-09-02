@@ -40,7 +40,6 @@ export function ActivityTerminal({
         <span className="h-2 w-2 rounded-full bg-red-500/70" />
         <span className="h-2 w-2 rounded-full bg-yellow-500/70" />
         <span className="h-2 w-2 rounded-full bg-green-500/70" />
-        <span className="ml-2 text-white/40">agente-ia</span>
       </div>
 
       <div ref={scrollRef} className="flex max-h-36 flex-col gap-1 overflow-y-auto px-3 py-2">
