@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { UserButton } from "@clerk/nextjs";
 import type {
@@ -34,6 +34,8 @@ import { ExternalLinkIcon, RefreshIcon } from "@/components/icons";
 const REFRESH_COOLDOWN_MS = 10_000;
 const RELATIVE_TIME_TICK_MS = 30_000;
 const PROVIDER_STORAGE_KEY = "getnow:ai-provider";
+const AUTO_ANALYZE_INTERVAL_MS = 30_000;
+const AUTO_ANALYZE_STATUS = "para desenvolver";
 
 type Status = "loading" | "ready" | "error";
 
@@ -115,6 +117,44 @@ export function Dashboard() {
       );
     },
     [clickupStatuses]
+  );
+
+  const analyzeActivityItem = useCallback(
+    async (item: ActivityItem, activeProvider: AiProvider) => {
+      const res = await fetch("/api/activities/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: item.id,
+          source: item.source,
+          title: item.title,
+          content: item.content,
+          provider: activeProvider,
+          authorName: item.authorName,
+          authorAvatarUrl: item.authorAvatarUrl,
+          authorClickupId: item.authorClickupId,
+          url: item.url,
+          date: item.date,
+          location: item.location,
+          additions: item.additions,
+          deletions: item.deletions,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Erro ao analisar atividade.");
+
+      setAnalyzedActivities((prev) => [
+        ...prev.filter((r) => !(r.id === item.id && r.provider === activeProvider)),
+        data.analysis,
+      ]);
+
+      if (data.clickupStatusUpdate) {
+        updateClickupTaskStatus(item.id, data.clickupStatusUpdate);
+      }
+
+      return data;
+    },
+    [updateClickupTaskStatus]
   );
 
   useEffect(() => {
@@ -254,6 +294,67 @@ export function Dashboard() {
 
     return [...commitItems, ...taskItems];
   }, [allCommits, clickupTasks, professionals, projects]);
+
+  const activityItemsRef = useRef(activityItems);
+  const analyzedActivitiesRef = useRef(analyzedActivities);
+  const providerRef = useRef(provider);
+  const analyzeActivityItemRef = useRef(analyzeActivityItem);
+
+  useEffect(() => {
+    activityItemsRef.current = activityItems;
+  }, [activityItems]);
+
+  useEffect(() => {
+    analyzedActivitiesRef.current = analyzedActivities;
+  }, [analyzedActivities]);
+
+  useEffect(() => {
+    providerRef.current = provider;
+  }, [provider]);
+
+  useEffect(() => {
+    analyzeActivityItemRef.current = analyzeActivityItem;
+  }, [analyzeActivityItem]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    async function tick() {
+      if (cancelled) return;
+
+      const activeProvider = providerRef.current;
+      const analyzedIds = new Set(
+        analyzedActivitiesRef.current
+          .filter((record) => record.provider === activeProvider)
+          .map((record) => record.id)
+      );
+      const candidate = activityItemsRef.current.find(
+        (item) =>
+          item.source === "clickup" &&
+          item.status?.toLowerCase() === AUTO_ANALYZE_STATUS &&
+          !analyzedIds.has(item.id)
+      );
+
+      if (candidate) {
+        try {
+          await analyzeActivityItemRef.current(candidate, activeProvider);
+        } catch (err) {
+          console.error("Erro na análise automática de card:", err);
+        }
+      }
+
+      if (!cancelled) {
+        timeoutId = setTimeout(tick, AUTO_ANALYZE_INTERVAL_MS);
+      }
+    }
+
+    timeoutId = setTimeout(tick, AUTO_ANALYZE_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, []);
 
   const projectNames = useMemo(
     () => Array.from(new Set(activityItems.map((item) => item.location))).sort((a, b) => a.localeCompare(b)),
