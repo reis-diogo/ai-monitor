@@ -299,7 +299,6 @@ export function Dashboard() {
   }, [allCommits, clickupTasks, professionals, projects]);
 
   const activityItemsRef = useRef(activityItems);
-  const analyzedActivitiesRef = useRef(analyzedActivities);
   const providerRef = useRef(provider);
   const analyzeActivityItemRef = useRef(analyzeActivityItem);
   const userEmailRef = useRef<string | null>(null);
@@ -307,10 +306,6 @@ export function Dashboard() {
   useEffect(() => {
     activityItemsRef.current = activityItems;
   }, [activityItems]);
-
-  useEffect(() => {
-    analyzedActivitiesRef.current = analyzedActivities;
-  }, [analyzedActivities]);
 
   useEffect(() => {
     providerRef.current = provider;
@@ -327,6 +322,7 @@ export function Dashboard() {
   useEffect(() => {
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout>;
+    const visitedIds = new Set<string>();
 
     function pushLine(text: string, tone: TerminalLogEntry["tone"]) {
       setTerminalLog((prev) =>
@@ -349,27 +345,31 @@ export function Dashboard() {
       );
 
       const activeProvider = providerRef.current;
-      const analyzedIds = new Set(
-        analyzedActivitiesRef.current
-          .filter((record) => record.provider === activeProvider)
-          .map((record) => record.id)
+      const pendingItems = activityItemsRef.current.filter(
+        (item) => item.source === "clickup" && item.status?.toLowerCase() === AUTO_ANALYZE_STATUS
       );
-      const candidate = activityItemsRef.current.find(
-        (item) =>
-          item.source === "clickup" &&
-          item.status?.toLowerCase() === AUTO_ANALYZE_STATUS &&
-          !analyzedIds.has(item.id)
-      );
+
+      const pendingIds = new Set(pendingItems.map((item) => item.id));
+      for (const id of visitedIds) {
+        if (!pendingIds.has(id)) visitedIds.delete(id);
+      }
+
+      const candidate = pendingItems.find((item) => !visitedIds.has(item.id));
 
       if (!candidate) {
         await sleep(300);
-        pushLine(
-          'nenhum card pendente de análise em "para desenvolver" — todos já foram analisados ou não há cards nesse status agora. próxima verificação em 30s',
-          "info"
-        );
+        if (pendingItems.length === 0) {
+          pushLine('nenhum card em "para desenvolver" no momento', "info");
+        } else {
+          pushLine(
+            `todos os ${pendingItems.length} card(s) em "para desenvolver" já foram verificados nesta sessão — aguardando novos cards ou mudanças de status`,
+            "info"
+          );
+        }
       }
 
       if (candidate) {
+        visitedIds.add(candidate.id);
         const label = candidate.customId ?? candidate.id.slice(0, 7);
         const email = userEmailRef.current ?? "desconhecido";
 
