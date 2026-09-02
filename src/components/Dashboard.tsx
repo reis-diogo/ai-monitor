@@ -30,6 +30,7 @@ import { normalizeLocation } from "@/lib/normalize-location";
 import { resolveAuthorName } from "@/lib/normalize-author";
 import { getPresetRange, isWithinRange, type DatePreset } from "@/lib/date-range";
 import { timeAgo } from "@/lib/time-ago";
+import { truncate } from "@/lib/truncate";
 import { ExternalLinkIcon, RefreshIcon } from "@/components/icons";
 
 const REFRESH_COOLDOWN_MS = 10_000;
@@ -342,7 +343,10 @@ export function Dashboard() {
     async function tick() {
       if (cancelled) return;
 
-      pushLine('verificando cards em "para desenvolver"...', "info");
+      pushLine(
+        'verificando cards com status "para desenvolver" no ClickUp em busca de pendências de análise...',
+        "info"
+      );
 
       const activeProvider = providerRef.current;
       const analyzedIds = new Set(
@@ -359,35 +363,52 @@ export function Dashboard() {
 
       if (!candidate) {
         await sleep(300);
-        pushLine("nenhum card pendente encontrado, aguardando próxima varredura", "info");
+        pushLine(
+          'nenhum card pendente de análise em "para desenvolver" — todos já foram analisados ou não há cards nesse status agora. próxima verificação em 30s',
+          "info"
+        );
       }
 
       if (candidate) {
         const label = candidate.customId ?? candidate.id.slice(0, 7);
         const email = userEmailRef.current ?? "desconhecido";
 
-        pushLine(`analisando ${label} - "${candidate.title.slice(0, 50)}"...`, "info");
+        pushLine(
+          `card encontrado: ${label} - "${truncate(candidate.title, 60)}" (projeto: ${candidate.location}, responsável: ${candidate.authorName}). iniciando análise de IA para avaliar a qualidade da entrega...`,
+          "info"
+        );
         await sleep(400);
-        pushLine(`usuário: ${email}`, "info");
+        pushLine(
+          `requisição autenticada com o usuário logado (${email}) — este e-mail será registrado no comentário do ClickUp caso a nota fique abaixo do limite`,
+          "info"
+        );
 
         try {
           const data = await analyzeActivityItemRef.current(candidate, activeProvider);
           await sleep(300);
-          pushLine(`nota da IA: ${data.analysis.score}/10`, "info");
+          pushLine(
+            `análise concluída pela IA (${data.analysis.provider}): nota ${data.analysis.score}/10 — "${truncate(data.analysis.critique, 120)}"`,
+            "info"
+          );
           await sleep(300);
           if (data.clickupStatusUpdate) {
             pushLine(
-              `nota abaixo de 7 → comentário adicionado e status alterado para "${data.clickupStatusUpdate}" no ClickUp`,
+              `nota ${data.analysis.score}/10 está abaixo do limite mínimo (7 pontos): adicionando comentário com a crítica da IA, marcando ${candidate.authorName} e alterando o status do card de "para desenvolver" para "${data.clickupStatusUpdate}" no ClickUp...`,
               "warning"
             );
+            await sleep(300);
+            pushLine(`comentário publicado e status atualizado com sucesso no card ${label}`, "success");
           } else {
-            pushLine("nota dentro do esperado, nenhuma alteração necessária", "success");
+            pushLine(
+              `nota ${data.analysis.score}/10 está dentro do esperado (≥ 7 pontos): nenhuma alteração será feita no card ${label}`,
+              "success"
+            );
           }
         } catch (err) {
           console.error("Erro na análise automática de card:", err);
           await sleep(300);
           pushLine(
-            `erro ao analisar ${label}: ${err instanceof Error ? err.message : "erro desconhecido"}`,
+            `falha ao analisar ${label}: ${err instanceof Error ? err.message : "erro desconhecido"}. o card permanece em "para desenvolver" e será tentado novamente na próxima varredura`,
             "error"
           );
         }
