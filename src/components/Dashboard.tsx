@@ -342,6 +342,8 @@ export function Dashboard() {
     async function tick() {
       if (cancelled) return;
 
+      pushLine('verificando cards em "para desenvolver"...', "info");
+
       const activeProvider = providerRef.current;
       const analyzedIds = new Set(
         analyzedActivitiesRef.current
@@ -354,6 +356,11 @@ export function Dashboard() {
           item.status?.toLowerCase() === AUTO_ANALYZE_STATUS &&
           !analyzedIds.has(item.id)
       );
+
+      if (!candidate) {
+        await sleep(300);
+        pushLine("nenhum card pendente encontrado, aguardando próxima varredura", "info");
+      }
 
       if (candidate) {
         const label = candidate.customId ?? candidate.id.slice(0, 7);
