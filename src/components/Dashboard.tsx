@@ -17,6 +17,7 @@ import type {
   RankingEntry,
 } from "@/lib/types";
 import { RepoManager } from "@/components/RepoManager";
+import { AutoAnalyzeLog, type AutoAnalyzeLogEntry } from "@/components/AutoAnalyzeLog";
 import { ProviderToggle } from "@/components/ProviderToggle";
 import { ActivityTable } from "@/components/ActivityTable";
 import { Ranking } from "@/components/Ranking";
@@ -58,6 +59,7 @@ export function Dashboard() {
   const [repoPullRequests, setRepoPullRequests] = useState<
     { owner: string; name: string; pullRequests: PullRequestInfo[] }[]
   >([]);
+  const [autoAnalyzeLog, setAutoAnalyzeLog] = useState<AutoAnalyzeLogEntry[]>([]);
 
   const fetchProjects = useCallback(async () => {
     const res = await fetch("/api/projects");
@@ -338,9 +340,37 @@ export function Dashboard() {
 
       if (candidate) {
         try {
-          await analyzeActivityItemRef.current(candidate, activeProvider);
+          const data = await analyzeActivityItemRef.current(candidate, activeProvider);
+          setAutoAnalyzeLog((prev) =>
+            [
+              {
+                id: `${candidate.id}-${Date.now()}`,
+                timestamp: new Date().toISOString(),
+                title: candidate.title,
+                customId: candidate.customId,
+                score: data.analysis.score,
+                flagged: !!data.clickupStatusUpdate,
+                error: null,
+              },
+              ...prev,
+            ].slice(0, 20)
+          );
         } catch (err) {
           console.error("Erro na análise automática de card:", err);
+          setAutoAnalyzeLog((prev) =>
+            [
+              {
+                id: `${candidate.id}-${Date.now()}`,
+                timestamp: new Date().toISOString(),
+                title: candidate.title,
+                customId: candidate.customId,
+                score: null,
+                flagged: false,
+                error: err instanceof Error ? err.message : "Erro ao analisar atividade.",
+              },
+              ...prev,
+            ].slice(0, 20)
+          );
         }
       }
 
@@ -633,6 +663,8 @@ export function Dashboard() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AutoAnalyzeLog entries={autoAnalyzeLog} />
 
       <ProfessionalsManager commits={allCommits} onChange={fetchProfessionals} />
 

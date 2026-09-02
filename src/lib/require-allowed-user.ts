@@ -5,8 +5,12 @@ const allowedEmails = (process.env.ALLOWED_EMAILS ?? "")
   .map((email) => email.trim().toLowerCase())
   .filter(Boolean);
 
-export async function isAllowedUser(): Promise<boolean> {
+export async function getCurrentUserEmail(): Promise<string | null> {
   const user = await currentUser();
-  const email = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
+  return user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? null;
+}
+
+export async function isAllowedUser(): Promise<boolean> {
+  const email = await getCurrentUserEmail();
   return !!email && allowedEmails.includes(email);
 }
