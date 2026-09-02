@@ -11,10 +11,8 @@ export function ProjectsManager({ onChange }: { onChange: () => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [scopeDrafts, setScopeDrafts] = useState<Record<string, string>>({});
-  const [savingScope, setSavingScope] = useState<string | null>(null);
   const [removingProject, setRemovingProject] = useState<Project | null>(null);
 
   useEffect(() => {
@@ -23,35 +21,49 @@ export function ProjectsManager({ onChange }: { onChange: () => void }) {
       .then((data) => setProjects(data.projects));
   }, []);
 
-  async function handleAdd(e: React.FormEvent) {
+  function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || submitting) return;
+    if (!name.trim()) return;
 
-    setSubmitting(true);
     setError(null);
-    try {
-      const res = await fetch("/api/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() }),
+    const trimmedName = name.trim();
+    const tempId = `temp-${Date.now()}`;
+    const optimisticProject: Project = { id: tempId, name: trimmedName };
+
+    setProjects((prev) => [...(prev ?? []), optimisticProject]);
+    setName("");
+
+    fetch("/api/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmedName }),
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Erro ao cadastrar projeto.");
+        setProjects((prev) => (prev ?? []).map((p) => (p.id === tempId ? data.project : p)));
+        onChange();
+      })
+      .catch((err) => {
+        setProjects((prev) => (prev ?? []).filter((p) => p.id !== tempId));
+        setError(err instanceof Error ? err.message : "Erro ao cadastrar projeto.");
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Erro ao cadastrar projeto.");
-      setProjects((prev) => [...(prev ?? []), data.project]);
-      setName("");
-      onChange();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao cadastrar projeto.");
-    } finally {
-      setSubmitting(false);
-    }
   }
 
-  async function handleRemove(id: string) {
-    await fetch(`/api/projects/${id}`, { method: "DELETE" });
+  function handleRemove(id: string) {
+    const previous = projects;
     setProjects((prev) => (prev ?? []).filter((p) => p.id !== id));
     setRemovingProject(null);
-    onChange();
+
+    fetch(`/api/projects/${id}`, { method: "DELETE" })
+      .then((res) => {
+        if (!res.ok) throw new Error("Erro ao remover projeto.");
+        onChange();
+      })
+      .catch(() => {
+        setProjects(previous);
+        setError("Erro ao remover projeto.");
+      });
   }
 
   function toggleExpand(project: Project) {
@@ -63,21 +75,26 @@ export function ProjectsManager({ onChange }: { onChange: () => void }) {
     setScopeDrafts((prev) => ({ ...prev, [project.id]: prev[project.id] ?? project.scope ?? "" }));
   }
 
-  async function handleSaveScope(id: string) {
-    setSavingScope(id);
-    try {
-      const res = await fetch(`/api/projects/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scope: scopeDrafts[id] ?? "" }),
+  function handleSaveScope(id: string) {
+    const previous = projects;
+    const draft = scopeDrafts[id] ?? "";
+    setProjects((prev) => (prev ?? []).map((p) => (p.id === id ? { ...p, scope: draft } : p)));
+
+    fetch(`/api/projects/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scope: draft }),
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Erro ao salvar escopo.");
+        setProjects((prev) => (prev ?? []).map((p) => (p.id === id ? data.project : p)));
+        onChange();
+      })
+      .catch((err) => {
+        setProjects(previous);
+        setError(err instanceof Error ? err.message : "Erro ao salvar escopo.");
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Erro ao salvar escopo.");
-      setProjects((prev) => (prev ?? []).map((p) => (p.id === id ? data.project : p)));
-      onChange();
-    } finally {
-      setSavingScope(null);
-    }
   }
 
   return (
@@ -118,17 +135,16 @@ export function ProjectsManager({ onChange }: { onChange: () => void }) {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Nome do projeto (ex: Novafrota)"
-                  disabled={submitting}
                   className="min-w-0 flex-1 rounded-md border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 px-2.5 py-1.5 text-sm outline-none placeholder:text-black/30 dark:text-white/30 focus:border-black/30 dark:focus:border-white/30"
                 />
                 <motion.button
                   type="submit"
-                  disabled={submitting || !name.trim()}
-                  whileHover={!submitting ? { scale: 1.04 } : undefined}
-                  whileTap={!submitting ? { scale: 0.96 } : undefined}
+                  disabled={!name.trim()}
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
                   className="rounded-md bg-foreground px-3 py-1.5 text-sm font-medium text-background disabled:opacity-40"
                 >
-                  {submitting ? "adicionando..." : "adicionar"}
+                  adicionar
                 </motion.button>
               </form>
 
@@ -211,12 +227,11 @@ export function ProjectsManager({ onChange }: { onChange: () => void }) {
                                 />
                                 <motion.button
                                   onClick={() => handleSaveScope(project.id)}
-                                  disabled={savingScope === project.id}
-                                  whileHover={savingScope !== project.id ? { scale: 1.02 } : undefined}
-                                  whileTap={savingScope !== project.id ? { scale: 0.98 } : undefined}
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
                                   className="self-end rounded-md bg-foreground px-3 py-1.5 text-xs font-medium text-background disabled:opacity-40"
                                 >
-                                  {savingScope === project.id ? "salvando..." : "salvar escopo"}
+                                  salvar escopo
                                 </motion.button>
                               </div>
                             </motion.div>

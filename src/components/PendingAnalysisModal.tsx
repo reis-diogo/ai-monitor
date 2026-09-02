@@ -47,6 +47,7 @@ function PendingAnalysisRow({
           location: item.location,
           additions: item.additions,
           deletions: item.deletions,
+          status: item.status,
         }),
       });
       const data = await res.json();

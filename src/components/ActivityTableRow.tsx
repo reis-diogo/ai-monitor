@@ -66,6 +66,7 @@ export function ActivityTableRow({
           location: item.location,
           additions: item.additions,
           deletions: item.deletions,
+          status: item.status,
           force,
         }),
       });

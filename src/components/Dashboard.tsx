@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { UserButton } from "@clerk/nextjs";
+import { UserButton, useUser } from "@clerk/nextjs";
 import type {
   ActivityItem,
   AiProvider,
@@ -17,6 +17,7 @@ import type {
   RankingEntry,
 } from "@/lib/types";
 import { RepoManager } from "@/components/RepoManager";
+import { ActivityTerminal, type TerminalLogEntry } from "@/components/ActivityTerminal";
 import { ProviderToggle } from "@/components/ProviderToggle";
 import { ActivityTable } from "@/components/ActivityTable";
 import { Ranking } from "@/components/Ranking";
@@ -29,6 +30,7 @@ import { normalizeLocation } from "@/lib/normalize-location";
 import { resolveAuthorName } from "@/lib/normalize-author";
 import { getPresetRange, isWithinRange, type DatePreset } from "@/lib/date-range";
 import { timeAgo } from "@/lib/time-ago";
+import { truncate } from "@/lib/truncate";
 import { ExternalLinkIcon, RefreshIcon } from "@/components/icons";
 
 const REFRESH_COOLDOWN_MS = 10_000;
@@ -58,6 +60,8 @@ export function Dashboard() {
   const [repoPullRequests, setRepoPullRequests] = useState<
     { owner: string; name: string; pullRequests: PullRequestInfo[] }[]
   >([]);
+  const [terminalLog, setTerminalLog] = useState<TerminalLogEntry[]>([]);
+  const { user } = useUser();
 
   const fetchProjects = useCallback(async () => {
     const res = await fetch("/api/projects");
@@ -138,6 +142,8 @@ export function Dashboard() {
           location: item.location,
           additions: item.additions,
           deletions: item.deletions,
+          status: item.status,
+          force: true,
         }),
       });
       const data = await res.json();
@@ -207,13 +213,12 @@ export function Dashboard() {
     fetchActivity();
   }, [fetchActivity]);
 
-  const [, setRelativeTimeTick] = useState(0);
+  const [nowTick, setNowTick] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(
-      () => setRelativeTimeTick((tick) => tick + 1),
-      RELATIVE_TIME_TICK_MS
-    );
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNowTick(Date.now());
+    const interval = setInterval(() => setNowTick(Date.now()), RELATIVE_TIME_TICK_MS);
     return () => clearInterval(interval);
   }, []);
 
@@ -261,36 +266,25 @@ export function Dashboard() {
       statusColor: null,
     }));
 
-    const poProfessionals = professionals.filter((p) => p.role === "po" && p.clickupEmail);
-
     const taskItems: ActivityItem[] = clickupTasks
-      .map((task): ActivityItem | null => {
-        if (task.status.toLowerCase() === "concluído") return null;
-
-        const owner = poProfessionals.find(
-          (p) => p.clickupEmail?.toLowerCase() === task.authorEmail.toLowerCase()
-        );
-        if (!owner) return null;
-
-        return {
-          id: task.id,
-          source: "clickup",
-          customId: task.customId,
-          authorName: resolveAuthorName(owner.authorName, professionals),
-          authorAvatarUrl: task.authorAvatarUrl,
-          authorClickupId: task.authorClickupId,
-          title: task.name,
-          content: task.description,
-          url: task.url,
-          date: task.date,
-          location: normalizeLocation(task.location, projectNames),
-          additions: null,
-          deletions: null,
-          status: task.status,
-          statusColor: task.statusColor,
-        };
-      })
-      .filter((item): item is ActivityItem => item !== null);
+      .filter((task) => task.status.toLowerCase() !== "concluído")
+      .map((task): ActivityItem => ({
+        id: task.id,
+        source: "clickup",
+        customId: task.customId,
+        authorName: resolveAuthorName(task.authorName, professionals),
+        authorAvatarUrl: task.authorAvatarUrl,
+        authorClickupId: task.authorClickupId,
+        title: task.name,
+        content: task.description,
+        url: task.url,
+        date: task.date,
+        location: normalizeLocation(task.location, projectNames),
+        additions: null,
+        deletions: null,
+        status: task.status,
+        statusColor: task.statusColor,
+      }));
 
     return [...commitItems, ...taskItems];
   }, [allCommits, clickupTasks, professionals, projects]);
@@ -299,6 +293,7 @@ export function Dashboard() {
   const analyzedActivitiesRef = useRef(analyzedActivities);
   const providerRef = useRef(provider);
   const analyzeActivityItemRef = useRef(analyzeActivityItem);
+  const userEmailRef = useRef<string | null>(null);
 
   useEffect(() => {
     activityItemsRef.current = activityItems;
@@ -317,11 +312,33 @@ export function Dashboard() {
   }, [analyzeActivityItem]);
 
   useEffect(() => {
+    userEmailRef.current = user?.primaryEmailAddress?.emailAddress ?? null;
+  }, [user]);
+
+  useEffect(() => {
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout>;
+    const visitedIds = new Set<string>();
+
+    function pushLine(text: string, tone: TerminalLogEntry["tone"]) {
+      setTerminalLog((prev) =>
+        [...prev, { id: `${Date.now()}-${Math.random()}`, timestamp: new Date().toISOString(), text, tone }].slice(
+          -30
+        )
+      );
+    }
+
+    function sleep(ms: number) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
 
     async function tick() {
       if (cancelled) return;
+
+      pushLine(
+        'verificando cards em "para desenvolver" no ClickUp e atividades (commits de dev e cards de PO) ainda sem análise de IA...',
+        "info"
+      );
 
       const activeProvider = providerRef.current;
       const analyzedIds = new Set(
@@ -329,18 +346,86 @@ export function Dashboard() {
           .filter((record) => record.provider === activeProvider)
           .map((record) => record.id)
       );
-      const candidate = activityItemsRef.current.find(
+      const pendingItems = activityItemsRef.current.filter(
         (item) =>
-          item.source === "clickup" &&
-          item.status?.toLowerCase() === AUTO_ANALYZE_STATUS &&
+          (item.source === "clickup" && item.status?.toLowerCase() === AUTO_ANALYZE_STATUS) ||
           !analyzedIds.has(item.id)
       );
 
+      const pendingIds = new Set(pendingItems.map((item) => item.id));
+      for (const id of visitedIds) {
+        if (!pendingIds.has(id)) visitedIds.delete(id);
+      }
+
+      const candidate = pendingItems.find((item) => !visitedIds.has(item.id));
+
+      if (!candidate) {
+        await sleep(300);
+        if (pendingItems.length === 0) {
+          pushLine('nenhum card em "para desenvolver" ou atividade sem análise no momento', "info");
+        } else {
+          pushLine(
+            `todas as ${pendingItems.length} atividade(s) pendentes (cards em "para desenvolver" ou sem análise) já foram verificadas nesta sessão — aguardando novas pendências`,
+            "info"
+          );
+        }
+      }
+
       if (candidate) {
+        const label = candidate.customId ?? candidate.id.slice(0, 7);
+        const email = userEmailRef.current ?? "desconhecido";
+
+        pushLine(
+          `atividade encontrada: ${label} - "${truncate(candidate.title, 60)}" (projeto: ${candidate.location}, responsável: ${candidate.authorName}). iniciando análise de IA para avaliar a qualidade da entrega...`,
+          "info"
+        );
+        const isPendingDev = candidate.status?.toLowerCase() === AUTO_ANALYZE_STATUS;
+        await sleep(400);
+        pushLine(
+          isPendingDev
+            ? `requisição autenticada com o usuário logado (${email}) — este e-mail será registrado no comentário do ClickUp caso a nota fique abaixo do limite`
+            : candidate.source === "commit"
+              ? `requisição autenticada com o usuário logado (${email}) — é um commit de dev, então apenas a nota será registrada (sem comentário nem mudança de status no ClickUp)`
+              : `requisição autenticada com o usuário logado (${email}) — card fora de "para desenvolver" (status atual: "${candidate.status}"), então apenas a nota será registrada, sem comentário nem mudança de status`,
+          "info"
+        );
+
         try {
-          await analyzeActivityItemRef.current(candidate, activeProvider);
+          const data = await analyzeActivityItemRef.current(candidate, activeProvider);
+          visitedIds.add(candidate.id);
+          await sleep(300);
+          pushLine(
+            `análise concluída pela IA (${data.analysis.provider}): nota ${data.analysis.score}/10 — "${truncate(data.analysis.critique, 120)}"`,
+            "info"
+          );
+          await sleep(300);
+          if (data.clickupStatusUpdate && data.analysis.score < 7) {
+            pushLine(
+              `nota ${data.analysis.score}/10 está abaixo do limite mínimo (7 pontos): adicionando comentário com a crítica da IA, marcando ${candidate.authorName} e alterando o status do card de "para desenvolver" para "${data.clickupStatusUpdate}" no ClickUp...`,
+              "warning"
+            );
+            await sleep(300);
+            pushLine(`comentário publicado e status atualizado com sucesso no card ${label}`, "success");
+          } else if (data.clickupStatusUpdate) {
+            pushLine(
+              `nota ${data.analysis.score}/10 está dentro do esperado (≥ 7 pontos): alterando o status do card de "para desenvolver" para "${data.clickupStatusUpdate}" no ClickUp, para não ficar em looping nas próximas varreduras...`,
+              "success"
+            );
+            await sleep(300);
+            pushLine(`status atualizado com sucesso no card ${label}`, "success");
+          } else {
+            pushLine(
+              `nota ${data.analysis.score}/10 processada; nenhuma alteração de status foi necessária no card ${label}`,
+              "success"
+            );
+          }
         } catch (err) {
-          console.error("Erro na análise automática de card:", err);
+          console.warn("Falha na análise automática (será tentada novamente):", err);
+          await sleep(300);
+          pushLine(
+            `falha ao analisar ${label}: ${err instanceof Error ? err.message : "erro desconhecido"}. será tentado novamente numa próxima varredura`,
+            "error"
+          );
         }
       }
 
@@ -355,6 +440,24 @@ export function Dashboard() {
       clearTimeout(timeoutId);
     };
   }, []);
+
+  const pendingDevelopmentCount = useMemo(
+    () =>
+      activityItems.filter(
+        (item) => item.source === "clickup" && item.status?.toLowerCase() === AUTO_ANALYZE_STATUS
+      ).length,
+    [activityItems]
+  );
+
+  const doneLastHour = useMemo(() => {
+    const oneHourAgo = nowTick - 60 * 60 * 1000;
+    const counts = new Map<string, number>();
+    for (const record of analyzedActivities) {
+      if (new Date(record.analyzedAt).getTime() < oneHourAgo) continue;
+      counts.set(record.authorName, (counts.get(record.authorName) ?? 0) + 1);
+    }
+    return Array.from(counts.entries()).map(([authorName, count]) => ({ authorName, count }));
+  }, [analyzedActivities, nowTick]);
 
   const projectNames = useMemo(
     () => Array.from(new Set(activityItems.map((item) => item.location))).sort((a, b) => a.localeCompare(b)),
@@ -530,6 +633,12 @@ export function Dashboard() {
           </a>
         </div>
       </motion.header>
+
+      <ActivityTerminal
+        entries={terminalLog}
+        pendingCount={pendingDevelopmentCount}
+        doneLastHour={doneLastHour}
+      />
 
       {projectNames.length > 1 && (
         <motion.div

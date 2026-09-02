@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeActivity } from "@/lib/ai";
 import { getCachedAnalysis, setCachedAnalysis } from "@/lib/analysis-cache";
-import { isAllowedUser } from "@/lib/require-allowed-user";
+import { getCurrentUserEmail, isAllowedUser } from "@/lib/require-allowed-user";
 import { createTaskComment, updateTaskStatus } from "@/lib/clickup";
 import type { ActivitySource, AiProvider, AnalyzedActivityRecord } from "@/lib/types";
 
 const LOW_SCORE_THRESHOLD = 7;
-const REFINE_STATUS = "para refinar";
+const PENDING_DEV_STATUS = "para desenvolver";
+const REFINE_STATUS = "refinar po";
+const DEV_RELEASED_STATUS = "dev liberado";
 
 function parseProvider(value: unknown): AiProvider {
   if (value === "openai" || value === "gemini") return value;
@@ -25,8 +27,13 @@ function numOrNull(value: unknown): number | null {
   return typeof value === "number" ? value : null;
 }
 
-async function flagLowScoreClickupTask(record: AnalyzedActivityRecord, mentionUserId: number | null) {
-  const comment = `Análise de IA (${record.score}/10): ${record.critique}`;
+async function flagLowScoreClickupTask(
+  record: AnalyzedActivityRecord,
+  mentionUserId: number | null,
+  performedByEmail: string | null
+) {
+  const registeredBy = performedByEmail ? `\n\nRegistrado por: ${performedByEmail}` : "";
+  const comment = `Análise de IA (${record.score}/10): ${record.critique}${registeredBy}`;
   await Promise.all([
     createTaskComment(record.id, comment, mentionUserId),
     updateTaskStatus(record.id, REFINE_STATUS),
@@ -81,13 +88,23 @@ export async function POST(request: NextRequest) {
     await setCachedAnalysis(provider, id, record);
 
     let clickupStatusUpdate: string | null = null;
-    if (source === "clickup" && record.score < LOW_SCORE_THRESHOLD) {
-      const mentionUserId = typeof body?.authorClickupId === "number" ? body.authorClickupId : null;
-      try {
-        await flagLowScoreClickupTask(record, mentionUserId);
-        clickupStatusUpdate = REFINE_STATUS;
-      } catch (clickupError) {
-        console.error("Erro ao sinalizar tarefa no ClickUp:", clickupError);
+    if (source === "clickup" && str(body?.status).toLowerCase() === PENDING_DEV_STATUS) {
+      if (record.score < LOW_SCORE_THRESHOLD) {
+        const mentionUserId = typeof body?.authorClickupId === "number" ? body.authorClickupId : null;
+        try {
+          const performedByEmail = await getCurrentUserEmail();
+          await flagLowScoreClickupTask(record, mentionUserId, performedByEmail);
+          clickupStatusUpdate = REFINE_STATUS;
+        } catch (clickupError) {
+          console.error("Erro ao sinalizar tarefa no ClickUp:", clickupError);
+        }
+      } else {
+        try {
+          await updateTaskStatus(record.id, DEV_RELEASED_STATUS);
+          clickupStatusUpdate = DEV_RELEASED_STATUS;
+        } catch (clickupError) {
+          console.error("Erro ao liberar tarefa no ClickUp:", clickupError);
+        }
       }
     }
 

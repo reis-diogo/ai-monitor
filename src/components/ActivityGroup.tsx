@@ -58,6 +58,8 @@ export function ActivityGroup({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [showPendingTasks, setShowPendingTasks] = useState(false);
+  const [showRefiningTasks, setShowRefiningTasks] = useState(false);
+  const [showDevReleasedTasks, setShowDevReleasedTasks] = useState(false);
   const [showPendingPrs, setShowPendingPrs] = useState(false);
   const [showPendingAnalysis, setShowPendingAnalysis] = useState(false);
   const pendingPrCount = pendingPullRequests.length;
@@ -88,6 +90,14 @@ export function ActivityGroup({
     (item) => item.source === "clickup" && item.status?.toLowerCase() === "para desenvolver"
   );
   const pendingTaskCount = pendingTaskItems.length;
+  const refiningTaskItems = items.filter(
+    (item) => item.source === "clickup" && item.status?.toLowerCase() === "refinar po"
+  );
+  const refiningTaskCount = refiningTaskItems.length;
+  const devReleasedTaskItems = items.filter(
+    (item) => item.source === "clickup" && item.status?.toLowerCase() === "dev liberado"
+  );
+  const devReleasedTaskCount = devReleasedTaskItems.length;
 
   async function handleAnalyzeScope(force = false) {
     if (!matchingProject) return;
@@ -149,6 +159,34 @@ export function ActivityGroup({
             >
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" />
               {pendingTaskCount} para desenvolver
+            </button>
+          )}
+
+          {refiningTaskCount > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowRefiningTasks(true);
+              }}
+              className="flex items-center gap-1 rounded-full border border-rose-400/30 bg-rose-400/10 px-2 py-0.5 font-medium text-rose-700 dark:text-rose-300 hover:bg-rose-400/20"
+              title={`${refiningTaskCount} tarefa${refiningTaskCount > 1 ? "s" : ""} com status "refinar po"`}
+            >
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-400" />
+              {refiningTaskCount} refinar po
+            </button>
+          )}
+
+          {devReleasedTaskCount > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDevReleasedTasks(true);
+              }}
+              className="flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-400/20"
+              title={`${devReleasedTaskCount} tarefa${devReleasedTaskCount > 1 ? "s" : ""} com status "dev liberado"`}
+            >
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+              {devReleasedTaskCount} dev liberado
             </button>
           )}
 
@@ -330,6 +368,18 @@ export function ActivityGroup({
       <PendingTasksModal
         items={showPendingTasks ? pendingTaskItems : null}
         onClose={() => setShowPendingTasks(false)}
+      />
+
+      <PendingTasksModal
+        items={showRefiningTasks ? refiningTaskItems : null}
+        onClose={() => setShowRefiningTasks(false)}
+        label="refinar po"
+      />
+
+      <PendingTasksModal
+        items={showDevReleasedTasks ? devReleasedTaskItems : null}
+        onClose={() => setShowDevReleasedTasks(false)}
+        label="dev liberado"
       />
 
       <PendingPullRequestsModal
