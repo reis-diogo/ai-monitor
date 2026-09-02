@@ -34,7 +34,6 @@ export function ProfessionalsManager({
   const [newRole, setNewRole] = useState<ProfessionalRole>("po");
   const [newEmail, setNewEmail] = useState("");
   const [newAvatarUrl, setNewAvatarUrl] = useState("");
-  const [adding, setAdding] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -54,19 +53,43 @@ export function ProfessionalsManager({
       .then((data) => setProfessionals(data.professionals));
   }, []);
 
-  async function handleSetRole(
+  function handleSetRole(
     authorName: string,
     role: ProfessionalRole,
     extra?: { clickupEmail?: string; avatarUrl?: string }
   ) {
-    const res = await fetch("/api/professionals", {
+    const previous = professionals;
+    const existing = professionals?.find((p) => p.authorName === authorName);
+    const optimisticProfessional: Professional = {
+      authorName,
+      role,
+      aliases: existing?.aliases,
+      clickupEmail: extra?.clickupEmail ?? existing?.clickupEmail,
+      avatarUrl: extra?.avatarUrl ?? existing?.avatarUrl,
+    };
+
+    setProfessionals((prev) => {
+      const list = prev ?? [];
+      const idx = list.findIndex((p) => p.authorName === authorName);
+      if (idx === -1) return [...list, optimisticProfessional];
+      return list.map((p, i) => (i === idx ? optimisticProfessional : p));
+    });
+
+    fetch("/api/professionals", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ authorName, role, ...extra }),
-    });
-    const data = await res.json();
-    setProfessionals(data.professionals);
-    onChange();
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Erro ao salvar profissional.");
+        setProfessionals(data.professionals);
+        onChange();
+      })
+      .catch((err) => {
+        setProfessionals(previous);
+        setAvatarError(err instanceof Error ? err.message : "Erro ao salvar profissional.");
+      });
   }
 
   function triggerUpload(target: "new" | string) {
@@ -96,7 +119,7 @@ export function ProfessionalsManager({
         setNewAvatarUrl(url);
       } else {
         const professional = professionals?.find((p) => p.authorName === target);
-        await handleSetRole(target, professional?.role ?? "dev", {
+        handleSetRole(target, professional?.role ?? "dev", {
           clickupEmail: professional?.clickupEmail,
           avatarUrl: url,
         });
@@ -107,55 +130,81 @@ export function ProfessionalsManager({
     setUploadTarget(null);
   }
 
-  async function handleAddAlias(authorName: string) {
+  function handleAddAlias(authorName: string) {
     if (!aliasDraft.trim()) return;
+    const alias = aliasDraft.trim();
     setAliasError(null);
-    const res = await fetch("/api/professionals/alias", {
+    const previous = professionals;
+
+    setProfessionals((prev) =>
+      (prev ?? []).map((p) =>
+        p.authorName === authorName ? { ...p, aliases: [...(p.aliases ?? []), alias] } : p
+      )
+    );
+    setAliasDraft("");
+
+    fetch("/api/professionals/alias", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ authorName, alias: aliasDraft.trim() }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setAliasError(data.error ?? "Erro ao adicionar apelido.");
-      return;
-    }
-    setProfessionals(data.professionals);
-    setAliasDraft("");
-    onChange();
+      body: JSON.stringify({ authorName, alias }),
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Erro ao adicionar apelido.");
+        setProfessionals(data.professionals);
+        onChange();
+      })
+      .catch((err) => {
+        setProfessionals(previous);
+        setAliasError(err instanceof Error ? err.message : "Erro ao adicionar apelido.");
+      });
   }
 
-  async function handleSaveEmail(authorName: string) {
+  function handleSaveEmail(authorName: string) {
     const professional = professionals?.find((p) => p.authorName === authorName);
-    await handleSetRole(authorName, professional?.role ?? "po", {
+    handleSetRole(authorName, professional?.role ?? "po", {
       clickupEmail: emailDraft.trim() || undefined,
       avatarUrl: professional?.avatarUrl,
     });
     setEmailEditingFor(null);
   }
 
-  async function handleRemoveAlias(authorName: string, alias: string) {
-    const res = await fetch("/api/professionals/alias", {
+  function handleRemoveAlias(authorName: string, alias: string) {
+    const previous = professionals;
+    setProfessionals((prev) =>
+      (prev ?? []).map((p) =>
+        p.authorName === authorName
+          ? { ...p, aliases: (p.aliases ?? []).filter((a) => a !== alias) }
+          : p
+      )
+    );
+
+    fetch("/api/professionals/alias", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ authorName, alias }),
-    });
-    const data = await res.json();
-    setProfessionals(data.professionals);
-    onChange();
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error("Erro ao remover apelido.");
+        setProfessionals(data.professionals);
+        onChange();
+      })
+      .catch(() => {
+        setProfessionals(previous);
+        setAliasError("Erro ao remover apelido.");
+      });
   }
 
-  async function handleAdd() {
+  function handleAdd() {
     if (!newName.trim()) return;
-    setAdding(true);
-    await handleSetRole(newName.trim(), newRole, {
+    handleSetRole(newName.trim(), newRole, {
       clickupEmail: newEmail.trim() || undefined,
       avatarUrl: newAvatarUrl.trim() || undefined,
     });
     setNewName("");
     setNewEmail("");
     setNewAvatarUrl("");
-    setAdding(false);
   }
 
   const aliasedRawNames = new Set(
@@ -261,9 +310,9 @@ export function ProfessionalsManager({
                   <RoleToggle groupId="new-professional" value={newRole} onChange={setNewRole} />
                   <motion.button
                     onClick={handleAdd}
-                    disabled={adding || !newName.trim()}
-                    whileHover={!adding ? { scale: 1.04 } : undefined}
-                    whileTap={!adding ? { scale: 0.96 } : undefined}
+                    disabled={!newName.trim()}
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.96 }}
                     className="rounded-md bg-foreground px-3 py-1.5 text-sm font-medium text-background disabled:opacity-40"
                   >
                     adicionar

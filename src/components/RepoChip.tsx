@@ -11,8 +11,7 @@ export function RepoChip({
   repo: RegisteredRepo;
   onRemove: (id: string) => void;
 }) {
-  async function handleRemove() {
-    await fetch(`/api/repos/${repo.id}`, { method: "DELETE" });
+  function handleRemove() {
     onRemove(repo.id);
   }
 
