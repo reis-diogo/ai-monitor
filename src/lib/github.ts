@@ -82,6 +82,7 @@ type GitHubPullRequestListItem = {
   title: string;
   html_url: string;
   user: { login?: string } | null;
+  head: { ref: string };
 };
 
 export async function fetchOpenPullRequests(
@@ -97,6 +98,7 @@ export async function fetchOpenPullRequests(
     title: pr.title,
     url: pr.html_url,
     authorName: pr.user?.login ?? null,
+    branchName: pr.head.ref,
   }));
 }
 

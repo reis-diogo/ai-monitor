@@ -3,6 +3,7 @@ export type PullRequestInfo = {
   title: string;
   url: string;
   authorName: string | null;
+  branchName: string;
 };
 
 export type RegisteredRepo = {
