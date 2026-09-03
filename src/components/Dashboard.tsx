@@ -38,6 +38,9 @@ const RELATIVE_TIME_TICK_MS = 30_000;
 const PROVIDER_STORAGE_KEY = "getnow:ai-provider";
 const AUTO_ANALYZE_INTERVAL_MS = 30_000;
 const AUTO_ANALYZE_STATUS = "para desenvolver";
+const PR_MONITOR_INTERVAL_MS = 30_000;
+const CLICKUP_ID_REGEX = /CLICKUP-\d+/i;
+const QA_STATUS = "em qa";
 
 type Status = "loading" | "ready" | "error";
 
@@ -294,6 +297,8 @@ export function Dashboard() {
   const providerRef = useRef(provider);
   const analyzeActivityItemRef = useRef(analyzeActivityItem);
   const userEmailRef = useRef<string | null>(null);
+  const clickupTasksRef = useRef(clickupTasks);
+  const updateClickupTaskStatusRef = useRef(updateClickupTaskStatus);
 
   useEffect(() => {
     activityItemsRef.current = activityItems;
@@ -310,6 +315,14 @@ export function Dashboard() {
   useEffect(() => {
     analyzeActivityItemRef.current = analyzeActivityItem;
   }, [analyzeActivityItem]);
+
+  useEffect(() => {
+    clickupTasksRef.current = clickupTasks;
+  }, [clickupTasks]);
+
+  useEffect(() => {
+    updateClickupTaskStatusRef.current = updateClickupTaskStatus;
+  }, [updateClickupTaskStatus]);
 
   useEffect(() => {
     userEmailRef.current = user?.primaryEmailAddress?.emailAddress ?? null;
@@ -435,6 +448,89 @@ export function Dashboard() {
     }
 
     timeoutId = setTimeout(tick, AUTO_ANALYZE_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const processedPrKeys = new Set<string>();
+
+    function pushLine(text: string, tone: TerminalLogEntry["tone"]) {
+      setTerminalLog((prev) =>
+        [...prev, { id: `${Date.now()}-${Math.random()}`, timestamp: new Date().toISOString(), text, tone }].slice(
+          -30
+        )
+      );
+    }
+
+    async function tick() {
+      if (cancelled) return;
+
+      try {
+        const res = await fetch("/api/repos/pending-prs");
+        const data = await res.json();
+        const repoPRs: { owner: string; name: string; pullRequests: PullRequestInfo[] }[] =
+          data.repoPullRequests ?? [];
+        setRepoPullRequests(repoPRs);
+
+        for (const repo of repoPRs) {
+          for (const pr of repo.pullRequests) {
+            if (cancelled) return;
+            const key = `${repo.owner}/${repo.name}#${pr.number}`;
+            if (processedPrKeys.has(key)) continue;
+            processedPrKeys.add(key);
+
+            const match = pr.title.match(CLICKUP_ID_REGEX) ?? pr.branchName.match(CLICKUP_ID_REGEX);
+            if (!match) continue;
+
+            const customId = match[0].toUpperCase();
+            const task = clickupTasksRef.current.find(
+              (t) => t.customId?.toUpperCase() === customId
+            );
+            if (!task || task.status.toLowerCase() === QA_STATUS) continue;
+
+            pushLine(
+              `PR aberto #${pr.number} "${truncate(pr.title, 60)}" (${repo.owner}/${repo.name}) referencia o card ${customId} — alterando status para "${QA_STATUS}" no ClickUp...`,
+              "info"
+            );
+
+            try {
+              const putRes = await fetch(`/api/clickup/tasks/${task.id}/status`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: QA_STATUS }),
+              });
+              if (!putRes.ok) throw new Error("Erro ao atualizar status da tarefa.");
+              updateClickupTaskStatusRef.current(task.id, QA_STATUS);
+              await sleep(200);
+              pushLine(`status do card ${customId} atualizado para "${QA_STATUS}" com sucesso`, "success");
+            } catch (err) {
+              console.warn("Falha ao mover card para em qa a partir do PR:", err);
+              pushLine(
+                `falha ao alterar status do card ${customId}: ${err instanceof Error ? err.message : "erro desconhecido"}`,
+                "error"
+              );
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Falha ao buscar PRs abertos para monitoramento:", err);
+      }
+
+      if (!cancelled) {
+        timeoutId = setTimeout(tick, PR_MONITOR_INTERVAL_MS);
+      }
+    }
+
+    function sleep(ms: number) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    timeoutId = setTimeout(tick, PR_MONITOR_INTERVAL_MS);
     return () => {
       cancelled = true;
       clearTimeout(timeoutId);
