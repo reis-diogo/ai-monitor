@@ -60,6 +60,7 @@ export function ActivityGroup({
   const [showPendingTasks, setShowPendingTasks] = useState(false);
   const [showRefiningTasks, setShowRefiningTasks] = useState(false);
   const [showDevReleasedTasks, setShowDevReleasedTasks] = useState(false);
+  const [showQaTasks, setShowQaTasks] = useState(false);
   const [showPendingPrs, setShowPendingPrs] = useState(false);
   const [showPendingAnalysis, setShowPendingAnalysis] = useState(false);
   const pendingPrCount = pendingPullRequests.length;
@@ -98,6 +99,10 @@ export function ActivityGroup({
     (item) => item.source === "clickup" && item.status?.toLowerCase() === "dev liberado"
   );
   const devReleasedTaskCount = devReleasedTaskItems.length;
+  const qaTaskItems = items.filter(
+    (item) => item.source === "clickup" && item.status?.toLowerCase() === "em qa"
+  );
+  const qaTaskCount = qaTaskItems.length;
 
   async function handleAnalyzeScope(force = false) {
     if (!matchingProject) return;
@@ -187,6 +192,20 @@ export function ActivityGroup({
             >
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
               {devReleasedTaskCount} dev liberado
+            </button>
+          )}
+
+          {qaTaskCount > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowQaTasks(true);
+              }}
+              className="flex items-center gap-1 rounded-full border border-orange-400/30 bg-orange-400/10 px-2 py-0.5 font-medium text-orange-700 dark:text-orange-300 hover:bg-orange-400/20"
+              title={`${qaTaskCount} tarefa${qaTaskCount > 1 ? "s" : ""} com status "em qa"`}
+            >
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400" />
+              {qaTaskCount} em qa
             </button>
           )}
 
@@ -380,6 +399,12 @@ export function ActivityGroup({
         items={showDevReleasedTasks ? devReleasedTaskItems : null}
         onClose={() => setShowDevReleasedTasks(false)}
         label="dev liberado"
+      />
+
+      <PendingTasksModal
+        items={showQaTasks ? qaTaskItems : null}
+        onClose={() => setShowQaTasks(false)}
+        label="em qa"
       />
 
       <PendingPullRequestsModal
