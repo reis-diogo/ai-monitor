@@ -17,7 +17,11 @@ import type {
 } from "@/lib/types";
 import { RepoManager } from "@/components/RepoManager";
 import { FlowLog, type FlowLogEntry } from "@/components/FlowLog";
-import { CardsOpenedChart } from "@/components/CardsOpenedChart";
+import {
+  CardsOpenedChart,
+  type ActivityDayDatum,
+  type PersonCount,
+} from "@/components/CardsOpenedChart";
 import type { ChartConfig } from "@/components/ui/chart";
 import { ProviderToggle } from "@/components/ProviderToggle";
 import { ActivityTable } from "@/components/ActivityTable";
@@ -604,29 +608,76 @@ export function Dashboard() {
   );
 
   const activityByDay = useMemo(() => {
-    const countsByDay = new Map<string, { cards: number; commits: number }>();
+    const palette = [
+      "#FE2B77",
+      "#8B5CF6",
+      "#22c55e",
+      "#eab308",
+      "#38bdf8",
+      "#f97316",
+      "#a855f7",
+      "#14b8a6",
+      "#f43f5e",
+      "#0ea5e9",
+    ];
+    const slugify = (value: string) =>
+      value
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "") || "desconhecido";
+
+    const projectBySlug = new Map<string, string>();
+    const countsByDay = new Map<string, Record<string, number>>();
+    const breakdownByDay = new Map<string, Map<string, Map<string, PersonCount>>>();
 
     for (const item of filteredActivityItems) {
       const day = item.date?.slice(0, 10);
       if (!day) continue;
 
-      const entry = countsByDay.get(day) ?? { cards: 0, commits: 0 };
-      if (item.source === "clickup") {
-        entry.cards += 1;
+      const projectSlug = slugify(item.location);
+      projectBySlug.set(projectSlug, item.location);
+
+      const dayCounts = countsByDay.get(day) ?? {};
+      dayCounts[projectSlug] = (dayCounts[projectSlug] ?? 0) + 1;
+      countsByDay.set(day, dayCounts);
+
+      const dayBreakdown = breakdownByDay.get(day) ?? new Map<string, Map<string, PersonCount>>();
+      const projectPeople = dayBreakdown.get(projectSlug) ?? new Map<string, PersonCount>();
+      const personSlug = slugify(item.authorName);
+      const existing = projectPeople.get(personSlug);
+      if (existing) {
+        existing.count += 1;
+        if (!existing.avatarUrl && item.authorAvatarUrl) existing.avatarUrl = item.authorAvatarUrl;
       } else {
-        entry.commits += 1;
+        projectPeople.set(personSlug, {
+          name: item.authorName,
+          avatarUrl: item.authorAvatarUrl,
+          count: 1,
+        });
       }
-      countsByDay.set(day, entry);
+      dayBreakdown.set(projectSlug, projectPeople);
+      breakdownByDay.set(day, dayBreakdown);
     }
 
-    const data = Array.from(countsByDay.entries())
+    const data: ActivityDayDatum[] = Array.from(countsByDay.entries())
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, counts]) => ({ date, ...counts }));
+      .map(([date, counts]) => {
+        const dayBreakdown = breakdownByDay.get(date);
+        const breakdown: Record<string, PersonCount[]> = {};
+        if (dayBreakdown) {
+          for (const [projectSlug, peopleMap] of dayBreakdown.entries()) {
+            breakdown[projectSlug] = Array.from(peopleMap.values()).sort((a, b) => b.count - a.count);
+          }
+        }
+        return { date, ...counts, __breakdown: breakdown };
+      });
 
-    const config: ChartConfig = {
-      cards: { label: "PO", color: "#FE2B77" },
-      commits: { label: "DEV", color: "#38bdf8" },
-    };
+    const config: ChartConfig = {};
+    Array.from(projectBySlug.entries()).forEach(([slug, name], index) => {
+      config[slug] = { label: name, color: palette[index % palette.length] };
+    });
 
     return { data, config };
   }, [filteredActivityItems]);
