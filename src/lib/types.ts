@@ -116,13 +116,6 @@ export type Professional = {
   aliases?: string[];
 };
 
-export type RankingEntry = {
-  authorName: string;
-  avatarUrl: string | null;
-  averageScore: number;
-  analyzedCount: number;
-};
-
 export type ProjectScopeAnalysis = {
   score: number;
   critique: string;

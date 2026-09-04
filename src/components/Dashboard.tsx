@@ -14,14 +14,13 @@ import type {
   Professional,
   Project,
   PullRequestInfo,
-  RankingEntry,
 } from "@/lib/types";
 import { RepoManager } from "@/components/RepoManager";
 import { FlowLog, type FlowLogEntry } from "@/components/FlowLog";
+import { CardsOpenedChart } from "@/components/CardsOpenedChart";
+import type { ChartConfig } from "@/components/ui/chart";
 import { ProviderToggle } from "@/components/ProviderToggle";
 import { ActivityTable } from "@/components/ActivityTable";
-import { Ranking } from "@/components/Ranking";
-import { ProjectRanking } from "@/components/ProjectRanking";
 import { ProfessionalsManager } from "@/components/ProfessionalsManager";
 import { ProjectsManager } from "@/components/ProjectsManager";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
@@ -604,52 +603,41 @@ export function Dashboard() {
     [resolvedAnalyzedActivities, dateRange, projectFilter]
   );
 
-  const projectFilteredAnalyzedActivities = useMemo(
-    () =>
-      resolvedAnalyzedActivities.filter(
-        (record) => !projectFilter || record.location === projectFilter
-      ),
-    [resolvedAnalyzedActivities, projectFilter]
-  );
+  const cardsOpenedByDay = useMemo(() => {
+    const palette = ["#FE2B77", "#8B5CF6", "#22c55e", "#eab308", "#38bdf8", "#f97316", "#a855f7", "#14b8a6"];
+    const authorNameBySlug = new Map<string, string>();
+    const countsByDay = new Map<string, Record<string, number>>();
 
-  const buildRanking = useCallback(
-    (role: "dev" | "po"): RankingEntry[] => {
-      const expectedSource = role === "dev" ? "commit" : "clickup";
-      const roleProfessionals = professionals.filter((p) => p.role === role);
-      const authorNames = Array.from(
-        new Set(roleProfessionals.map((p) => resolveAuthorName(p.authorName, professionals)))
-      );
+    for (const item of filteredActivityItems) {
+      if (item.source !== "clickup") continue;
+      const day = item.date?.slice(0, 10);
+      if (!day) continue;
 
-      return authorNames
-        .map((authorName): RankingEntry | null => {
-          const scores = filteredAnalyzedActivities.filter(
-            (record) =>
-              record.provider === provider &&
-              record.authorName === authorName &&
-              record.source === expectedSource
-          );
-          if (scores.length === 0) return null;
+      const slug =
+        item.authorName
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[̀-ͯ]/g, "")
+          .replace(/[^a-z0-9]+/g, "_")
+          .replace(/^_+|_+$/g, "") || "desconhecido";
+      authorNameBySlug.set(slug, item.authorName);
 
-          const avatarUrl =
-            roleProfessionals.find(
-              (p) => resolveAuthorName(p.authorName, professionals) === authorName && p.avatarUrl
-            )?.avatarUrl ??
-            filteredActivityItems.find((item) => item.authorName === authorName)
-              ?.authorAvatarUrl ??
-            null;
-          const averageScore =
-            scores.reduce((sum, record) => sum + record.score, 0) / scores.length;
+      const dayEntry = countsByDay.get(day) ?? {};
+      dayEntry[slug] = (dayEntry[slug] ?? 0) + 1;
+      countsByDay.set(day, dayEntry);
+    }
 
-          return { authorName, avatarUrl, averageScore, analyzedCount: scores.length };
-        })
-        .filter((entry): entry is RankingEntry => entry !== null)
-        .sort((a, b) => b.averageScore - a.averageScore);
-    },
-    [professionals, filteredAnalyzedActivities, provider, filteredActivityItems]
-  );
+    const data = Array.from(countsByDay.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, counts]) => ({ date, ...counts }));
 
-  const devRanking = useMemo(() => buildRanking("dev"), [buildRanking]);
-  const poRanking = useMemo(() => buildRanking("po"), [buildRanking]);
+    const config: ChartConfig = {};
+    Array.from(authorNameBySlug.entries()).forEach(([slug, name], index) => {
+      config[slug] = { label: name, color: palette[index % palette.length] };
+    });
+
+    return { data, config };
+  }, [filteredActivityItems]);
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-16">
@@ -808,26 +796,7 @@ export function Dashboard() {
           </motion.p>
         ) : (
           <motion.div key="content" className="flex flex-col gap-8">
-            <Ranking
-              title="Ranking · Devs"
-              entries={devRanking}
-              analyzedActivities={projectFilteredAnalyzedActivities}
-            />
-
-            <Ranking
-              title="Ranking · PO's"
-              entries={poRanking}
-              analyzedActivities={projectFilteredAnalyzedActivities}
-            />
-
-            <ProjectRanking
-              entries={projectAnalyses.filter(
-                (record) =>
-                  record.provider === provider &&
-                  projects.some((p) => p.id === record.projectId) &&
-                  (!projectFilter || record.projectName === projectFilter)
-              )}
-            />
+            <CardsOpenedChart data={cardsOpenedByDay.data} config={cardsOpenedByDay.config} />
 
             <ActivityTable
               items={filteredActivityItems}
