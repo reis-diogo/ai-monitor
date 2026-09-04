@@ -17,7 +17,7 @@ import type {
   RankingEntry,
 } from "@/lib/types";
 import { RepoManager } from "@/components/RepoManager";
-import { ActivityTerminal, type TerminalLogEntry } from "@/components/ActivityTerminal";
+import { FlowLog, type FlowLogEntry } from "@/components/FlowLog";
 import { ProviderToggle } from "@/components/ProviderToggle";
 import { ActivityTable } from "@/components/ActivityTable";
 import { Ranking } from "@/components/Ranking";
@@ -63,7 +63,7 @@ export function Dashboard() {
   const [repoPullRequests, setRepoPullRequests] = useState<
     { owner: string; name: string; pullRequests: PullRequestInfo[] }[]
   >([]);
-  const [terminalLog, setTerminalLog] = useState<TerminalLogEntry[]>([]);
+  const [flowLog, setFlowLog] = useState<FlowLogEntry[]>([]);
   const { user } = useUser();
 
   const fetchProjects = useCallback(async () => {
@@ -324,8 +324,18 @@ export function Dashboard() {
     updateClickupTaskStatusRef.current = updateClickupTaskStatus;
   }, [updateClickupTaskStatus]);
 
+  const actorInitialsRef = useRef("··");
+
   useEffect(() => {
     userEmailRef.current = user?.primaryEmailAddress?.emailAddress ?? null;
+    const name = user?.fullName?.trim() || userEmailRef.current || "";
+    const parts = name.split(/[\s.@]+/).filter(Boolean);
+    actorInitialsRef.current =
+      parts.length >= 2
+        ? (parts[0][0] + parts[1][0]).toUpperCase()
+        : parts.length === 1
+          ? parts[0].slice(0, 2).toUpperCase()
+          : "··";
   }, [user]);
 
   useEffect(() => {
@@ -333,25 +343,35 @@ export function Dashboard() {
     let timeoutId: ReturnType<typeof setTimeout>;
     const visitedIds = new Set<string>();
 
-    function pushLine(text: string, tone: TerminalLogEntry["tone"]) {
-      setTerminalLog((prev) =>
-        [...prev, { id: `${Date.now()}-${Math.random()}`, timestamp: new Date().toISOString(), text, tone }].slice(
-          -30
-        )
+    function startEntry(description: string): string {
+      const id = `${Date.now()}-${Math.random()}`;
+      setFlowLog((prev) =>
+        [
+          ...prev,
+          {
+            id,
+            startedAt: Date.now(),
+            agent: "Analisador de IA",
+            description,
+            actorInitials: actorInitialsRef.current,
+            status: "running" as const,
+          },
+        ].slice(-60)
       );
+      return id;
     }
 
-    function sleep(ms: number) {
-      return new Promise((resolve) => setTimeout(resolve, ms));
+    function finishEntry(
+      id: string,
+      patch: { status: "ok" | "error"; description?: string; metric?: string }
+    ) {
+      setFlowLog((prev) =>
+        prev.map((entry) => (entry.id === id ? { ...entry, ...patch, finishedAt: Date.now() } : entry))
+      );
     }
 
     async function tick() {
       if (cancelled) return;
-
-      pushLine(
-        'verificando cards em "para desenvolver" no ClickUp e atividades (commits de dev e cards de PO) ainda sem análise de IA...',
-        "info"
-      );
 
       const activeProvider = providerRef.current;
       const analyzedIds = new Set(
@@ -372,73 +392,40 @@ export function Dashboard() {
 
       const candidate = pendingItems.find((item) => !visitedIds.has(item.id));
 
-      if (!candidate) {
-        await sleep(300);
-        if (pendingItems.length === 0) {
-          pushLine('nenhum card em "para desenvolver" ou atividade sem análise no momento', "info");
-        } else {
-          pushLine(
-            `todas as ${pendingItems.length} atividade(s) pendentes (cards em "para desenvolver" ou sem análise) já foram verificadas nesta sessão — aguardando novas pendências`,
-            "info"
-          );
-        }
-      }
-
       if (candidate) {
         const label = candidate.customId ?? candidate.id.slice(0, 7);
-        const email = userEmailRef.current ?? "desconhecido";
-
-        pushLine(
-          `atividade encontrada: ${label} - "${truncate(candidate.title, 60)}" (projeto: ${candidate.location}, responsável: ${candidate.authorName}). iniciando análise de IA para avaliar a qualidade da entrega...`,
-          "info"
-        );
-        const isPendingDev = candidate.status?.toLowerCase() === AUTO_ANALYZE_STATUS;
-        await sleep(400);
-        pushLine(
-          isPendingDev
-            ? `requisição autenticada com o usuário logado (${email}) — este e-mail será registrado no comentário do ClickUp caso a nota fique abaixo do limite`
-            : candidate.source === "commit"
-              ? `requisição autenticada com o usuário logado (${email}) — é um commit de dev, então apenas a nota será registrada (sem comentário nem mudança de status no ClickUp)`
-              : `requisição autenticada com o usuário logado (${email}) — card fora de "para desenvolver" (status atual: "${candidate.status}"), então apenas a nota será registrada, sem comentário nem mudança de status`,
-          "info"
-        );
+        const entryId = startEntry(`Analisando ${label} - "${truncate(candidate.title, 60)}"`);
 
         try {
           const data = await analyzeActivityItemRef.current(candidate, activeProvider);
           visitedIds.add(candidate.id);
-          await sleep(300);
-          pushLine(
-            `análise concluída pela IA (${data.analysis.provider}): nota ${data.analysis.score}/10 — "${truncate(data.analysis.critique, 120)}"`,
-            "info"
-          );
-          await sleep(300);
+          const metric = `${data.analysis.score}/10`;
+
           if (data.clickupStatusUpdate && data.analysis.score < 7) {
-            pushLine(
-              `nota ${data.analysis.score}/10 está abaixo do limite mínimo (7 pontos): adicionando comentário com a crítica da IA, marcando ${candidate.authorName} e alterando o status do card de "para desenvolver" para "${data.clickupStatusUpdate}" no ClickUp...`,
-              "warning"
-            );
-            await sleep(300);
-            pushLine(`comentário publicado e status atualizado com sucesso no card ${label}`, "success");
+            finishEntry(entryId, {
+              status: "ok",
+              description: `${label}: nota abaixo do limite — comentário adicionado e status alterado para "${data.clickupStatusUpdate}"`,
+              metric,
+            });
           } else if (data.clickupStatusUpdate) {
-            pushLine(
-              `nota ${data.analysis.score}/10 está dentro do esperado (≥ 7 pontos): alterando o status do card de "para desenvolver" para "${data.clickupStatusUpdate}" no ClickUp, para não ficar em looping nas próximas varreduras...`,
-              "success"
-            );
-            await sleep(300);
-            pushLine(`status atualizado com sucesso no card ${label}`, "success");
+            finishEntry(entryId, {
+              status: "ok",
+              description: `${label}: nota dentro do esperado — status alterado para "${data.clickupStatusUpdate}"`,
+              metric,
+            });
           } else {
-            pushLine(
-              `nota ${data.analysis.score}/10 processada; nenhuma alteração de status foi necessária no card ${label}`,
-              "success"
-            );
+            finishEntry(entryId, {
+              status: "ok",
+              description: `${label}: nota registrada, nenhuma alteração de status necessária`,
+              metric,
+            });
           }
         } catch (err) {
           console.warn("Falha na análise automática (será tentada novamente):", err);
-          await sleep(300);
-          pushLine(
-            `falha ao analisar ${label}: ${err instanceof Error ? err.message : "erro desconhecido"}. será tentado novamente numa próxima varredura`,
-            "error"
-          );
+          finishEntry(entryId, {
+            status: "error",
+            description: `falha ao analisar ${label}: ${err instanceof Error ? err.message : "erro desconhecido"}`,
+          });
         }
       }
 
@@ -459,11 +446,28 @@ export function Dashboard() {
     let timeoutId: ReturnType<typeof setTimeout>;
     const processedPrKeys = new Set<string>();
 
-    function pushLine(text: string, tone: TerminalLogEntry["tone"]) {
-      setTerminalLog((prev) =>
-        [...prev, { id: `${Date.now()}-${Math.random()}`, timestamp: new Date().toISOString(), text, tone }].slice(
-          -30
-        )
+    function startEntry(description: string, metric?: string): string {
+      const id = `${Date.now()}-${Math.random()}`;
+      setFlowLog((prev) =>
+        [
+          ...prev,
+          {
+            id,
+            startedAt: Date.now(),
+            agent: "Monitor de PR",
+            description,
+            metric,
+            actorInitials: actorInitialsRef.current,
+            status: "running" as const,
+          },
+        ].slice(-60)
+      );
+      return id;
+    }
+
+    function finishEntry(id: string, patch: { status: "ok" | "error"; description?: string }) {
+      setFlowLog((prev) =>
+        prev.map((entry) => (entry.id === id ? { ...entry, ...patch, finishedAt: Date.now() } : entry))
       );
     }
 
@@ -493,9 +497,9 @@ export function Dashboard() {
             );
             if (!task || task.status.toLowerCase() === QA_STATUS) continue;
 
-            pushLine(
-              `PR aberto #${pr.number} "${truncate(pr.title, 60)}" (${repo.owner}/${repo.name}) referencia o card ${customId} — alterando status para "${QA_STATUS}" no ClickUp...`,
-              "info"
+            const entryId = startEntry(
+              `PR #${pr.number} (${repo.owner}/${repo.name}) referencia ${customId} — movendo para "${QA_STATUS}"`,
+              `#${pr.number}`
             );
 
             try {
@@ -506,14 +510,16 @@ export function Dashboard() {
               });
               if (!putRes.ok) throw new Error("Erro ao atualizar status da tarefa.");
               updateClickupTaskStatusRef.current(task.id, QA_STATUS);
-              await sleep(200);
-              pushLine(`status do card ${customId} atualizado para "${QA_STATUS}" com sucesso`, "success");
+              finishEntry(entryId, {
+                status: "ok",
+                description: `${customId} movido para "${QA_STATUS}" (PR #${pr.number})`,
+              });
             } catch (err) {
               console.warn("Falha ao mover card para em qa a partir do PR:", err);
-              pushLine(
-                `falha ao alterar status do card ${customId}: ${err instanceof Error ? err.message : "erro desconhecido"}`,
-                "error"
-              );
+              finishEntry(entryId, {
+                status: "error",
+                description: `falha ao mover ${customId} para "${QA_STATUS}": ${err instanceof Error ? err.message : "erro desconhecido"}`,
+              });
             }
           }
         }
@@ -524,10 +530,6 @@ export function Dashboard() {
       if (!cancelled) {
         timeoutId = setTimeout(tick, PR_MONITOR_INTERVAL_MS);
       }
-    }
-
-    function sleep(ms: number) {
-      return new Promise((resolve) => setTimeout(resolve, ms));
     }
 
     timeoutId = setTimeout(tick, PR_MONITOR_INTERVAL_MS);
@@ -655,10 +657,15 @@ export function Dashboard() {
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+        className="dark relative flex flex-col gap-3 overflow-hidden rounded-2xl bg-[#180A1B] px-6 py-8 sm:flex-row sm:items-start sm:justify-between sm:px-8"
       >
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold">Weenow 360</h1>
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-20 -top-28 h-72 w-72 rounded-full bg-[#FE2B77] opacity-25 blur-3xl" />
+          <div className="absolute -bottom-24 right-0 h-80 w-80 rounded-full bg-[#52193C] opacity-60 blur-3xl" />
+        </div>
+
+        <div className="relative flex flex-col gap-2">
+          <h1 className="text-2xl font-semibold text-foreground">Weenow 360</h1>
           <div className="flex items-center gap-2 text-xs text-black/40 dark:text-white/40">
             <StatusDot status={status} />
             <AnimatePresence mode="wait" initial={false}>
@@ -713,7 +720,7 @@ export function Dashboard() {
           </motion.button>
         </div>
 
-        <div className="flex flex-col items-end gap-2">
+        <div className="relative flex flex-col items-end gap-2">
           <div className="flex items-center gap-2">
             <ProviderToggle value={provider} onChange={handleProviderChange} />
             <UserButton />
@@ -730,8 +737,8 @@ export function Dashboard() {
         </div>
       </motion.header>
 
-      <ActivityTerminal
-        entries={terminalLog}
+      <FlowLog
+        entries={flowLog}
         pendingCount={pendingDevelopmentCount}
         doneLastHour={doneLastHour}
       />
