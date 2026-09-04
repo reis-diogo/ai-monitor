@@ -6,11 +6,11 @@ import { motion, AnimatePresence } from "motion/react";
 import { ChevronIcon } from "@/components/icons";
 
 const STATUS_OPTIONS = [
-  { value: "em qa", label: "Em QA" },
-  { value: "dev liberado", label: "Dev liberado" },
-  { value: "refinar po", label: "Refinar PO" },
   { value: "bug", label: "Bug" },
+  { value: "dev liberado", label: "Dev liberado" },
+  { value: "em qa", label: "Em QA" },
   { value: "pr_pendente", label: "PR pendente" },
+  { value: "refinar po", label: "Refinar PO" },
 ];
 
 export function StatusValueFilter({
