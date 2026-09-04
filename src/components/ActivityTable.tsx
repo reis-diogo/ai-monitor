@@ -118,10 +118,12 @@ export function ActivityTable({
       layout
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] p-5"
+      className="rounded-xl border border-border bg-card p-5 font-mono dark:shadow-lg dark:shadow-black/40"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-black/60 dark:text-white/60">Atividades ({filteredItems.length})</p>
+        <p className="text-sm text-muted-foreground dark:text-[#ffd9e8]/70">
+          Atividades ({filteredItems.length})
+        </p>
         <div className="flex flex-wrap items-center gap-2">
           <ActivityRoleFilter
             value={roleFilter}

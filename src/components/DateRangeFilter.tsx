@@ -34,13 +34,13 @@ export function DateRangeFilter({
             key={option.value}
             onClick={() => onChange(option.value)}
             className={`relative rounded-full px-3 py-1.5 font-medium transition-colors ${
-              value === option.value ? "text-background" : "text-foreground/50"
+              value === option.value ? "text-primary-foreground" : "text-foreground/50"
             }`}
           >
             {value === option.value && (
               <motion.span
                 layoutId="date-filter-pill"
-                className="absolute inset-0 rounded-full bg-foreground"
+                className="absolute inset-0 rounded-full bg-primary"
                 transition={{ type: "spring", stiffness: 500, damping: 34 }}
               />
             )}

@@ -99,20 +99,20 @@ export function StatusMenu({
               transition={{ duration: 0.12 }}
               onClick={(e) => e.stopPropagation()}
               style={{ position: "fixed", top: menuPosition.top, left: menuPosition.left }}
-              className="z-50 flex min-w-[170px] flex-col gap-0.5 rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-950 p-1 shadow-xl"
+              className="z-50 flex min-w-[170px] flex-col gap-0.5 rounded-lg border border-border bg-popover p-1 shadow-xl"
             >
               {statuses.map((s) => (
                 <button
                   key={s.status}
                   onClick={() => handleSelect(s.status)}
-                  className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-[11px] text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5"
+                  className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-[11px] text-foreground/80 hover:bg-accent"
                 >
                   <span
                     className="h-1.5 w-1.5 shrink-0 rounded-full"
                     style={{ backgroundColor: s.color }}
                   />
                   <span className="truncate">{s.status}</span>
-                  {s.status === status && <span className="ml-auto text-black/30 dark:text-white/30">✓</span>}
+                  {s.status === status && <span className="ml-auto text-muted-foreground">✓</span>}
                 </button>
               ))}
             </motion.div>

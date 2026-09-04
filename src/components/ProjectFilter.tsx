@@ -16,13 +16,13 @@ export function ProjectFilter({
       <button
         onClick={() => onChange(null)}
         className={`relative rounded-full px-3 py-1.5 font-medium transition-colors ${
-          value === null ? "text-background" : "text-foreground/50"
+          value === null ? "text-primary-foreground" : "text-foreground/50"
         }`}
       >
         {value === null && (
           <motion.span
             layoutId="project-filter-pill"
-            className="absolute inset-0 rounded-full bg-foreground"
+            className="absolute inset-0 rounded-full bg-primary"
             transition={{ type: "spring", stiffness: 500, damping: 34 }}
           />
         )}
@@ -34,13 +34,13 @@ export function ProjectFilter({
           key={project}
           onClick={() => onChange(project)}
           className={`relative rounded-full px-3 py-1.5 font-medium transition-colors ${
-            value === project ? "text-background" : "text-foreground/50"
+            value === project ? "text-primary-foreground" : "text-foreground/50"
           }`}
         >
           {value === project && (
             <motion.span
               layoutId="project-filter-pill"
-              className="absolute inset-0 rounded-full bg-foreground"
+              className="absolute inset-0 rounded-full bg-primary"
               transition={{ type: "spring", stiffness: 500, damping: 34 }}
             />
           )}

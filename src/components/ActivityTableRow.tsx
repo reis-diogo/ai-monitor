@@ -90,7 +90,7 @@ export function ActivityTableRow({
         layout
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="border-t border-black/5 dark:border-white/5"
+        className="border-t border-border/60"
       >
         <td className="py-2 pr-3">
           <div className="flex items-center gap-2">
@@ -102,16 +102,16 @@ export function ActivityTableRow({
                 className="h-5 w-5 rounded-full"
               />
             ) : (
-              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-black/10 dark:bg-white/10 text-[9px] font-medium">
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[9px] font-medium">
                 {item.authorName.slice(0, 2).toUpperCase()}
               </div>
             )}
-            <span className="text-black/70 dark:text-white/70">{item.authorName}</span>
+            <span className="text-foreground/80">{item.authorName}</span>
           </div>
         </td>
-        <td className="py-2 pr-3 text-black/80 dark:text-white/80">
+        <td className="py-2 pr-3 text-foreground">
           {item.source === "commit" ? (
-            <span className="font-mono text-black/40 dark:text-white/40">{item.id.slice(0, 7)}</span>
+            <span className="font-mono text-muted-foreground">{item.id.slice(0, 7)}</span>
           ) : (
             <button
               onClick={() => setShowDetail(true)}
@@ -124,7 +124,7 @@ export function ActivityTableRow({
             </button>
           )}
         </td>
-        {showLocation && <td className="py-2 pr-3 text-black/50 dark:text-white/50">{item.location}</td>}
+        {showLocation && <td className="py-2 pr-3 text-muted-foreground">{item.location}</td>}
         <td className="py-2 pr-3">
           {item.source === "clickup" && item.status && item.statusColor ? (
             <StatusMenu
@@ -135,7 +135,7 @@ export function ActivityTableRow({
               onOptimisticChange={(next) => onStatusUpdate?.(item.id, next)}
             />
           ) : (
-            <span className="text-black/20 dark:text-white/20">—</span>
+            <span className="text-muted-foreground/50">—</span>
           )}
         </td>
         <td className="py-2 pr-3 font-mono">
@@ -145,7 +145,7 @@ export function ActivityTableRow({
               <span className="text-red-400">-{item.deletions}</span>
             </>
           ) : (
-            <span className="text-black/20 dark:text-white/20">—</span>
+            <span className="text-muted-foreground/50">—</span>
           )}
         </td>
         <td className="py-2 pr-3">
@@ -167,7 +167,7 @@ export function ActivityTableRow({
                 whileHover={status !== "loading" ? { scale: 1.1 } : undefined}
                 whileTap={status !== "loading" ? { scale: 0.9 } : undefined}
                 title="Reavaliar"
-                className="flex h-4 w-4 items-center justify-center text-black/30 dark:text-white/30 hover:text-black/70 dark:hover:text-white/70 disabled:opacity-40"
+                className="flex h-4 w-4 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-40"
               >
                 <motion.span
                   className="flex items-center justify-center"
@@ -188,7 +188,7 @@ export function ActivityTableRow({
               disabled={status === "loading"}
               whileHover={status !== "loading" ? { scale: 1.04 } : undefined}
               whileTap={status !== "loading" ? { scale: 0.96 } : undefined}
-              className="flex items-center gap-1.5 rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-black/60 dark:text-white/60 hover:border-black/30 dark:hover:border-white/30 disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-muted-foreground hover:border-primary/40 disabled:opacity-40"
             >
               <AiIcon size={11} />
               {status === "loading"
@@ -201,11 +201,11 @@ export function ActivityTableRow({
         </td>
         <td
           onClick={() => analysis && onSelect(analysis)}
-          className={`py-2 pr-3 text-black/60 dark:text-white/60 ${analysis ? "cursor-pointer hover:underline" : ""}`}
+          className={`py-2 pr-3 text-muted-foreground ${analysis ? "cursor-pointer hover:underline" : ""}`}
         >
           {analysis ? truncate(analysis.intent, 10) : "—"}
         </td>
-        <td className="py-2 text-black/30 dark:text-white/30">
+        <td className="py-2 text-muted-foreground">
           {analysis ? PROVIDER_LABEL[analysis.provider] : "—"}
         </td>
       </motion.tr>

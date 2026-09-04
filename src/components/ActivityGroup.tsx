@@ -16,10 +16,8 @@ import { scoreColor } from "@/lib/score-color";
 import { ScoreIcon } from "@/components/ScoreIcon";
 import { AiIcon } from "@/components/AiIcon";
 import { ChevronIcon, PullRequestIcon, RefreshIcon } from "@/components/icons";
-import { timeAgo } from "@/lib/time-ago";
 import { PendingTasksModal } from "@/components/PendingTasksModal";
 import { PendingPullRequestsModal } from "@/components/PendingPullRequestsModal";
-import { PendingAnalysisModal } from "@/components/PendingAnalysisModal";
 
 type ScopeStatus = "idle" | "loading" | "error";
 
@@ -62,7 +60,6 @@ export function ActivityGroup({
   const [showDevReleasedTasks, setShowDevReleasedTasks] = useState(false);
   const [showQaTasks, setShowQaTasks] = useState(false);
   const [showPendingPrs, setShowPendingPrs] = useState(false);
-  const [showPendingAnalysis, setShowPendingAnalysis] = useState(false);
   const pendingPrCount = pendingPullRequests.length;
   const [scopeStatus, setScopeStatus] = useState<ScopeStatus>("idle");
   const [scopeError, setScopeError] = useState<string | null>(null);
@@ -76,17 +73,8 @@ export function ActivityGroup({
       ? analyzedScores.reduce((sum, score) => sum + score, 0) / analyzedScores.length
       : null;
 
-  const lastActivityDate = items.reduce<string | null>((latest, item) => {
-    if (!latest) return item.date;
-    return new Date(item.date) > new Date(latest) ? item.date : latest;
-  }, null);
-
   const commitCount = items.filter((item) => item.source === "commit").length;
   const taskCount = items.length - commitCount;
-  const pendingAnalysisItems = items.filter(
-    (item) => !analyzedMap.has(`${provider}:${item.id}`)
-  );
-  const pendingCount = pendingAnalysisItems.length;
   const pendingTaskItems = items.filter(
     (item) => item.source === "clickup" && item.status?.toLowerCase() === "para desenvolver"
   );
@@ -128,8 +116,15 @@ export function ActivityGroup({
     }
   }
 
+  const needsAttention = pendingTaskCount > 0 || refiningTaskCount > 0;
+
   return (
-    <motion.div layout className="rounded-lg border border-black/5 dark:border-white/5 bg-black/[0.01] dark:bg-white/[0.01]">
+    <motion.div
+      layout
+      className={`rounded-lg border-y border-r bg-card ${
+        needsAttention ? "border-l-2 border-l-[#FE2B77] border-y-border/60 border-r-border/60" : "border-l border-border/60"
+      }`}
+    >
       <div
         role="button"
         tabIndex={0}
@@ -140,14 +135,14 @@ export function ActivityGroup({
             setOpen((v) => !v);
           }
         }}
-        className="flex w-full flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs text-black/60 dark:text-white/60"
+        className="flex w-full flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs text-muted-foreground"
       >
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium text-black/80 dark:text-white/80">
-            {project} <span className="font-normal text-black/30 dark:text-white/30">({items.length})</span>
+          <span className="font-medium text-foreground">
+            {project} <span className="font-normal text-muted-foreground">({items.length})</span>
           </span>
 
-          <span className="text-black/30 dark:text-white/30">
+          <span className="text-muted-foreground">
             {commitCount > 0 && `${commitCount} commit${commitCount > 1 ? "s" : ""}`}
             {commitCount > 0 && taskCount > 0 && " · "}
             {taskCount > 0 && `${taskCount} tarefa${taskCount > 1 ? "s" : ""}`}
@@ -223,23 +218,6 @@ export function ActivityGroup({
             </button>
           )}
 
-          {pendingCount > 0 ? (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowPendingAnalysis(true);
-              }}
-              className="flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-400/20"
-            >
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
-              {pendingCount} pendente{pendingCount > 1 ? "s" : ""} de análise
-            </button>
-          ) : (
-            <span className="text-black/30 dark:text-white/30">
-              {analyzedScores.length}/{items.length} analisados
-            </span>
-          )}
-
           {averageScore !== null && (
             <span
               className="flex items-center gap-1 rounded-full px-2 py-0.5 font-mono font-medium"
@@ -250,15 +228,12 @@ export function ActivityGroup({
             </span>
           )}
 
-          {lastActivityDate && (
-            <span className="text-black/30 dark:text-white/30">última atividade {timeAgo(lastActivityDate)}</span>
-          )}
         </div>
 
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          className="flex h-4 w-4 shrink-0 items-center justify-center text-black/30 dark:text-white/30"
+          className="flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground"
         >
           <ChevronIcon />
         </motion.span>
@@ -276,7 +251,7 @@ export function ActivityGroup({
             {matchingProject && (
               <div
                 onClick={(e) => e.stopPropagation()}
-                className="flex flex-wrap items-center gap-2 border-t border-black/5 dark:border-white/5 px-3 py-2"
+                className="flex flex-wrap items-center gap-2 border-t border-border/60 px-3 py-2"
               >
                 {projectAnalysis ? (
                   <>
@@ -297,7 +272,7 @@ export function ActivityGroup({
                       whileHover={scopeStatus !== "loading" ? { scale: 1.1 } : undefined}
                       whileTap={scopeStatus !== "loading" ? { scale: 0.9 } : undefined}
                       title="Reavaliar escopo"
-                      className="flex h-4 w-4 items-center justify-center text-black/30 dark:text-white/30 hover:text-black/70 dark:hover:text-white/70 disabled:opacity-40"
+                      className="flex h-4 w-4 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-40"
                     >
                       <motion.span
                         className="flex items-center justify-center"
@@ -318,7 +293,7 @@ export function ActivityGroup({
                     disabled={scopeStatus === "loading"}
                     whileHover={scopeStatus !== "loading" ? { scale: 1.04 } : undefined}
                     whileTap={scopeStatus !== "loading" ? { scale: 0.96 } : undefined}
-                    className="flex items-center gap-1.5 rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-[11px] text-black/60 dark:text-white/60 hover:border-black/30 dark:hover:border-white/30 disabled:opacity-40"
+                    className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground hover:border-primary/40 disabled:opacity-40"
                   >
                     <AiIcon size={11} />
                     {scopeStatus === "loading"
@@ -328,7 +303,7 @@ export function ActivityGroup({
                         : "analisar escopo do projeto"}
                   </motion.button>
                 ) : (
-                  <span className="text-[11px] text-black/20 dark:text-white/20">
+                  <span className="text-[11px] text-muted-foreground/50">
                     defina o escopo do projeto em &quot;Projetos&quot; para habilitar a análise
                   </span>
                 )}
@@ -351,7 +326,7 @@ export function ActivityGroup({
             <div className="overflow-x-auto px-3 pb-3">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="text-black/30 dark:text-white/30">
+                  <tr className="text-muted-foreground">
                     <th className="pb-2 pr-3 font-normal">autor</th>
                     <th className="pb-2 pr-3 font-normal">item</th>
                     <th className="pb-2 pr-3 font-normal">status</th>
@@ -412,13 +387,6 @@ export function ActivityGroup({
         onClose={() => setShowPendingPrs(false)}
       />
 
-      <PendingAnalysisModal
-        items={showPendingAnalysis ? pendingAnalysisItems : null}
-        provider={provider}
-        onClose={() => setShowPendingAnalysis(false)}
-        onAnalyzed={() => onActivityAnalyzed()}
-        onStatusUpdate={onTaskStatusUpdate}
-      />
     </motion.div>
   );
 }
