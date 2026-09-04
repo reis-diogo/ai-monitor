@@ -657,7 +657,7 @@ export function Dashboard() {
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="dark relative flex flex-col gap-3 overflow-hidden rounded-2xl bg-[#180A1B] px-6 py-8 sm:flex-row sm:items-start sm:justify-between sm:px-8"
+        className="dark relative flex flex-col gap-3 overflow-hidden rounded-2xl bg-[#0F0713] px-6 py-8 sm:flex-row sm:items-start sm:justify-between sm:px-8"
       >
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -left-20 -top-28 h-72 w-72 rounded-full bg-[#FE2B77] opacity-25 blur-3xl" />

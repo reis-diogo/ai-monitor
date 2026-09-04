@@ -85,7 +85,7 @@ export function FlowLog({
   const totalDoneLastHour = doneLastHour.reduce((sum, d) => sum + d.count, 0);
 
   return (
-    <div className="w-full overflow-hidden rounded-xl border border-[#FE2B77]/20 bg-gradient-to-b from-[#52193C]/60 to-[#180A1B] font-mono shadow-lg shadow-black/40 backdrop-blur-xl">
+    <div className="w-full overflow-hidden rounded-xl border border-[#FE2B77]/20 bg-gradient-to-b from-[#52193C]/60 to-[#0F0713] font-mono shadow-lg shadow-black/40 backdrop-blur-xl">
       <div className="flex items-center justify-between border-b border-[#FE2B77]/20 px-4 py-3 text-[12px] tracking-wide">
         <span className="text-[#ffd9e8]/60">
           FLUXO DE ACIONAMENTOS <span className="ml-2 font-semibold text-[#ffd9e8]">atualiza a cada 30s</span>
