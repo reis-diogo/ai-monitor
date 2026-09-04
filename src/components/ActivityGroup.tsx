@@ -64,15 +64,6 @@ export function ActivityGroup({
   const [scopeStatus, setScopeStatus] = useState<ScopeStatus>("idle");
   const [scopeError, setScopeError] = useState<string | null>(null);
 
-  const analyzedScores = items
-    .map((item) => analyzedMap.get(`${provider}:${item.id}`)?.score)
-    .filter((score): score is number => score !== undefined);
-
-  const averageScore =
-    analyzedScores.length > 0
-      ? analyzedScores.reduce((sum, score) => sum + score, 0) / analyzedScores.length
-      : null;
-
   const commitCount = items.filter((item) => item.source === "commit").length;
   const taskCount = items.length - commitCount;
   const pendingTaskItems = items.filter(
@@ -216,16 +207,6 @@ export function ActivityGroup({
               <PullRequestIcon size={11} />
               {pendingPrCount} PR{pendingPrCount > 1 ? "s" : ""} pendente{pendingPrCount > 1 ? "s" : ""}
             </button>
-          )}
-
-          {averageScore !== null && (
-            <span
-              className="flex items-center gap-1 rounded-full px-2 py-0.5 font-mono font-medium"
-              style={{ color: scoreColor(averageScore).color, backgroundColor: scoreColor(averageScore).bg }}
-            >
-              <ScoreIcon score={averageScore} size={11} />
-              {averageScore.toFixed(1)}/10
-            </span>
           )}
 
         </div>

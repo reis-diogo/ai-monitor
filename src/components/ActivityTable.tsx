@@ -16,6 +16,7 @@ import { CommitAnalysisModal } from "@/components/CommitAnalysisModal";
 import { ProjectScopeAnalysisModal } from "@/components/ProjectScopeAnalysisModal";
 import { AuthorFilter, type AuthorFilterOption } from "@/components/AuthorFilter";
 import { ActivityRoleFilter } from "@/components/ActivityRoleFilter";
+import { StatusValueFilter } from "@/components/StatusValueFilter";
 import { ActivityGroup } from "@/components/ActivityGroup";
 
 export function ActivityTable({
@@ -49,6 +50,7 @@ export function ActivityTable({
   );
   const [authorFilter, setAuthorFilter] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<ActivitySource | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
 
   const analyzedMap = useMemo(() => {
     const map = new Map<string, AnalyzedActivityRecord>();
@@ -89,8 +91,12 @@ export function ActivityTable({
     ).values()
   ).sort((a, b) => a.name.localeCompare(b.name));
 
-  const filteredItems = roleFilteredItems.filter(
+  const authorFilteredItems = roleFilteredItems.filter(
     (item) => !authorFilter || item.authorName === authorFilter
+  );
+
+  const filteredItems = authorFilteredItems.filter(
+    (item) => statusFilter.length === 0 || (item.status && statusFilter.includes(item.status.toLowerCase()))
   );
 
   const groups = useMemo(() => {
@@ -135,6 +141,7 @@ export function ActivityTable({
           {authors.length > 1 && (
             <AuthorFilter authors={authors} value={authorFilter} onChange={setAuthorFilter} />
           )}
+          <StatusValueFilter value={statusFilter} onChange={setStatusFilter} />
         </div>
       </div>
 
