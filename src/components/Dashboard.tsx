@@ -624,8 +624,8 @@ export function Dashboard() {
       .map(([date, counts]) => ({ date, ...counts }));
 
     const config: ChartConfig = {
-      cards: { label: "Cards abertos (PO's)", color: "#FE2B77" },
-      commits: { label: "Commits (Devs)", color: "#38bdf8" },
+      cards: { label: "PO", color: "#FE2B77" },
+      commits: { label: "DEV", color: "#38bdf8" },
     };
 
     return { data, config };
