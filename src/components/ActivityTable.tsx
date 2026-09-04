@@ -95,9 +95,13 @@ export function ActivityTable({
     (item) => !authorFilter || item.authorName === authorFilter
   );
 
-  const filteredItems = authorFilteredItems.filter(
-    (item) => statusFilter.length === 0 || (item.status && statusFilter.includes(item.status.toLowerCase()))
-  );
+  const filteredItems = authorFilteredItems.filter((item) => {
+    if (statusFilter.length === 0) return true;
+    const matchesStatus = !!item.status && statusFilter.includes(item.status.toLowerCase());
+    const matchesPendingPr =
+      statusFilter.includes("pr_pendente") && (pendingPrsByProject.get(item.location)?.length ?? 0) > 0;
+    return matchesStatus || matchesPendingPr;
+  });
 
   const groups = useMemo(() => {
     const map = new Map<string, ActivityItem[]>();

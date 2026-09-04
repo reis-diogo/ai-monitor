@@ -10,6 +10,7 @@ const STATUS_OPTIONS = [
   { value: "dev liberado", label: "Dev liberado" },
   { value: "refinar po", label: "Refinar PO" },
   { value: "bug", label: "Bug" },
+  { value: "pr_pendente", label: "PR pendente" },
 ];
 
 export function StatusValueFilter({
