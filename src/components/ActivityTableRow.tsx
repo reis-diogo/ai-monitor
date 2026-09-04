@@ -151,6 +151,16 @@ export function ActivityTableRow({
         <td className="py-2 pr-3">
           {analysis ? (
             <div className="flex items-center gap-1.5">
+              <span
+                className="flex items-center gap-1 rounded-full px-2 py-0.5 font-mono font-medium"
+                style={{
+                  color: scoreColor(analysis.score).color,
+                  backgroundColor: scoreColor(analysis.score).bg,
+                }}
+              >
+                <ScoreIcon score={analysis.score} size={11} />
+                {analysis.score}/10
+              </span>
               <motion.button
                 onClick={() => handleAnalyze(true)}
                 disabled={status === "loading"}
