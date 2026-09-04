@@ -21,6 +21,11 @@ export type ActivityDayDatum = {
   [projectSlug: string]: number | string | Record<string, PersonCount[]>;
 };
 
+function parseDayKey(value: string): Date {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, (month ?? 1) - 1, day ?? 1);
+}
+
 function ActivityTooltip({
   active,
   payload,
@@ -37,7 +42,7 @@ function ActivityTooltip({
   const breakdown =
     (payload[0] as unknown as { payload?: ActivityDayDatum })?.payload?.__breakdown ?? {};
   const dateLabel = label
-    ? new Date(label).toLocaleDateString("pt-BR", { day: "2-digit", month: "long" })
+    ? parseDayKey(label).toLocaleDateString("pt-BR", { day: "2-digit", month: "long" })
     : "";
 
   return (
@@ -118,7 +123,7 @@ export function CardsOpenedChart({
               axisLine={false}
               tickMargin={8}
               tickFormatter={(value: string) =>
-                new Date(value).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
+                parseDayKey(value).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
               }
             />
             <ChartTooltip content={<ActivityTooltip config={config} />} />

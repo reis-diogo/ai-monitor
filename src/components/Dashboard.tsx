@@ -633,8 +633,12 @@ export function Dashboard() {
     const breakdownByDay = new Map<string, Map<string, Map<string, PersonCount>>>();
 
     for (const item of filteredActivityItems) {
-      const day = item.date?.slice(0, 10);
-      if (!day) continue;
+      if (!item.date) continue;
+      const itemDate = new Date(item.date);
+      if (Number.isNaN(itemDate.getTime())) continue;
+      const day = `${itemDate.getFullYear()}-${String(itemDate.getMonth() + 1).padStart(2, "0")}-${String(
+        itemDate.getDate()
+      ).padStart(2, "0")}`;
 
       const projectSlug = slugify(item.location);
       projectBySlug.set(projectSlug, item.location);
