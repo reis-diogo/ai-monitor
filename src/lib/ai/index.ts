@@ -6,10 +6,13 @@ import {
   ActivityAnalysisSchema,
   COMMIT_SYSTEM_PROMPT,
   PO_TASK_SYSTEM_PROMPT,
+  DifficultyAnalysisSchema,
+  DIFFICULTY_SYSTEM_PROMPT,
   ProjectScopeAnalysisSchema,
   PROJECT_SCOPE_SYSTEM_PROMPT,
   buildCommitUserPrompt,
   buildPoTaskUserPrompt,
+  buildDifficultyUserPrompt,
   buildProjectScopeUserPrompt,
 } from "@/lib/ai/schema";
 
@@ -37,6 +40,25 @@ export async function analyzeActivity(
         : await analyzeWithAnthropic({ systemPrompt, userPrompt, schema: ActivityAnalysisSchema });
 
   return { ...result, provider };
+}
+
+export async function analyzeDifficulty(
+  provider: AiProvider,
+  params: { title: string; content: string }
+): Promise<{ difficulty: number; reasoning: string }> {
+  const systemPrompt = DIFFICULTY_SYSTEM_PROMPT;
+  const userPrompt = buildDifficultyUserPrompt({ title: params.title, description: params.content });
+
+  return provider === "openai"
+    ? await analyzeWithOpenAI({
+        systemPrompt,
+        userPrompt,
+        schema: DifficultyAnalysisSchema,
+        schemaName: "difficulty_analysis",
+      })
+    : provider === "gemini"
+      ? await analyzeWithGemini({ systemPrompt, userPrompt, schema: DifficultyAnalysisSchema })
+      : await analyzeWithAnthropic({ systemPrompt, userPrompt, schema: DifficultyAnalysisSchema });
 }
 
 export async function analyzeProjectScope(

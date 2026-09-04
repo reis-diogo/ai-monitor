@@ -17,6 +17,8 @@ type AnalysisCacheRow = {
   additions: number | null;
   deletions: number | null;
   analyzed_at: string;
+  difficulty: number | null;
+  difficulty_reasoning: string | null;
 };
 
 function rowToRecord(row: AnalysisCacheRow): AnalyzedActivityRecord {
@@ -36,6 +38,8 @@ function rowToRecord(row: AnalysisCacheRow): AnalyzedActivityRecord {
     additions: row.additions,
     deletions: row.deletions,
     analyzedAt: row.analyzed_at,
+    difficulty: row.difficulty,
+    difficultyReasoning: row.difficulty_reasoning,
   };
 }
 
@@ -75,6 +79,8 @@ export async function setCachedAnalysis(
     additions: record.additions,
     deletions: record.deletions,
     analyzed_at: record.analyzedAt,
+    difficulty: record.difficulty ?? null,
+    difficulty_reasoning: record.difficultyReasoning ?? null,
   };
 
   const { error } = await getSupabase()

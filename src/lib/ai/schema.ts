@@ -55,6 +55,39 @@ export function buildPoTaskUserPrompt(params: { title: string; description: stri
   }`;
 }
 
+export const DifficultyAnalysisSchema = z.object({
+  difficulty: z
+    .number()
+    .int()
+    .min(0)
+    .max(10)
+    .describe(
+      "Grau de dificuldade técnica estimado para implementar a atividade, de 0 (trivial) a 10 (muito complexa)."
+    ),
+  reasoning: z
+    .string()
+    .describe("Justificativa curta e direta do grau de dificuldade atribuído."),
+});
+
+export const DIFFICULTY_SYSTEM_PROMPT = `Você é um arquiteto de software sênior estimando, para um diretor de engenharia, o grau de dificuldade técnica de implementar uma atividade (tarefa) já aprovada e pronta para desenvolvimento.
+
+A atividade já passou pelo crivo de qualidade — o texto está bem definido, então avalie apenas a dificuldade técnica real de implementá-la, não a qualidade da redação.
+
+Dê uma nota de 0 a 10 para a dificuldade:
+- 0 = trivial, mudança mecânica e direta, sem ambiguidade técnica, baixo risco (ex.: alterar um texto, campo simples, ajuste de estilo).
+- 10 = muito complexa, exige múltiplas integrações, lógica de negócio delicada, alto risco de efeitos colaterais, ou trabalho de arquitetura significativo.
+- Notas intermediárias refletem o quanto a atividade se aproxima de um extremo ou outro: considere escopo técnico, dependências externas, risco de regressão e ambiguidade de implementação.
+
+Seja objetivo e direto: o diretor quer estimar esforço e risco técnico real, não a importância de negócio da atividade.
+
+Responda sempre em português do Brasil.`;
+
+export function buildDifficultyUserPrompt(params: { title: string; description: string }): string {
+  return `Título da atividade:\n${params.title}\n\nDescrição:\n${
+    params.description || "(sem descrição)"
+  }`;
+}
+
 export const ProjectScopeAnalysisSchema = z.object({
   score: z
     .number()

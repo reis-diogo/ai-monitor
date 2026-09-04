@@ -44,6 +44,8 @@ const AUTO_ANALYZE_STATUS = "para desenvolver";
 const PR_MONITOR_INTERVAL_MS = 30_000;
 const CLICKUP_ID_REGEX = /CLICKUP-\d+/i;
 const QA_STATUS = "em qa";
+const DEV_RELEASED_STATUS = "dev liberado";
+const DIFFICULTY_INTERVAL_MS = 30_000;
 
 type Status = "loading" | "ready" | "error";
 
@@ -536,6 +538,115 @@ export function Dashboard() {
     }
 
     timeoutId = setTimeout(tick, PR_MONITOR_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const visitedIds = new Set<string>();
+
+    function startEntry(description: string): string {
+      const id = `${Date.now()}-${Math.random()}`;
+      setFlowLog((prev) =>
+        [
+          ...prev,
+          {
+            id,
+            startedAt: Date.now(),
+            agent: "Classificador de Dificuldade",
+            description,
+            actorInitials: actorInitialsRef.current,
+            status: "running" as const,
+          },
+        ].slice(-60)
+      );
+      return id;
+    }
+
+    function finishEntry(
+      id: string,
+      patch: { status: "ok" | "error"; description?: string; metric?: string }
+    ) {
+      setFlowLog((prev) =>
+        prev.map((entry) => (entry.id === id ? { ...entry, ...patch, finishedAt: Date.now() } : entry))
+      );
+    }
+
+    async function tick() {
+      if (cancelled) return;
+
+      const activeProvider = providerRef.current;
+      const analyzedByKey = new Map(
+        analyzedActivitiesRef.current
+          .filter((record) => record.provider === activeProvider)
+          .map((record) => [record.id, record])
+      );
+
+      const pendingItems = activityItemsRef.current.filter((item) => {
+        if (item.source !== "clickup") return false;
+        if (item.status?.toLowerCase() !== DEV_RELEASED_STATUS) return false;
+        const record = analyzedByKey.get(item.id);
+        return !!record && (record.difficulty === null || record.difficulty === undefined);
+      });
+
+      const pendingIds = new Set(pendingItems.map((item) => item.id));
+      for (const id of visitedIds) {
+        if (!pendingIds.has(id)) visitedIds.delete(id);
+      }
+
+      const candidate = pendingItems.find((item) => !visitedIds.has(item.id));
+
+      if (candidate) {
+        const label = candidate.customId ?? candidate.id.slice(0, 7);
+        const entryId = startEntry(
+          `Classificando dificuldade de ${label} - "${truncate(candidate.title, 60)}"`
+        );
+
+        try {
+          const res = await fetch("/api/activities/difficulty", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: candidate.id,
+              title: candidate.title,
+              content: candidate.content,
+              provider: activeProvider,
+              status: candidate.status,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error ?? "Erro ao classificar dificuldade.");
+
+          visitedIds.add(candidate.id);
+          setAnalyzedActivities((prev) => [
+            ...prev.filter((r) => !(r.id === candidate.id && r.provider === activeProvider)),
+            data.analysis,
+          ]);
+
+          finishEntry(entryId, {
+            status: "ok",
+            description: `${label}: dificuldade ${data.analysis.difficulty}/10`,
+            metric: `${data.analysis.difficulty}/10`,
+          });
+        } catch (err) {
+          console.warn("Falha ao classificar dificuldade (será tentada novamente):", err);
+          finishEntry(entryId, {
+            status: "error",
+            description: `falha ao classificar dificuldade de ${label}: ${err instanceof Error ? err.message : "erro desconhecido"}`,
+          });
+        }
+      }
+
+      if (!cancelled) {
+        timeoutId = setTimeout(tick, DIFFICULTY_INTERVAL_MS);
+      }
+    }
+
+    timeoutId = setTimeout(tick, DIFFICULTY_INTERVAL_MS);
     return () => {
       cancelled = true;
       clearTimeout(timeoutId);

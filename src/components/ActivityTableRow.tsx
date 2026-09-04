@@ -161,6 +161,14 @@ export function ActivityTableRow({
                 <ScoreIcon score={analysis.score} size={11} />
                 {analysis.score}/10
               </span>
+              {analysis.difficulty !== null && analysis.difficulty !== undefined && (
+                <span
+                  title={analysis.difficultyReasoning ?? undefined}
+                  className="flex items-center gap-1 rounded-full bg-[#8B5CF6]/10 px-2 py-0.5 font-mono font-medium text-[#8B5CF6]"
+                >
+                  dif {analysis.difficulty}/10
+                </span>
+              )}
               <motion.button
                 onClick={() => handleAnalyze(true)}
                 disabled={status === "loading"}
