@@ -603,38 +603,30 @@ export function Dashboard() {
     [resolvedAnalyzedActivities, dateRange, projectFilter]
   );
 
-  const cardsOpenedByDay = useMemo(() => {
-    const palette = ["#FE2B77", "#8B5CF6", "#22c55e", "#eab308", "#38bdf8", "#f97316", "#a855f7", "#14b8a6"];
-    const authorNameBySlug = new Map<string, string>();
-    const countsByDay = new Map<string, Record<string, number>>();
+  const activityByDay = useMemo(() => {
+    const countsByDay = new Map<string, { cards: number; commits: number }>();
 
     for (const item of filteredActivityItems) {
-      if (item.source !== "clickup") continue;
       const day = item.date?.slice(0, 10);
       if (!day) continue;
 
-      const slug =
-        item.authorName
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/[̀-ͯ]/g, "")
-          .replace(/[^a-z0-9]+/g, "_")
-          .replace(/^_+|_+$/g, "") || "desconhecido";
-      authorNameBySlug.set(slug, item.authorName);
-
-      const dayEntry = countsByDay.get(day) ?? {};
-      dayEntry[slug] = (dayEntry[slug] ?? 0) + 1;
-      countsByDay.set(day, dayEntry);
+      const entry = countsByDay.get(day) ?? { cards: 0, commits: 0 };
+      if (item.source === "clickup") {
+        entry.cards += 1;
+      } else {
+        entry.commits += 1;
+      }
+      countsByDay.set(day, entry);
     }
 
     const data = Array.from(countsByDay.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, counts]) => ({ date, ...counts }));
 
-    const config: ChartConfig = {};
-    Array.from(authorNameBySlug.entries()).forEach(([slug, name], index) => {
-      config[slug] = { label: name, color: palette[index % palette.length] };
-    });
+    const config: ChartConfig = {
+      cards: { label: "Cards abertos (PO's)", color: "#FE2B77" },
+      commits: { label: "Commits (Devs)", color: "#38bdf8" },
+    };
 
     return { data, config };
   }, [filteredActivityItems]);
@@ -796,7 +788,7 @@ export function Dashboard() {
           </motion.p>
         ) : (
           <motion.div key="content" className="flex flex-col gap-8">
-            <CardsOpenedChart data={cardsOpenedByDay.data} config={cardsOpenedByDay.config} />
+            <CardsOpenedChart data={activityByDay.data} config={activityByDay.config} />
 
             <ActivityTable
               items={filteredActivityItems}

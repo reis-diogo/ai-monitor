@@ -4,6 +4,8 @@ import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 import {
   type ChartConfig,
   ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
@@ -19,7 +21,9 @@ export function CardsOpenedChart({
 
   return (
     <div className="rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] p-5">
-      <p className="mb-4 text-sm text-black/60 dark:text-white/60">Cards abertos por dia</p>
+      <p className="mb-4 text-sm text-black/60 dark:text-white/60">
+        Cards abertos (PO&apos;s) x commits (Devs) por dia
+      </p>
       {data.length === 0 ? (
         <p className="text-sm text-black/30 dark:text-white/30">Nenhum card no período selecionado.</p>
       ) : (
@@ -45,15 +49,15 @@ export function CardsOpenedChart({
                 />
               }
             />
+            <ChartLegend content={<ChartLegendContent />} />
             {seriesKeys.map((key) => (
               <Area
                 key={key}
                 dataKey={key}
                 type="natural"
                 fill={`var(--color-${key})`}
-                fillOpacity={0.35}
+                fillOpacity={0.25}
                 stroke={`var(--color-${key})`}
-                stackId="a"
               />
             ))}
           </AreaChart>
