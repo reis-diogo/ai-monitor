@@ -104,6 +104,8 @@ export type AnalyzedActivityRecord = CommitAnalysis & {
   additions: number | null;
   deletions: number | null;
   analyzedAt: string;
+  difficulty?: number | null;
+  difficultyReasoning?: string | null;
 };
 
 export type ProfessionalRole = "dev" | "po";

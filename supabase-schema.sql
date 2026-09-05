@@ -59,6 +59,8 @@ create table if not exists analysis_cache (
   additions int,
   deletions int,
   analyzed_at timestamptz not null default now(),
+  difficulty int,
+  difficulty_reasoning text,
   primary key (provider, activity_id)
 );
 
