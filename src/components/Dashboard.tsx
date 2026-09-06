@@ -44,7 +44,6 @@ const AUTO_ANALYZE_STATUS = "para desenvolver";
 const PR_MONITOR_INTERVAL_MS = 30_000;
 const CLICKUP_ID_REGEX = /CLICKUP-\d+/i;
 const QA_STATUS = "em qa";
-const DEV_RELEASED_STATUS = "dev liberado";
 const DIFFICULTY_INTERVAL_MS = 30_000;
 
 type Status = "loading" | "ready" | "error";
@@ -588,7 +587,6 @@ export function Dashboard() {
 
       const pendingItems = activityItemsRef.current.filter((item) => {
         if (item.source !== "clickup") return false;
-        if (item.status?.toLowerCase() !== DEV_RELEASED_STATUS) return false;
         const record = analyzedByKey.get(item.id);
         return !!record && (record.difficulty === null || record.difficulty === undefined);
       });
@@ -615,7 +613,6 @@ export function Dashboard() {
               title: candidate.title,
               content: candidate.content,
               provider: activeProvider,
-              status: candidate.status,
             }),
           });
           const data = await res.json();
