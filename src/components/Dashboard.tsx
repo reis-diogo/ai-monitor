@@ -253,6 +253,18 @@ export function Dashboard() {
   }, []);
 
   const [refreshCooldown, setRefreshCooldown] = useState(0);
+  const [syncingStatuses, setSyncingStatuses] = useState(false);
+
+  // Refresh focado: status vindos do ClickUp e pareceres que chegaram pela
+  // ingestao local, que nasce fora do navegador e nao atualiza a tela sozinha.
+  const syncClickupStatuses = useCallback(async () => {
+    setSyncingStatuses(true);
+    try {
+      await Promise.all([fetchClickupTasks(), fetchAnalyzed()]);
+    } finally {
+      setSyncingStatuses(false);
+    }
+  }, [fetchClickupTasks, fetchAnalyzed]);
 
   function handleRefresh() {
     if (refreshCooldown > 0) return;
@@ -1154,6 +1166,8 @@ export function Dashboard() {
               onActivityAnalyzed={fetchAnalyzed}
               onProjectAnalyzed={fetchProjectAnalyses}
               onTaskStatusUpdate={updateClickupTaskStatus}
+              onSyncStatuses={syncClickupStatuses}
+              syncingStatuses={syncingStatuses}
             />
           </motion.div>
         )}

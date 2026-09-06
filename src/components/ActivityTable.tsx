@@ -19,6 +19,7 @@ import { DevPromptModal } from "@/components/DevPromptModal";
 import { ProjectScopeAnalysisModal } from "@/components/ProjectScopeAnalysisModal";
 import { AuthorFilter, type AuthorFilterOption } from "@/components/AuthorFilter";
 import { ActivityRoleFilter } from "@/components/ActivityRoleFilter";
+import { RefreshIcon } from "@/components/icons";
 import { StatusValueFilter } from "@/components/StatusValueFilter";
 import { ActivityGroup } from "@/components/ActivityGroup";
 
@@ -34,6 +35,8 @@ export function ActivityTable({
   onActivityAnalyzed,
   onProjectAnalyzed,
   onTaskStatusUpdate,
+  onSyncStatuses,
+  syncingStatuses,
 }: {
   items: ActivityItem[];
   allItems: ActivityItem[];
@@ -46,6 +49,8 @@ export function ActivityTable({
   onActivityAnalyzed: () => void;
   onProjectAnalyzed: () => void;
   onTaskStatusUpdate: (taskId: string, status: string) => void;
+  onSyncStatuses: () => Promise<void>;
+  syncingStatuses: boolean;
 }) {
   const [selected, setSelected] = useState<AnalyzedActivityRecord | null>(null);
   const [selectedDifficulty, setSelectedDifficulty] = useState<AnalyzedActivityRecord | null>(null);
@@ -139,9 +144,32 @@ export function ActivityTable({
       className="rounded-xl border border-border bg-card p-5 font-mono dark:shadow-lg dark:shadow-black/40"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground dark:text-[#ffd9e8]/70">
-          Atividades ({filteredItems.length})
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm text-muted-foreground dark:text-[#ffd9e8]/70">
+            Atividades ({filteredItems.length})
+          </p>
+          <motion.button
+            onClick={onSyncStatuses}
+            disabled={syncingStatuses}
+            whileHover={!syncingStatuses ? { scale: 1.04 } : undefined}
+            whileTap={!syncingStatuses ? { scale: 0.96 } : undefined}
+            title="Buscar status e pareceres atualizados no ClickUp"
+            className="flex items-center gap-1.5 rounded-full border border-black/10 dark:border-white/10 px-2.5 py-1 text-xs text-muted-foreground hover:border-primary/40 hover:text-foreground disabled:opacity-40"
+          >
+            <motion.span
+              className="flex items-center justify-center"
+              animate={syncingStatuses ? { rotate: 360 } : { rotate: 0 }}
+              transition={
+                syncingStatuses
+                  ? { repeat: Infinity, duration: 0.8, ease: "linear" }
+                  : { duration: 0.2 }
+              }
+            >
+              <RefreshIcon size={11} />
+            </motion.span>
+            {syncingStatuses ? "atualizando..." : "status"}
+          </motion.button>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <ActivityRoleFilter
             value={roleFilter}

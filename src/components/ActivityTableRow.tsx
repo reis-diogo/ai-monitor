@@ -13,6 +13,7 @@ import { ActivityItemDetailModal } from "@/components/ActivityItemDetailModal";
 
 const ARCHITECT_QUEUE_STATUS = "refinar arquiteto";
 const DEV_RELEASED_STATUS = "dev liberado";
+const APPROVAL_THRESHOLD = 7;
 
 type Status = "idle" | "loading" | "error";
 
@@ -123,9 +124,7 @@ export function ActivityTableRow({
               title={item.title}
               className="hover:underline"
             >
-              {item.customId
-                ? `${item.customId} - ${truncate(item.title, 24).toLowerCase()}`
-                : truncate(item.title, 24).toLowerCase()}
+              {item.customId ? item.customId : truncate(item.title, 24).toLowerCase()}
             </button>
           )}
         </td>
@@ -177,15 +176,20 @@ export function ActivityTableRow({
                   dif {analysis.difficulty}/10
                 </button>
               )}
-              {(analysis.architecture === null || analysis.architecture === undefined) &&
-                item.source === "clickup" &&
+              {item.source === "clickup" &&
                 item.status?.toLowerCase() === ARCHITECT_QUEUE_STATUS && (
                   <button
                     onClick={() => onArchitectLocal(item)}
-                    title="Gerar prompt para arquitetar este card na sua IA local"
+                    title={
+                      analysis.architecture === null || analysis.architecture === undefined
+                        ? "Gerar prompt para arquitetar este card na sua IA local"
+                        : "Gerar prompt para reavaliar a arquitetura deste card"
+                    }
                     className="flex items-center gap-1 rounded-full border border-dashed border-sky-400/40 px-2 py-0.5 font-mono font-medium text-sky-400/70 hover:border-sky-400/70 hover:text-sky-400"
                   >
-                    + arq
+                    {analysis.architecture === null || analysis.architecture === undefined
+                      ? "+ arq"
+                      : "rever arq"}
                   </button>
                 )}
               {analysis.architecture !== null && analysis.architecture !== undefined && (
@@ -198,6 +202,7 @@ export function ActivityTableRow({
                 </button>
               )}
               {item.status?.toLowerCase() === DEV_RELEASED_STATUS &&
+                (analysis.architecture ?? 0) >= APPROVAL_THRESHOLD &&
                 !!analysis.architecturePayload?.devPrompt && (
                   <button
                     onClick={() => onSelectDevPrompt(analysis)}
