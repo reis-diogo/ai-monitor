@@ -1,6 +1,13 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isPublicRoute = createRouteMatcher(["/sign-in(.*)", "/unauthorized"]);
+// A ingestao do arquiteto e chamada pela IA local do usuario, fora do navegador,
+// entao nao tem sessao do Clerk. Ela se autentica pelo token do lote (hash no banco,
+// escopo fixo de cards, validade curta) — ver app/api/architect/ingest.
+const isPublicRoute = createRouteMatcher([
+  "/sign-in(.*)",
+  "/unauthorized",
+  "/api/architect/ingest",
+]);
 
 export default clerkMiddleware(async (auth, req) => {
   if (isPublicRoute(req)) return;

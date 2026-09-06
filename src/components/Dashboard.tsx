@@ -17,6 +17,7 @@ import type {
 } from "@/lib/types";
 import { RepoManager } from "@/components/RepoManager";
 import { FlowLog, type FlowLogEntry } from "@/components/FlowLog";
+import { PromptEditorModal } from "@/components/PromptEditorModal";
 import {
   CardsOpenedChart,
   type ActivityDayDatum,
@@ -45,6 +46,12 @@ const PR_MONITOR_INTERVAL_MS = 30_000;
 const CLICKUP_ID_REGEX = /CLICKUP-\d+/i;
 const QA_STATUS = "em qa";
 const DIFFICULTY_INTERVAL_MS = 30_000;
+// Desligada: a arquitetura passou a ser delegada para a IA local do usuario
+// (botao "arquitetar N local" em cada projeto). Volte para true para gastar
+// os tokens do proprio app de novo.
+const ARCHITECT_AUTO_SCAN = false;
+const ARCHITECT_INTERVAL_MS = 180_000;
+const ARCHITECT_MAX_BACKOFF_MS = 900_000;
 
 type Status = "loading" | "ready" | "error";
 
@@ -68,6 +75,8 @@ export function Dashboard() {
     { owner: string; name: string; pullRequests: PullRequestInfo[] }[]
   >([]);
   const [flowLog, setFlowLog] = useState<FlowLogEntry[]>([]);
+  const [canEditPrompts, setCanEditPrompts] = useState(false);
+  const [promptEditorOpen, setPromptEditorOpen] = useState(false);
   const { user } = useUser();
 
   const fetchProjects = useCallback(async () => {
@@ -188,6 +197,20 @@ export function Dashboard() {
     fetchProjects,
     fetchPendingPullRequests,
   ]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/prompts")
+      .then((res) => {
+        if (!cancelled) setCanEditPrompts(res.ok);
+      })
+      .catch(() => {
+        if (!cancelled) setCanEditPrompts(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem(PROVIDER_STORAGE_KEY);
@@ -650,6 +673,158 @@ export function Dashboard() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!ARCHITECT_AUTO_SCAN) return;
+
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    let delayMs = ARCHITECT_INTERVAL_MS;
+    const visitedIds = new Set<string>();
+
+    function isRateLimit(message: string): boolean {
+      return /limite de requisi|rate limit|429|quota|resource_exhausted/i.test(message);
+    }
+
+    function startEntry(description: string): string {
+      const id = `${Date.now()}-${Math.random()}`;
+      setFlowLog((prev) =>
+        [
+          ...prev,
+          {
+            id,
+            startedAt: Date.now(),
+            agent: "Arquiteto Salesforce",
+            description,
+            actorInitials: actorInitialsRef.current,
+            status: "running" as const,
+          },
+        ].slice(-60)
+      );
+      return id;
+    }
+
+    function updateEntry(id: string, description: string) {
+      setFlowLog((prev) =>
+        prev.map((entry) => (entry.id === id ? { ...entry, description } : entry))
+      );
+    }
+
+    function finishEntry(
+      id: string,
+      patch: { status: "ok" | "error"; description?: string; metric?: string }
+    ) {
+      setFlowLog((prev) =>
+        prev.map((entry) => (entry.id === id ? { ...entry, ...patch, finishedAt: Date.now() } : entry))
+      );
+    }
+
+    async function tick() {
+      if (cancelled) return;
+
+      const activeProvider = providerRef.current;
+      const analyzedByKey = new Map(
+        analyzedActivitiesRef.current
+          .filter((record) => record.provider === activeProvider)
+          .map((record) => [record.id, record])
+      );
+
+      const pendingItems = activityItemsRef.current.filter((item) => {
+        if (item.source !== "clickup") return false;
+        const record = analyzedByKey.get(item.id);
+        return !!record && (record.architecture === null || record.architecture === undefined);
+      });
+
+      const pendingIds = new Set(pendingItems.map((item) => item.id));
+      for (const id of visitedIds) {
+        if (!pendingIds.has(id)) visitedIds.delete(id);
+      }
+
+      const candidate = pendingItems.find((item) => !visitedIds.has(item.id));
+
+      if (candidate) {
+        const label = candidate.customId ?? candidate.id.slice(0, 7);
+        const entryId = startEntry(
+          `Lendo metadados de "${candidate.location}" e pesquisando documentação oficial para ${label}`
+        );
+
+        try {
+          const res = await fetch("/api/activities/architect", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: candidate.id,
+              title: candidate.title,
+              content: candidate.content,
+              location: candidate.location,
+              authorClickupId: candidate.authorClickupId,
+              provider: activeProvider,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error ?? "Erro ao analisar arquitetura.");
+
+          visitedIds.add(candidate.id);
+          setAnalyzedActivities((prev) => [
+            ...prev.filter((r) => !(r.id === candidate.id && r.provider === activeProvider)),
+            data.analysis,
+          ]);
+
+          const score = data.analysis.architecture as number;
+          const payload = data.analysis.architecturePayload;
+          const solution = payload?.usesCustom ? "customizado" : "nativo";
+          const ambiguityCount = payload?.ambiguities?.length ?? 0;
+
+          updateEntry(
+            entryId,
+            `${label}: parecer ${solution}${
+              ambiguityCount ? `, ${ambiguityCount} ponto(s) para o PO` : ", sem ambiguidades"
+            }${data.hadMetadata ? "" : " (sem metadados no GitHub)"}`
+          );
+
+          if (data.appliedStatus) {
+            updateClickupTaskStatusRef.current(candidate.id, data.appliedStatus);
+          }
+
+          delayMs = ARCHITECT_INTERVAL_MS;
+
+          finishEntry(entryId, {
+            status: data.statusError ? "error" : "ok",
+            description: data.statusError
+              ? `${label}: arq ${score}/10, mas falhou ao mover no ClickUp: ${data.statusError}`
+              : `${label}: arq ${score}/10 → ${data.appliedStatus ?? "status não alterado"}`,
+            metric: `${score}/10`,
+          });
+        } catch (err) {
+          console.warn("Falha na análise de arquitetura (será tentada novamente):", err);
+          const message = err instanceof Error ? err.message : "erro desconhecido";
+
+          if (isRateLimit(message)) {
+            delayMs = Math.min(delayMs * 2, ARCHITECT_MAX_BACKOFF_MS);
+          }
+
+          finishEntry(entryId, {
+            status: "error",
+            description: `falha ao arquitetar ${label}: ${message}${
+              isRateLimit(message)
+                ? ` — próxima tentativa em ${Math.round(delayMs / 60000)}min`
+                : ""
+            }`,
+          });
+        }
+      }
+
+      if (!cancelled) {
+        timeoutId = setTimeout(tick, delayMs);
+      }
+    }
+
+    timeoutId = setTimeout(tick, delayMs);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
   const pendingDevelopmentCount = useMemo(
     () =>
       activityItems.filter(
@@ -878,8 +1053,21 @@ export function Dashboard() {
             <ExternalLinkIcon size={11} />
             click-up
           </a>
+
+          {canEditPrompts && (
+            <motion.button
+              onClick={() => setPromptEditorOpen(true)}
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              className="flex items-center gap-1.5 rounded-full border border-black/10 dark:border-white/10 px-3 py-1 text-xs text-black/50 dark:text-white/50 hover:border-black/30 dark:hover:border-white/30 hover:text-black/80 dark:hover:text-white/80"
+            >
+              prompts
+            </motion.button>
+          )}
         </div>
       </motion.header>
+
+      <PromptEditorModal open={promptEditorOpen} onClose={() => setPromptEditorOpen(false)} />
 
       <FlowLog
         entries={flowLog}

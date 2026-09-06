@@ -1,4 +1,10 @@
-import type { ActivitySource, AiProvider, CommitAnalysis, ProjectScopeAnalysis } from "@/lib/types";
+import type {
+  ActivitySource,
+  AiProvider,
+  ArchitectPayload,
+  CommitAnalysis,
+  ProjectScopeAnalysis,
+} from "@/lib/types";
 import { analyzeWithAnthropic } from "@/lib/ai/anthropic";
 import { analyzeWithOpenAI } from "@/lib/ai/openai";
 import { analyzeWithGemini } from "@/lib/ai/gemini";
@@ -14,7 +20,14 @@ import {
   buildPoTaskUserPrompt,
   buildDifficultyUserPrompt,
   buildProjectScopeUserPrompt,
+  ArchitectAnalysisSchema,
+  ARCHITECT_RESEARCH_PROMPT_KEY,
+  ARCHITECT_STRUCTURE_PROMPT_KEY,
+  buildArchitectResearchUserPrompt,
+  buildArchitectStructureUserPrompt,
 } from "@/lib/ai/schema";
+import { researchSalesforceDocs } from "@/lib/ai/research";
+import { getPromptContent } from "@/lib/prompts-store";
 
 export async function analyzeActivity(
   provider: AiProvider,
@@ -81,4 +94,50 @@ export async function analyzeProjectScope(
         : await analyzeWithAnthropic({ systemPrompt, userPrompt, schema: ProjectScopeAnalysisSchema });
 
   return { ...result, provider };
+}
+
+export type ArchitectResult = ArchitectPayload & {
+  architecture: number;
+  reasoning: string;
+};
+
+export async function researchArchitecture(
+  provider: AiProvider,
+  params: { title: string; content: string; metadata: string }
+): Promise<string> {
+  const systemPrompt = await getPromptContent(ARCHITECT_RESEARCH_PROMPT_KEY);
+  const userPrompt = buildArchitectResearchUserPrompt({
+    title: params.title,
+    description: params.content,
+    metadata: params.metadata,
+  });
+
+  return researchSalesforceDocs(provider, { systemPrompt, userPrompt });
+}
+
+export async function structureArchitecture(
+  provider: AiProvider,
+  params: { title: string; content: string; metadata: string; research: string }
+): Promise<ArchitectResult> {
+  const systemPrompt = await getPromptContent(ARCHITECT_STRUCTURE_PROMPT_KEY);
+  const userPrompt = buildArchitectStructureUserPrompt({
+    title: params.title,
+    description: params.content,
+    metadata: params.metadata,
+    research: params.research,
+  });
+
+  const result =
+    provider === "openai"
+      ? await analyzeWithOpenAI({
+          systemPrompt,
+          userPrompt,
+          schema: ArchitectAnalysisSchema,
+          schemaName: "architect_analysis",
+        })
+      : provider === "gemini"
+        ? await analyzeWithGemini({ systemPrompt, userPrompt, schema: ArchitectAnalysisSchema })
+        : await analyzeWithAnthropic({ systemPrompt, userPrompt, schema: ArchitectAnalysisSchema });
+
+  return { ...result, research: params.research };
 }

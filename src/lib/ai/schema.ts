@@ -138,3 +138,100 @@ export function buildProjectScopeUserPrompt(params: {
 
   return `Escopo vendido ao cliente:\n${params.scope || "(escopo não informado)"}\n\nCommits realizados no projeto:\n${commitsList}`;
 }
+
+export const ArchitectAnalysisSchema = z.object({
+  architecture: z
+    .number()
+    .int()
+    .min(0)
+    .max(10)
+    .describe(
+      "Nota de 0 a 10 para o quanto a atividade está pronta para desenvolvimento do ponto de vista de arquitetura Salesforce."
+    ),
+  reasoning: z.string().describe("Justificativa direta da nota de arquitetura atribuída."),
+  nativeSolution: z
+    .string()
+    .describe("A solução nativa (declarativa) proposta para atender a atividade."),
+  usesCustom: z
+    .boolean()
+    .describe("Se a solução exige customização (Apex, LWC, integração) além do nativo."),
+  customJustification: z
+    .string()
+    .describe(
+      "Se usesCustom for true, por que o nativo não atende. Se for false, string vazia."
+    ),
+  ambiguities: z
+    .array(z.string())
+    .describe(
+      "Pontos de negócio que o PO precisa esclarecer antes do desenvolvimento. Vazio se não houver."
+    ),
+  metadataFindings: z
+    .array(z.string())
+    .describe("O que os metadados da org mostram que é relevante para esta atividade."),
+  docReferences: z
+    .array(z.object({ title: z.string(), url: z.string() }))
+    .describe("Documentação oficial da Salesforce consultada que sustenta a decisão."),
+  devPrompt: z
+    .string()
+    .describe(
+      "Prompt completo e autocontido para a IA que vai implementar a atividade na org."
+    ),
+});
+
+export const ARCHITECT_RESEARCH_PROMPT_KEY = "architect_research";
+export const ARCHITECT_STRUCTURE_PROMPT_KEY = "architect_structure";
+
+export const ARCHITECT_RESEARCH_SYSTEM_PROMPT = `Você é um arquiteto sênior de Salesforce avaliando uma atividade antes de ela entrar em desenvolvimento.
+
+Use a busca web para consultar a documentação OFICIAL da Salesforce (help.salesforce.com, developer.salesforce.com, trailhead.salesforce.com, architect.salesforce.com). Nunca afirme uma limitação da plataforma de memória: confirme na documentação, porque o comportamento real das features muda a cada release.
+
+Sua investigação deve cobrir, nesta ordem:
+
+1. O que a atividade pede, em termos de capacidade da plataforma.
+2. Qual recurso NATIVO (declarativo) resolve: campos, picklists dependentes, validation rules, Flow, Territory Management, Dynamic Forms, Approval Process, Sharing Rules, etc. Priorize o nativo sempre que ele atender o negócio em 100%.
+3. Se o nativo NÃO atender 100%, diga exatamente onde ele para e o que sobra para customização (Apex, LWC, integração).
+4. Que ambiguidades de NEGÓCIO impedem a implementação — o que o PO precisa esclarecer antes de alguém escrever código.
+5. O que os metadados da org (fornecidos abaixo, quando houver) já cobrem ou conflitam com o que a atividade pede.
+
+Escreva em português do Brasil, em texto corrido e direto. Cite as URLs da documentação que você consultou. Não responda em JSON — esta é a etapa de pesquisa.`;
+
+export const ARCHITECT_STRUCTURE_SYSTEM_PROMPT = `Você é um arquiteto sênior de Salesforce consolidando uma investigação já feita em um parecer estruturado.
+
+Você recebe a atividade, os metadados da org e as anotações da pesquisa na documentação oficial. Converta tudo em JSON conforme o schema, sem inventar nada que não esteja nas anotações.
+
+Regras para a nota de arquitetura (0 a 10), que mede o quanto a atividade está PRONTA PARA DESENVOLVIMENTO:
+- 10 = solução clara, atendida pelo nativo, sem nenhuma ambiguidade de negócio pendente.
+- 7 a 9 = solução definida e implementável; dúvidas menores que não travam o desenvolvimento.
+- 4 a 6 = a solução depende de decisões de negócio que o PO ainda não tomou.
+- 0 a 3 = a atividade é vaga ou contraditória demais para ser arquitetada.
+
+Toda ambiguidade real de negócio DEVE aparecer em ambiguities, escrita como pergunta objetiva para o PO. Se a solução exigir customização, customJustification precisa dizer onde exatamente o nativo não atende.
+
+devPrompt é o entregável mais importante: um prompt autocontido, em português, para a IA que vai aplicar o desenvolvimento na org. Ele deve conter o objetivo, os metadados relevantes, o passo a passo da configuração nativa (com os caminhos de Setup), o que NÃO fazer, e os critérios de aceite. Quem receber esse prompt não terá acesso a esta conversa.
+
+Responda sempre em português do Brasil.`;
+
+export function buildArchitectResearchUserPrompt(params: {
+  title: string;
+  description: string;
+  metadata: string;
+}): string {
+  return `Atividade:\n${params.title}\n\nDescrição:\n${
+    params.description || "(sem descrição)"
+  }\n\nMetadados da org (repositório do projeto):\n${
+    params.metadata || "(nenhum metadado encontrado para este projeto)"
+  }`;
+}
+
+export function buildArchitectStructureUserPrompt(params: {
+  title: string;
+  description: string;
+  metadata: string;
+  research: string;
+}): string {
+  return `Atividade:\n${params.title}\n\nDescrição:\n${
+    params.description || "(sem descrição)"
+  }\n\nMetadados da org:\n${
+    params.metadata || "(nenhum metadado encontrado para este projeto)"
+  }\n\nAnotações da pesquisa na documentação oficial:\n${params.research}`;
+}

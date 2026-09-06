@@ -14,6 +14,8 @@ import type {
 } from "@/lib/types";
 import { CommitAnalysisModal } from "@/components/CommitAnalysisModal";
 import { DifficultyAnalysisModal } from "@/components/DifficultyAnalysisModal";
+import { ArchitectAnalysisModal } from "@/components/ArchitectAnalysisModal";
+import { DevPromptModal } from "@/components/DevPromptModal";
 import { ProjectScopeAnalysisModal } from "@/components/ProjectScopeAnalysisModal";
 import { AuthorFilter, type AuthorFilterOption } from "@/components/AuthorFilter";
 import { ActivityRoleFilter } from "@/components/ActivityRoleFilter";
@@ -47,6 +49,10 @@ export function ActivityTable({
 }) {
   const [selected, setSelected] = useState<AnalyzedActivityRecord | null>(null);
   const [selectedDifficulty, setSelectedDifficulty] = useState<AnalyzedActivityRecord | null>(null);
+  const [selectedArchitecture, setSelectedArchitecture] = useState<AnalyzedActivityRecord | null>(
+    null
+  );
+  const [selectedDevPrompt, setSelectedDevPrompt] = useState<AnalyzedActivityRecord | null>(null);
   const [selectedProjectAnalysis, setSelectedProjectAnalysis] = useState<AnalyzedProjectRecord | null>(
     null
   );
@@ -163,6 +169,8 @@ export function ActivityTable({
             onActivityAnalyzed={onActivityAnalyzed}
             onSelect={setSelected}
             onSelectDifficulty={setSelectedDifficulty}
+            onSelectArchitecture={setSelectedArchitecture}
+            onSelectDevPrompt={setSelectedDevPrompt}
             matchingProject={group.matchingProject}
             allProjectCommits={allCommitsByLocation.get(group.project) ?? []}
             projectAnalysis={group.projectAnalysis}
@@ -180,6 +188,11 @@ export function ActivityTable({
         record={selectedDifficulty}
         onClose={() => setSelectedDifficulty(null)}
       />
+      <ArchitectAnalysisModal
+        record={selectedArchitecture}
+        onClose={() => setSelectedArchitecture(null)}
+      />
+      <DevPromptModal record={selectedDevPrompt} onClose={() => setSelectedDevPrompt(null)} />
       <ProjectScopeAnalysisModal
         record={selectedProjectAnalysis}
         onClose={() => setSelectedProjectAnalysis(null)}
