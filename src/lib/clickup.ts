@@ -27,7 +27,9 @@ async function clickupFetch(path: string, init?: RequestInit) {
     throw new Error(`Erro ao consultar o ClickUp (${res.status}).`);
   }
 
-  return res.json();
+  // DELETE responde 200 com corpo vazio; res.json() estouraria nesse caso.
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }
 
 type ClickUpUser = {
@@ -137,4 +139,53 @@ export async function createTaskComment(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ comment }),
   });
+}
+
+type ClickUpChecklistResponse = { checklist?: { id: string } };
+
+type ClickUpTaskChecklists = { checklists?: { id: string; name: string }[] };
+
+/** Remove checklists com esse nome, para a reavaliacao substituir em vez de empilhar. */
+async function deleteChecklistsNamed(taskId: string, name: string): Promise<void> {
+  const task = (await clickupFetch(`/task/${taskId}`)) as ClickUpTaskChecklists;
+  const existing = (task.checklists ?? []).filter((c) => c.name === name);
+
+  for (const checklist of existing) {
+    await clickupFetch(`/checklist/${checklist.id}`, { method: "DELETE" });
+  }
+}
+
+/**
+ * Cria um checklist na tarefa e adiciona um item por pendência. O ClickUp não
+ * aceita os itens na mesma chamada da criação, então são duas etapas.
+ * Atenção: ele NÃO preserva a ordem de criação e devolve orderindex null — quem
+ * chama deve numerar os itens se a ordem importar.
+ */
+export async function createTaskChecklist(
+  taskId: string,
+  name: string,
+  items: string[]
+): Promise<void> {
+  if (!items.length) return;
+
+  await deleteChecklistsNamed(taskId, name);
+
+  const created = (await clickupFetch(`/task/${taskId}/checklist`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  })) as ClickUpChecklistResponse;
+
+  const checklistId = created.checklist?.id;
+  if (!checklistId) {
+    throw new Error("O ClickUp não retornou o id do checklist criado.");
+  }
+
+  for (const item of items) {
+    await clickupFetch(`/checklist/${checklistId}/checklist_item`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: item }),
+    });
+  }
 }

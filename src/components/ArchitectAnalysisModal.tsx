@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { AnalyzedActivityRecord } from "@/lib/types";
 
+const APPROVAL_THRESHOLD = 7;
+
 const PROVIDER_LABEL: Record<AnalyzedActivityRecord["provider"], string> = {
   anthropic: "Claude",
   openai: "OpenAI",
@@ -16,7 +18,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <p className="font-mono text-[11px] uppercase tracking-wide text-black/35 dark:text-white/35">
         {title}
       </p>
-      <div className="mt-1.5 text-sm text-black/80 dark:text-white/80">{children}</div>
+      <div className="mt-1.5 text-sm break-words [overflow-wrap:anywhere] text-black/80 dark:text-white/80">
+        {children}
+      </div>
     </div>
   );
 }
@@ -41,7 +45,7 @@ export function ArchitectAnalysisModal({
 
   const score = record?.architecture ?? null;
   const payload = record?.architecturePayload ?? null;
-  const approved = score !== null && score >= 7;
+  const approved = score !== null && score >= APPROVAL_THRESHOLD;
 
   const copied = !!record && copiedId === record.id;
 
@@ -74,7 +78,9 @@ export function ArchitectAnalysisModal({
                 <p className="font-mono text-xs text-black/40 dark:text-white/40">
                   {record.location} · arquitetura Salesforce
                 </p>
-                <p className="mt-1 text-sm text-black/80 dark:text-white/80">{record.title}</p>
+                <p className="mt-1 text-sm break-words text-black/80 dark:text-white/80">
+                  {record.title}
+                </p>
               </div>
               <button
                 onClick={onClose}
@@ -139,13 +145,25 @@ export function ArchitectAnalysisModal({
             )}
 
             {!!payload?.ambiguities?.length && (
-              <Section title="o PO precisa esclarecer">
-                <ul className="list-disc space-y-1 pl-4">
-                  {payload.ambiguities.map((item) => (
-                    <li key={item}>{item}</li>
+              <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+                <p className="font-mono text-[11px] uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                  o PO precisa esclarecer · {payload.ambiguities.length}{" "}
+                  {payload.ambiguities.length === 1 ? "ponto" : "pontos"}
+                </p>
+                <ul className="mt-2 space-y-2">
+                  {payload.ambiguities.map((item, index) => (
+                    <li key={item} className="flex gap-2 text-sm text-black/80 dark:text-white/80">
+                      <span className="shrink-0 font-mono text-[11px] text-amber-600/70 dark:text-amber-400/70">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <span className="min-w-0 break-words [overflow-wrap:anywhere]">{item}</span>
+                    </li>
                   ))}
                 </ul>
-              </Section>
+                <p className="mt-3 text-[11px] text-black/40 dark:text-white/40">
+                  Cada ponto virou um item de checklist no card do ClickUp.
+                </p>
+              </div>
             )}
 
             {!!payload?.metadataFindings?.length && (
@@ -167,7 +185,7 @@ export function ArchitectAnalysisModal({
                         href={ref.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[#38BDF8] hover:underline"
+                        className="break-words [overflow-wrap:anywhere] text-[#38BDF8] hover:underline"
                       >
                         {ref.title}
                       </a>
@@ -177,7 +195,16 @@ export function ArchitectAnalysisModal({
               </Section>
             )}
 
-            {payload?.devPrompt && (
+            {!approved && (
+              <Section title="prompt para o desenvolvimento">
+                <p className="rounded-lg border border-red-500/25 bg-red-500/5 px-3 py-2 text-red-600 dark:text-red-300">
+                  Bloqueado: liberado só a partir de {APPROVAL_THRESHOLD}/10. Resolva os pontos
+                  acima e reavalie a arquitetura.
+                </p>
+              </Section>
+            )}
+
+            {approved && payload?.devPrompt && (
               <Section title="prompt para o desenvolvimento">
                 <div className="rounded-lg border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 p-3">
                   <pre className="max-h-64 overflow-y-auto whitespace-pre-wrap font-mono text-[11px] leading-5 text-black/70 dark:text-white/70">

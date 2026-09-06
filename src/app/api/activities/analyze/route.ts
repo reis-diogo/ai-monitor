@@ -8,7 +8,9 @@ import type { ActivitySource, AiProvider, AnalyzedActivityRecord } from "@/lib/t
 const LOW_SCORE_THRESHOLD = 7;
 const PENDING_DEV_STATUS = "para desenvolver";
 const REFINE_STATUS = "refinar po";
-const DEV_RELEASED_STATUS = "dev liberado";
+// Aprovado na qualidade o card nao vai direto para desenvolvimento: passa pelo
+// crivo do arquiteto, que decide entre "dev liberado" e "refinar po".
+const ARCHITECT_QUEUE_STATUS = "refinar arquiteto";
 
 function parseProvider(value: unknown): AiProvider {
   if (value === "openai" || value === "gemini") return value;
@@ -100,8 +102,8 @@ export async function POST(request: NextRequest) {
         }
       } else {
         try {
-          await updateTaskStatus(record.id, DEV_RELEASED_STATUS);
-          clickupStatusUpdate = DEV_RELEASED_STATUS;
+          await updateTaskStatus(record.id, ARCHITECT_QUEUE_STATUS);
+          clickupStatusUpdate = ARCHITECT_QUEUE_STATUS;
         } catch (clickupError) {
           console.error("Erro ao liberar tarefa no ClickUp:", clickupError);
         }

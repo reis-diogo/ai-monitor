@@ -75,7 +75,7 @@ Campos:
 
   Se a nota for menor que 7, o card não vai para "dev liberado" e o badge não aparece — ainda assim preencha \`devPrompt\` com o que já dá para instruir, deixando explícito o que depende das \`ambiguities\` serem resolvidas.
 
-O app move o card no ClickUp conforme a nota: 7 ou mais vai para "dev liberado", abaixo disso vai para "refinar arquiteto" com as \`ambiguities\` como comentário. Então trate a nota como uma decisão real, não como um palpite.
+O app move o card no ClickUp conforme a nota: 7 ou mais vai para "dev liberado", abaixo disso volta para "refinar po" com as \`ambiguities\` como comentário, para o PO esclarecer. Então trate a nota como uma decisão real, não como um palpite.
 
 Se um POST responder erro, mostre a resposta e siga para o próximo card.
 

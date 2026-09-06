@@ -6,7 +6,8 @@ import { getRepos } from "@/lib/repos-store";
 import { isAllowedUser } from "@/lib/require-allowed-user";
 import type { AiProvider } from "@/lib/types";
 
-export const maxDuration = 300;
+// 60s e o teto do plano Hobby na Vercel; valores maiores sao recusados no deploy.
+export const maxDuration = 60;
 
 function parseProvider(value: unknown): AiProvider {
   if (value === "openai" || value === "gemini") return value;

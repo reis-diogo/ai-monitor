@@ -1,10 +1,12 @@
 import { getCachedAnalysis, setCachedAnalysis } from "@/lib/analysis-cache";
-import { createTaskComment, updateTaskStatus } from "@/lib/clickup";
+import { createTaskChecklist, createTaskComment, updateTaskStatus } from "@/lib/clickup";
 import type { AiProvider, AnalyzedActivityRecord, ArchitectPayload } from "@/lib/types";
 
 export const APPROVED_STATUS = "dev liberado";
-export const REFINE_STATUS = "refinar arquiteto";
+export const REFINE_STATUS = "refinar po";
 export const APPROVAL_THRESHOLD = 7;
+const CHECKLIST_NAME = "Pendências de arquitetura";
+const ARCHITECT_QUEUE_STATUS = "refinar arquiteto";
 
 export type ArchitectResultInput = {
   architecture: number;
@@ -19,12 +21,14 @@ export type ArchitectResultInput = {
   research?: string;
 };
 
-function buildRefineComment(ambiguities: string[], reasoning: string): string {
-  const questions = ambiguities.length
-    ? ambiguities.map((item, index) => `${index + 1}. ${item}`).join("\n")
-    : "Nenhum ponto específico foi listado, mas a atividade não tem definição suficiente para ser arquitetada.";
+function buildRefineComment(score: number, ambiguityCount: number): string {
+  if (!ambiguityCount) {
+    return `Revisão de arquitetura: ${score}/10. A atividade não tem definição suficiente para ser arquitetada. Detalhe o escopo antes de devolver para "${ARCHITECT_QUEUE_STATUS}".`;
+  }
 
-  return `Revisão de arquitetura Salesforce\n\n${reasoning}\n\nPontos que precisam ser esclarecidos antes do desenvolvimento:\n${questions}`;
+  return `Revisão de arquitetura: ${score}/10. Abri o checklist "${CHECKLIST_NAME}" neste card com ${ambiguityCount} ${
+    ambiguityCount === 1 ? "ponto" : "pontos"
+  } que precisam ser esclarecidos. Resolva e marque todos os itens antes de devolver o card para "${ARCHITECT_QUEUE_STATUS}".`;
 }
 
 export async function applyArchitectResult(params: {
@@ -43,9 +47,19 @@ export async function applyArchitectResult(params: {
 
   try {
     if (!approved) {
+      // O checklist carrega o detalhe e vem primeiro, para o PO já encontrar os
+      // itens quando ler o comentário. Numerado porque o ClickUp embaralha a
+      // ordem e devolve orderindex null.
+      await createTaskChecklist(
+        params.activityId,
+        CHECKLIST_NAME,
+        result.ambiguities.map(
+          (item, index) => `${String(index + 1).padStart(2, "0")}. ${item}`
+        )
+      );
       await createTaskComment(
         params.activityId,
-        buildRefineComment(result.ambiguities, result.reasoning),
+        buildRefineComment(result.architecture, result.ambiguities.length),
         params.authorClickupId
       );
     }
