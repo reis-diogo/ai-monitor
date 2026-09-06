@@ -106,6 +106,33 @@ export type AnalyzedActivityRecord = CommitAnalysis & {
   analyzedAt: string;
   difficulty?: number | null;
   difficultyReasoning?: string | null;
+  architecture?: number | null;
+  architectureReasoning?: string | null;
+  architecturePayload?: ArchitectPayload | null;
+};
+
+export type ArchitectDocReference = {
+  title: string;
+  url: string;
+};
+
+export type ArchitectPayload = {
+  nativeSolution: string;
+  usesCustom: boolean;
+  customJustification: string;
+  ambiguities: string[];
+  metadataFindings: string[];
+  docReferences: ArchitectDocReference[];
+  devPrompt: string;
+  research: string;
+  appliedStatus?: string | null;
+};
+
+export type AiPrompt = {
+  key: string;
+  label: string;
+  content: string;
+  updatedAt: string;
 };
 
 export type ProfessionalRole = "dev" | "po";

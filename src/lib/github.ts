@@ -142,3 +142,74 @@ export async function fetchAllCommitsWithStats(
 
   return [...newCommits, ...cachedCommits.values()];
 }
+
+type GitHubRepoDetail = { default_branch: string };
+
+type GitHubTreeEntry = { path: string; type: string };
+
+type GitHubTreeResponse = { tree: GitHubTreeEntry[]; truncated: boolean };
+
+const METADATA_TYPE_LABELS: { dir: string; label: string }[] = [
+  { dir: "objects", label: "Objetos e campos" },
+  { dir: "flows", label: "Flows" },
+  { dir: "classes", label: "Classes Apex" },
+  { dir: "triggers", label: "Triggers" },
+  { dir: "lwc", label: "Lightning Web Components" },
+  { dir: "aura", label: "Componentes Aura" },
+  { dir: "permissionsets", label: "Permission Sets" },
+  { dir: "profiles", label: "Profiles" },
+  { dir: "layouts", label: "Page Layouts" },
+  { dir: "flexipages", label: "Lightning Pages" },
+  { dir: "quickActions", label: "Quick Actions" },
+  { dir: "validationRules", label: "Validation Rules" },
+  { dir: "workflows", label: "Workflows" },
+  { dir: "approvalProcesses", label: "Approval Processes" },
+  { dir: "sharingRules", label: "Sharing Rules" },
+  { dir: "customMetadata", label: "Custom Metadata" },
+  { dir: "namedCredentials", label: "Named Credentials" },
+  { dir: "staticresources", label: "Static Resources" },
+];
+
+const MAX_ITEMS_PER_TYPE = 40;
+
+function entryName(path: string): string {
+  const file = path.split("/").pop() ?? path;
+  return file.replace(/\.[^.]+-meta\.xml$/, "").replace(/\.[^.]+$/, "");
+}
+
+export async function fetchOrgMetadataSummary(
+  owner: string,
+  name: string
+): Promise<string | null> {
+  const repo = (await githubFetch(`/repos/${owner}/${name}`)) as GitHubRepoDetail;
+  const tree = (await githubFetch(
+    `/repos/${owner}/${name}/git/trees/${repo.default_branch}?recursive=1`
+  )) as GitHubTreeResponse;
+
+  const files = tree.tree.filter((entry) => entry.type === "blob");
+  const sections: string[] = [];
+
+  for (const { dir, label } of METADATA_TYPE_LABELS) {
+    const names = new Set<string>();
+    for (const file of files) {
+      if (!file.path.includes(`/${dir}/`)) continue;
+      names.add(entryName(file.path));
+    }
+    if (!names.size) continue;
+
+    const list = Array.from(names).sort();
+    const shown = list.slice(0, MAX_ITEMS_PER_TYPE);
+    const extra = list.length - shown.length;
+    sections.push(
+      `${label} (${list.length}): ${shown.join(", ")}${extra > 0 ? ` … +${extra}` : ""}`
+    );
+  }
+
+  if (!sections.length) return null;
+
+  const header = `Repositório ${owner}/${name} (branch ${repo.default_branch})${
+    tree.truncated ? " — árvore truncada pelo GitHub, listagem parcial" : ""
+  }`;
+
+  return `${header}\n\n${sections.join("\n\n")}`;
+}

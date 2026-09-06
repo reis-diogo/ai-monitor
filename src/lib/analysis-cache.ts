@@ -1,5 +1,5 @@
 import { getSupabase } from "@/lib/supabase";
-import type { AiProvider, AnalyzedActivityRecord } from "@/lib/types";
+import type { AiProvider, AnalyzedActivityRecord, ArchitectPayload } from "@/lib/types";
 
 type AnalysisCacheRow = {
   provider: AiProvider;
@@ -19,6 +19,9 @@ type AnalysisCacheRow = {
   analyzed_at: string;
   difficulty: number | null;
   difficulty_reasoning: string | null;
+  architecture: number | null;
+  architecture_reasoning: string | null;
+  architecture_payload: ArchitectPayload | null;
 };
 
 function rowToRecord(row: AnalysisCacheRow): AnalyzedActivityRecord {
@@ -40,6 +43,9 @@ function rowToRecord(row: AnalysisCacheRow): AnalyzedActivityRecord {
     analyzedAt: row.analyzed_at,
     difficulty: row.difficulty,
     difficultyReasoning: row.difficulty_reasoning,
+    architecture: row.architecture,
+    architectureReasoning: row.architecture_reasoning,
+    architecturePayload: row.architecture_payload,
   };
 }
 
@@ -81,6 +87,9 @@ export async function setCachedAnalysis(
     analyzed_at: record.analyzedAt,
     difficulty: record.difficulty ?? null,
     difficulty_reasoning: record.difficultyReasoning ?? null,
+    architecture: record.architecture ?? null,
+    architecture_reasoning: record.architectureReasoning ?? null,
+    architecture_payload: record.architecturePayload ?? null,
   };
 
   const { error } = await getSupabase()

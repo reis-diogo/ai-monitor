@@ -16,6 +16,7 @@ import { scoreColor } from "@/lib/score-color";
 import { ScoreIcon } from "@/components/ScoreIcon";
 import { AiIcon } from "@/components/AiIcon";
 import { ChevronIcon, PullRequestIcon, RefreshIcon } from "@/components/icons";
+import { LocalArchitectModal } from "@/components/LocalArchitectModal";
 import { PendingTasksModal } from "@/components/PendingTasksModal";
 import { PendingPullRequestsModal } from "@/components/PendingPullRequestsModal";
 
@@ -30,6 +31,8 @@ export function ActivityGroup({
   onActivityAnalyzed,
   onSelect,
   onSelectDifficulty,
+  onSelectArchitecture,
+  onSelectDevPrompt,
   matchingProject,
   allProjectCommits,
   projectAnalysis,
@@ -47,6 +50,8 @@ export function ActivityGroup({
   onActivityAnalyzed: () => void;
   onSelect: (record: AnalyzedActivityRecord) => void;
   onSelectDifficulty: (record: AnalyzedActivityRecord) => void;
+  onSelectArchitecture: (record: AnalyzedActivityRecord) => void;
+  onSelectDevPrompt: (record: AnalyzedActivityRecord) => void;
   matchingProject?: Project | null;
   allProjectCommits?: ActivityItem[];
   projectAnalysis?: AnalyzedProjectRecord | null;
@@ -65,6 +70,8 @@ export function ActivityGroup({
   const pendingPrCount = pendingPullRequests.length;
   const [scopeStatus, setScopeStatus] = useState<ScopeStatus>("idle");
   const [scopeError, setScopeError] = useState<string | null>(null);
+
+  const [localArchitectCards, setLocalArchitectCards] = useState<ActivityItem[] | null>(null);
 
   const commitCount = items.filter((item) => item.source === "commit").length;
   const taskCount = items.length - commitCount;
@@ -330,6 +337,9 @@ export function ActivityGroup({
                         onAnalyzed={onActivityAnalyzed}
                         onSelect={onSelect}
                         onSelectDifficulty={onSelectDifficulty}
+                        onSelectArchitecture={onSelectArchitecture}
+                        onArchitectLocal={(card) => setLocalArchitectCards([card])}
+                        onSelectDevPrompt={onSelectDevPrompt}
                         onStatusUpdate={onTaskStatusUpdate}
                       />
                     ))}
@@ -362,6 +372,13 @@ export function ActivityGroup({
         items={showQaTasks ? qaTaskItems : null}
         onClose={() => setShowQaTasks(false)}
         label="em qa"
+      />
+
+      <LocalArchitectModal
+        project={localArchitectCards ? project : null}
+        cards={localArchitectCards ?? []}
+        provider={provider}
+        onClose={() => setLocalArchitectCards(null)}
       />
 
       <PendingPullRequestsModal

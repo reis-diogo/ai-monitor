@@ -11,6 +11,9 @@ import { RefreshIcon } from "@/components/icons";
 import { StatusMenu } from "@/components/StatusMenu";
 import { ActivityItemDetailModal } from "@/components/ActivityItemDetailModal";
 
+const ARCHITECT_QUEUE_STATUS = "refinar arquiteto";
+const DEV_RELEASED_STATUS = "dev liberado";
+
 type Status = "idle" | "loading" | "error";
 
 export function ActivityTableRow({
@@ -22,6 +25,9 @@ export function ActivityTableRow({
   onAnalyzed,
   onSelect,
   onSelectDifficulty,
+  onSelectArchitecture,
+  onArchitectLocal,
+  onSelectDevPrompt,
   onStatusUpdate,
 }: {
   item: ActivityItem;
@@ -32,6 +38,9 @@ export function ActivityTableRow({
   onAnalyzed: () => void;
   onSelect: (record: AnalyzedActivityRecord) => void;
   onSelectDifficulty: (record: AnalyzedActivityRecord) => void;
+  onSelectArchitecture: (record: AnalyzedActivityRecord) => void;
+  onArchitectLocal: (item: ActivityItem) => void;
+  onSelectDevPrompt: (record: AnalyzedActivityRecord) => void;
   onStatusUpdate?: (taskId: string, status: string) => void;
 }) {
   const columnCount = showLocation ? 6 : 5;
@@ -168,6 +177,36 @@ export function ActivityTableRow({
                   dif {analysis.difficulty}/10
                 </button>
               )}
+              {(analysis.architecture === null || analysis.architecture === undefined) &&
+                item.source === "clickup" &&
+                item.status?.toLowerCase() === ARCHITECT_QUEUE_STATUS && (
+                  <button
+                    onClick={() => onArchitectLocal(item)}
+                    title="Gerar prompt para arquitetar este card na sua IA local"
+                    className="flex items-center gap-1 rounded-full border border-dashed border-sky-400/40 px-2 py-0.5 font-mono font-medium text-sky-400/70 hover:border-sky-400/70 hover:text-sky-400"
+                  >
+                    + arq
+                  </button>
+                )}
+              {analysis.architecture !== null && analysis.architecture !== undefined && (
+                <button
+                  onClick={() => onSelectArchitecture(analysis)}
+                  title="Ver parecer de arquitetura"
+                  className="flex items-center gap-1 rounded-full bg-[#38BDF8]/10 px-2 py-0.5 font-mono font-medium text-[#38BDF8] hover:underline"
+                >
+                  arq {analysis.architecture}/10
+                </button>
+              )}
+              {item.status?.toLowerCase() === DEV_RELEASED_STATUS &&
+                !!analysis.architecturePayload?.devPrompt && (
+                  <button
+                    onClick={() => onSelectDevPrompt(analysis)}
+                    title="Prompt para desenvolver este card"
+                    className="flex items-center gap-1 rounded-full bg-[#FBBF24]/10 px-2 py-0.5 font-mono font-medium text-[#FBBF24] hover:underline"
+                  >
+                    prompt dev
+                  </button>
+                )}
               <motion.button
                 onClick={() => handleAnalyze(true)}
                 disabled={status === "loading"}

@@ -131,3 +131,51 @@ export function RefreshIcon({ size = 11, className = "" }: { size?: number; clas
     </svg>
   );
 }
+
+export function CopyIcon({ size = 11, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      className={`shrink-0 ${className}`}
+    >
+      <rect
+        x="5.75"
+        y="5.75"
+        width="8.5"
+        height="8.5"
+        rx="1.75"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M10.25 3.6A1.85 1.85 0 0 0 8.4 1.75H3.6A1.85 1.85 0 0 0 1.75 3.6v4.8A1.85 1.85 0 0 0 3.6 10.25"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+export function CheckIcon({ size = 11, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      className={`shrink-0 ${className}`}
+    >
+      <path
+        d="M3 8.5 6.2 11.7 13 4.9"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
