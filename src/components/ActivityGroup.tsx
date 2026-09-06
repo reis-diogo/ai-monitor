@@ -29,6 +29,7 @@ export function ActivityGroup({
   defaultOpen = true,
   onActivityAnalyzed,
   onSelect,
+  onSelectDifficulty,
   matchingProject,
   allProjectCommits,
   projectAnalysis,
@@ -45,6 +46,7 @@ export function ActivityGroup({
   defaultOpen?: boolean;
   onActivityAnalyzed: () => void;
   onSelect: (record: AnalyzedActivityRecord) => void;
+  onSelectDifficulty: (record: AnalyzedActivityRecord) => void;
   matchingProject?: Project | null;
   allProjectCommits?: ActivityItem[];
   projectAnalysis?: AnalyzedProjectRecord | null;
@@ -312,9 +314,7 @@ export function ActivityGroup({
                     <th className="pb-2 pr-3 font-normal">item</th>
                     <th className="pb-2 pr-3 font-normal">status</th>
                     <th className="pb-2 pr-3 font-normal">+/-</th>
-                    <th className="pb-2 pr-3 font-normal">nota</th>
-                    <th className="pb-2 pr-3 font-normal">detalhamento</th>
-                    <th className="pb-2 font-normal">IA</th>
+                    <th className="pb-2 font-normal">nota</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -329,6 +329,7 @@ export function ActivityGroup({
                         clickupStatuses={clickupStatuses}
                         onAnalyzed={onActivityAnalyzed}
                         onSelect={onSelect}
+                        onSelectDifficulty={onSelectDifficulty}
                         onStatusUpdate={onTaskStatusUpdate}
                       />
                     ))}

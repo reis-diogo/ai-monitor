@@ -11,12 +11,6 @@ import { RefreshIcon } from "@/components/icons";
 import { StatusMenu } from "@/components/StatusMenu";
 import { ActivityItemDetailModal } from "@/components/ActivityItemDetailModal";
 
-const PROVIDER_LABEL: Record<AiProvider, string> = {
-  anthropic: "Claude",
-  openai: "OpenAI",
-  gemini: "Gemini",
-};
-
 type Status = "idle" | "loading" | "error";
 
 export function ActivityTableRow({
@@ -27,6 +21,7 @@ export function ActivityTableRow({
   clickupStatuses = [],
   onAnalyzed,
   onSelect,
+  onSelectDifficulty,
   onStatusUpdate,
 }: {
   item: ActivityItem;
@@ -36,9 +31,10 @@ export function ActivityTableRow({
   clickupStatuses?: ClickUpStatusOption[];
   onAnalyzed: () => void;
   onSelect: (record: AnalyzedActivityRecord) => void;
+  onSelectDifficulty: (record: AnalyzedActivityRecord) => void;
   onStatusUpdate?: (taskId: string, status: string) => void;
 }) {
-  const columnCount = showLocation ? 8 : 7;
+  const columnCount = showLocation ? 6 : 5;
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const [localAnalysis, setLocalAnalysis] = useState<AnalyzedActivityRecord | null>(null);
@@ -151,8 +147,10 @@ export function ActivityTableRow({
         <td className="py-2 pr-3">
           {analysis ? (
             <div className="flex items-center gap-1.5">
-              <span
-                className="flex items-center gap-1 rounded-full px-2 py-0.5 font-mono font-medium"
+              <button
+                onClick={() => onSelect(analysis)}
+                title="Ver detalhamento da análise"
+                className="flex items-center gap-1 rounded-full px-2 py-0.5 font-mono font-medium hover:underline"
                 style={{
                   color: scoreColor(analysis.score).color,
                   backgroundColor: scoreColor(analysis.score).bg,
@@ -160,14 +158,15 @@ export function ActivityTableRow({
               >
                 <ScoreIcon score={analysis.score} size={11} />
                 {analysis.score}/10
-              </span>
+              </button>
               {analysis.difficulty !== null && analysis.difficulty !== undefined && (
-                <span
-                  title={analysis.difficultyReasoning ?? undefined}
-                  className="flex items-center gap-1 rounded-full bg-[#8B5CF6]/10 px-2 py-0.5 font-mono font-medium text-[#8B5CF6]"
+                <button
+                  onClick={() => onSelectDifficulty(analysis)}
+                  title="Ver detalhamento da dificuldade"
+                  className="flex items-center gap-1 rounded-full bg-[#8B5CF6]/10 px-2 py-0.5 font-mono font-medium text-[#8B5CF6] hover:underline"
                 >
                   dif {analysis.difficulty}/10
-                </span>
+                </button>
               )}
               <motion.button
                 onClick={() => handleAnalyze(true)}
@@ -206,15 +205,6 @@ export function ActivityTableRow({
                   : "analisar"}
             </motion.button>
           )}
-        </td>
-        <td
-          onClick={() => analysis && onSelect(analysis)}
-          className={`py-2 pr-3 text-muted-foreground ${analysis ? "cursor-pointer hover:underline" : ""}`}
-        >
-          {analysis ? truncate(analysis.intent, 10) : "—"}
-        </td>
-        <td className="py-2 text-muted-foreground">
-          {analysis ? PROVIDER_LABEL[analysis.provider] : "—"}
         </td>
       </motion.tr>
 

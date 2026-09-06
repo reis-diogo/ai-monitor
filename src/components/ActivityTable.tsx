@@ -13,6 +13,7 @@ import type {
   PullRequestInfo,
 } from "@/lib/types";
 import { CommitAnalysisModal } from "@/components/CommitAnalysisModal";
+import { DifficultyAnalysisModal } from "@/components/DifficultyAnalysisModal";
 import { ProjectScopeAnalysisModal } from "@/components/ProjectScopeAnalysisModal";
 import { AuthorFilter, type AuthorFilterOption } from "@/components/AuthorFilter";
 import { ActivityRoleFilter } from "@/components/ActivityRoleFilter";
@@ -45,6 +46,7 @@ export function ActivityTable({
   onTaskStatusUpdate: (taskId: string, status: string) => void;
 }) {
   const [selected, setSelected] = useState<AnalyzedActivityRecord | null>(null);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<AnalyzedActivityRecord | null>(null);
   const [selectedProjectAnalysis, setSelectedProjectAnalysis] = useState<AnalyzedProjectRecord | null>(
     null
   );
@@ -160,6 +162,7 @@ export function ActivityTable({
             defaultOpen={false}
             onActivityAnalyzed={onActivityAnalyzed}
             onSelect={setSelected}
+            onSelectDifficulty={setSelectedDifficulty}
             matchingProject={group.matchingProject}
             allProjectCommits={allCommitsByLocation.get(group.project) ?? []}
             projectAnalysis={group.projectAnalysis}
@@ -173,6 +176,10 @@ export function ActivityTable({
       </div>
 
       <CommitAnalysisModal record={selected} onClose={() => setSelected(null)} />
+      <DifficultyAnalysisModal
+        record={selectedDifficulty}
+        onClose={() => setSelectedDifficulty(null)}
+      />
       <ProjectScopeAnalysisModal
         record={selectedProjectAnalysis}
         onClose={() => setSelectedProjectAnalysis(null)}
