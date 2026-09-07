@@ -64,6 +64,7 @@ export function ActivityGroup({
   const [open, setOpen] = useState(defaultOpen);
   const [showPendingTasks, setShowPendingTasks] = useState(false);
   const [showRefiningTasks, setShowRefiningTasks] = useState(false);
+  const [showArchitectTasks, setShowArchitectTasks] = useState(false);
   const [showDevReleasedTasks, setShowDevReleasedTasks] = useState(false);
   const [showQaTasks, setShowQaTasks] = useState(false);
   const [showPendingPrs, setShowPendingPrs] = useState(false);
@@ -83,6 +84,10 @@ export function ActivityGroup({
     (item) => item.source === "clickup" && item.status?.toLowerCase() === "refinar po"
   );
   const refiningTaskCount = refiningTaskItems.length;
+  const architectTaskItems = items.filter(
+    (item) => item.source === "clickup" && item.status?.toLowerCase() === "refinar arquiteto"
+  );
+  const architectTaskCount = architectTaskItems.length;
   const devReleasedTaskItems = items.filter(
     (item) => item.source === "clickup" && item.status?.toLowerCase() === "dev liberado"
   );
@@ -116,7 +121,7 @@ export function ActivityGroup({
     }
   }
 
-  const needsAttention = pendingTaskCount > 0 || refiningTaskCount > 0;
+  const needsAttention = pendingTaskCount > 0 || refiningTaskCount > 0 || architectTaskCount > 0;
 
   return (
     <motion.div
@@ -173,6 +178,20 @@ export function ActivityGroup({
             >
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-400" />
               {refiningTaskCount} refinar po
+            </button>
+          )}
+
+          {architectTaskCount > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowArchitectTasks(true);
+              }}
+              className="flex items-center gap-1 rounded-full border border-sky-400/30 bg-sky-400/10 px-2 py-0.5 font-medium text-sky-700 dark:text-sky-300 hover:bg-sky-400/20"
+              title={`${architectTaskCount} tarefa${architectTaskCount > 1 ? "s" : ""} com status "refinar arquiteto"`}
+            >
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" />
+              {architectTaskCount} refinar arquiteto
             </button>
           )}
 
@@ -360,6 +379,12 @@ export function ActivityGroup({
         items={showRefiningTasks ? refiningTaskItems : null}
         onClose={() => setShowRefiningTasks(false)}
         label="refinar po"
+      />
+
+      <PendingTasksModal
+        items={showArchitectTasks ? architectTaskItems : null}
+        onClose={() => setShowArchitectTasks(false)}
+        label="refinar arquiteto"
       />
 
       <PendingTasksModal

@@ -115,7 +115,9 @@ export function CardsOpenedChart({
         <p className="text-sm text-black/30 dark:text-white/30">Nenhuma atividade no período selecionado.</p>
       ) : (
         <ChartContainer config={config} className="h-[260px] w-full">
-          <AreaChart data={data} margin={{ left: 0, right: 0 }}>
+          {/* top: a curva "natural" ultrapassa o maior valor dos dados; sem folga
+              no topo o pico e cortado pela borda do SVG. */}
+          <AreaChart data={data} margin={{ top: 16, left: 0, right: 0 }}>
             <CartesianGrid vertical={false} />
             <XAxis
               dataKey="date"

@@ -6,7 +6,7 @@ import type { ActivityItem, AiProvider, AnalyzedActivityRecord, ClickUpStatusOpt
 import { scoreColor } from "@/lib/score-color";
 import { truncate } from "@/lib/truncate";
 import { AiIcon } from "@/components/AiIcon";
-import { RefreshIcon } from "@/components/icons";
+import { ExternalLinkIcon, RefreshIcon } from "@/components/icons";
 import { StatusMenu } from "@/components/StatusMenu";
 import { ActivityItemDetailModal } from "@/components/ActivityItemDetailModal";
 
@@ -115,17 +115,30 @@ export function ActivityTableRow({
           </div>
         </td>
         <td className="py-2 pr-3 text-foreground">
-          {item.source === "commit" ? (
-            <span className="font-mono text-muted-foreground">{item.id.slice(0, 7)}</span>
-          ) : (
-            <button
-              onClick={() => setShowDetail(true)}
-              title={item.title}
-              className="hover:underline"
-            >
-              {item.customId ? item.customId : truncate(item.title, 24).toLowerCase()}
-            </button>
-          )}
+          <div className="flex items-center gap-1.5">
+            {item.source === "commit" ? (
+              <span className="font-mono text-muted-foreground">{item.id.slice(0, 7)}</span>
+            ) : (
+              <button
+                onClick={() => setShowDetail(true)}
+                title={item.title}
+                className="hover:underline"
+              >
+                {item.customId ? item.customId : truncate(item.title, 24).toLowerCase()}
+              </button>
+            )}
+            {!!item.url && (
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noreferrer"
+                title={item.source === "commit" ? "Abrir commit no GitHub" : "Abrir card no ClickUp"}
+                className="flex items-center text-muted-foreground/40 transition-colors hover:text-foreground"
+              >
+                <ExternalLinkIcon size={10} />
+              </a>
+            )}
+          </div>
         </td>
         {showLocation && <td className="py-2 pr-3 text-muted-foreground">{item.location}</td>}
         <td className="py-2 pr-3">

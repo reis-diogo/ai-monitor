@@ -33,11 +33,9 @@ import { ProjectFilter } from "@/components/ProjectFilter";
 import { normalizeLocation } from "@/lib/normalize-location";
 import { resolveAuthorName } from "@/lib/normalize-author";
 import { getPresetRange, isWithinRange, type DatePreset } from "@/lib/date-range";
-import { timeAgo } from "@/lib/time-ago";
 import { truncate } from "@/lib/truncate";
-import { ExternalLinkIcon, RefreshIcon } from "@/components/icons";
+import { ExternalLinkIcon } from "@/components/icons";
 
-const REFRESH_COOLDOWN_MS = 10_000;
 const RELATIVE_TIME_TICK_MS = 30_000;
 const PROVIDER_STORAGE_KEY = "getnow:ai-provider";
 const AUTO_ANALYZE_INTERVAL_MS = 30_000;
@@ -252,38 +250,37 @@ export function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  const [refreshCooldown, setRefreshCooldown] = useState(0);
   const [syncingStatuses, setSyncingStatuses] = useState(false);
 
-  // Refresh focado: status vindos do ClickUp e pareceres que chegaram pela
-  // ingestao local, que nasce fora do navegador e nao atualiza a tela sozinha.
+  // Unico ponto de sincronizacao manual da tela. Alem dos status do ClickUp,
+  // recarrega os pareceres — a ingestao local nasce fora do navegador e nao
+  // atualiza nada sozinha.
   const syncClickupStatuses = useCallback(async () => {
     setSyncingStatuses(true);
     try {
-      await Promise.all([fetchClickupTasks(), fetchAnalyzed()]);
+      await Promise.all([
+        fetchActivity(),
+        fetchAnalyzed(),
+        fetchProjectAnalyses(),
+        fetchProfessionals(),
+        fetchClickupTasks(),
+        fetchClickupStatuses(),
+        fetchProjects(),
+        fetchPendingPullRequests(),
+      ]);
     } finally {
       setSyncingStatuses(false);
     }
-  }, [fetchClickupTasks, fetchAnalyzed]);
-
-  function handleRefresh() {
-    if (refreshCooldown > 0) return;
-    fetchActivity();
-    fetchAnalyzed();
-    fetchProjectAnalyses();
-    fetchProfessionals();
-    fetchClickupTasks();
-    fetchClickupStatuses();
-    fetchProjects();
-    fetchPendingPullRequests();
-    setRefreshCooldown(REFRESH_COOLDOWN_MS / 1000);
-  }
-
-  useEffect(() => {
-    if (refreshCooldown <= 0) return;
-    const timer = setTimeout(() => setRefreshCooldown((s) => s - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [refreshCooldown]);
+  }, [
+    fetchActivity,
+    fetchAnalyzed,
+    fetchProjectAnalyses,
+    fetchProfessionals,
+    fetchClickupTasks,
+    fetchClickupStatuses,
+    fetchProjects,
+    fetchPendingPullRequests,
+  ]);
 
   const allCommits = (authors ?? []).flatMap((author) => author.commits);
 
@@ -1001,54 +998,20 @@ export function Dashboard() {
             <StatusDot status={status} />
             <AnimatePresence mode="wait" initial={false}>
               <motion.span
-                key={status + (lastSync?.toISOString() ?? "")}
+                key={status}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
               >
                 {status === "loading" && "sincronizando atividade..."}
-                {status === "ready" && lastSync && `atualizado ${timeAgo(lastSync.toISOString())}`}
+                {status === "ready" && "atividade sincronizada"}
                 {status === "error" && "erro ao sincronizar atividade"}
               </motion.span>
             </AnimatePresence>
           </div>
 
-          <motion.button
-            onClick={handleRefresh}
-            disabled={refreshCooldown > 0 || status === "loading"}
-            whileHover={refreshCooldown === 0 && status !== "loading" ? { scale: 1.03 } : undefined}
-            whileTap={refreshCooldown === 0 && status !== "loading" ? { scale: 0.97 } : undefined}
-            title="Sincronizar"
-            className="flex w-fit items-center gap-2 rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 px-3 py-1.5 text-xs font-medium text-black/70 dark:text-white/70 hover:border-black/30 dark:hover:border-white/30 disabled:cursor-default disabled:opacity-50"
-          >
-            <motion.span
-              className="flex items-center justify-center"
-              animate={status === "loading" ? { rotate: 360 } : { rotate: 0 }}
-              transition={
-                status === "loading"
-                  ? { repeat: Infinity, duration: 0.8, ease: "linear" }
-                  : { duration: 0.2 }
-              }
-            >
-              <RefreshIcon size={13} />
-            </motion.span>
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.span
-                key={status === "loading" ? "loading" : refreshCooldown > 0 ? refreshCooldown : "idle"}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                {status === "loading"
-                  ? "sincronizando..."
-                  : refreshCooldown > 0
-                    ? `aguarde ${refreshCooldown}s`
-                    : "sincronizar"}
-              </motion.span>
-            </AnimatePresence>
-          </motion.button>
+
         </div>
 
         <div className="relative flex flex-col items-end gap-2">
@@ -1168,6 +1131,7 @@ export function Dashboard() {
               onTaskStatusUpdate={updateClickupTaskStatus}
               onSyncStatuses={syncClickupStatuses}
               syncingStatuses={syncingStatuses}
+              lastSyncedAt={lastSync}
             />
           </motion.div>
         )}

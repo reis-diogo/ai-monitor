@@ -20,7 +20,8 @@ import { ProjectScopeAnalysisModal } from "@/components/ProjectScopeAnalysisModa
 import { AuthorFilter, type AuthorFilterOption } from "@/components/AuthorFilter";
 import { ActivityRoleFilter } from "@/components/ActivityRoleFilter";
 import { RefreshIcon } from "@/components/icons";
-import { StatusValueFilter } from "@/components/StatusValueFilter";
+import { timeAgo } from "@/lib/time-ago";
+import { StatusValueFilter, STATUS_OPTIONS } from "@/components/StatusValueFilter";
 import { ActivityGroup } from "@/components/ActivityGroup";
 
 export function ActivityTable({
@@ -37,6 +38,7 @@ export function ActivityTable({
   onTaskStatusUpdate,
   onSyncStatuses,
   syncingStatuses,
+  lastSyncedAt,
 }: {
   items: ActivityItem[];
   allItems: ActivityItem[];
@@ -51,6 +53,7 @@ export function ActivityTable({
   onTaskStatusUpdate: (taskId: string, status: string) => void;
   onSyncStatuses: () => Promise<void>;
   syncingStatuses: boolean;
+  lastSyncedAt: Date | null;
 }) {
   const [selected, setSelected] = useState<AnalyzedActivityRecord | null>(null);
   const [selectedDifficulty, setSelectedDifficulty] = useState<AnalyzedActivityRecord | null>(null);
@@ -169,6 +172,11 @@ export function ActivityTable({
             </motion.span>
             {syncingStatuses ? "atualizando..." : "status"}
           </motion.button>
+          {lastSyncedAt && !syncingStatuses && (
+            <span className="font-mono text-[11px] text-muted-foreground/50">
+              {timeAgo(lastSyncedAt.toISOString())}
+            </span>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <ActivityRoleFilter
@@ -183,6 +191,38 @@ export function ActivityTable({
           )}
           <StatusValueFilter value={statusFilter} onChange={setStatusFilter} />
         </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        {STATUS_OPTIONS.map((option) => {
+          const active = statusFilter.includes(option.value);
+          return (
+            <motion.button
+              key={option.value}
+              onClick={() =>
+                setStatusFilter(
+                  active
+                    ? statusFilter.filter((v) => v !== option.value)
+                    : [...statusFilter, option.value]
+                )
+              }
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className="flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[11px] font-medium transition-colors"
+              style={{
+                borderColor: active ? `${option.color}66` : "transparent",
+                backgroundColor: active ? `${option.color}1a` : "rgba(255,255,255,0.04)",
+                color: active ? option.color : "var(--muted-foreground)",
+              }}
+            >
+              <span
+                className="h-1.5 w-1.5 shrink-0 rounded-full"
+                style={{ backgroundColor: active ? option.color : "currentColor", opacity: active ? 1 : 0.4 }}
+              />
+              {option.label.toLowerCase()}
+            </motion.button>
+          );
+        })}
       </div>
 
       <div className="mt-4 flex flex-col gap-2">

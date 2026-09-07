@@ -3,14 +3,16 @@
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
-import { ChevronIcon } from "@/components/icons";
+import { ChevronIcon, CloseIcon } from "@/components/icons";
 
-const STATUS_OPTIONS = [
-  { value: "bug", label: "Bug" },
-  { value: "dev liberado", label: "Dev liberado" },
-  { value: "em qa", label: "Em QA" },
-  { value: "pr_pendente", label: "PR pendente" },
-  { value: "refinar po", label: "Refinar PO" },
+// Cores espelham os chips de status no cabecalho de cada projeto.
+export const STATUS_OPTIONS = [
+  { value: "bug", label: "Bug", color: "#f87171" },
+  { value: "dev liberado", label: "Dev liberado", color: "#34d399" },
+  { value: "em qa", label: "Em QA", color: "#fbbf24" },
+  { value: "pr_pendente", label: "PR pendente", color: "#38bdf8" },
+  { value: "refinar arquiteto", label: "Refinar arquiteto", color: "#38bdf8" },
+  { value: "refinar po", label: "Refinar PO", color: "#fb7185" },
 ];
 
 export function StatusValueFilter({
@@ -20,7 +22,7 @@ export function StatusValueFilter({
   value: string[];
   onChange: (next: string[]) => void;
 }) {
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const buttonRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
 
@@ -44,26 +46,50 @@ export function StatusValueFilter({
 
   return (
     <>
-      <motion.button
+      {/* Wrapper e div, nao button: o botao de limpar fica dentro do pill e
+          button aninhado em button e HTML invalido. */}
+      <motion.div
         ref={buttonRef}
-        onClick={handleToggle}
         whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+        className={`flex items-center rounded-full border text-xs font-medium transition-colors ${
           value.length > 0
             ? "border-primary/40 bg-primary/10 text-primary"
             : "border-border bg-black/5 text-foreground/50 dark:bg-white/5"
         }`}
       >
-        status{value.length > 0 ? ` (${value.length})` : ""}
-        <motion.span
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-          className="flex h-3 w-3 items-center justify-center"
+        <button
+          onClick={handleToggle}
+          className={`flex items-center gap-1.5 py-1.5 pl-3 ${value.length > 0 ? "pr-1.5" : "pr-3"}`}
         >
-          <ChevronIcon />
-        </motion.span>
-      </motion.button>
+          status{value.length > 0 ? ` (${value.length})` : ""}
+          <motion.span
+            animate={{ rotate: open ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+            className="flex h-3 w-3 items-center justify-center"
+          >
+            <ChevronIcon />
+          </motion.span>
+        </button>
+
+        <AnimatePresence>
+          {value.length > 0 && (
+            <motion.button
+              initial={{ opacity: 0, width: 0 }}
+              animate={{ opacity: 1, width: "auto" }}
+              exit={{ opacity: 0, width: 0 }}
+              transition={{ duration: 0.15 }}
+              onClick={() => {
+                onChange([]);
+                setOpen(false);
+              }}
+              title="Remover filtro de status"
+              className="flex items-center overflow-hidden py-1.5 pr-2.5 pl-0.5 text-primary/60 hover:text-primary"
+            >
+              <CloseIcon size={9} />
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </motion.div>
 
       {open &&
         menuPosition &&
