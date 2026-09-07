@@ -3,6 +3,7 @@ import { createLocalJob } from "@/lib/local-jobs-store";
 import { buildLocalArchitectPrompt, type LocalPromptCard } from "@/lib/ai/local-prompt";
 import { getPromptContent } from "@/lib/prompts-store";
 import { ARCHITECT_RESEARCH_PROMPT_KEY } from "@/lib/ai/schema";
+import { fetchTaskContent } from "@/lib/clickup";
 import { getCurrentUserEmail, isAllowedUser } from "@/lib/require-allowed-user";
 import type { AiProvider } from "@/lib/types";
 
@@ -55,9 +56,17 @@ export async function POST(request: NextRequest) {
     // instalacao publica do app — nao para o localhost de quem gerou o prompt.
     const origin = (process.env.APP_PUBLIC_URL || request.nextUrl.origin).replace(/\/+$/, "");
 
+    // O titulo e a descricao vem do ClickUp agora, nao do que a tela enviou.
+    const freshCards = await Promise.all(
+      cards.map(async (card) => {
+        const fresh = await fetchTaskContent(card.id);
+        return fresh ? { ...card, title: fresh.title, content: fresh.description } : card;
+      })
+    );
+
     const prompt = buildLocalArchitectPrompt({
       project,
-      cards,
+      cards: freshCards,
       token,
       ingestUrl: `${origin}/api/architect/ingest`,
       systemPrompt: await getPromptContent(ARCHITECT_RESEARCH_PROMPT_KEY),

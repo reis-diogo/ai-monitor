@@ -189,3 +189,22 @@ export async function createTaskChecklist(
     });
   }
 }
+
+/**
+ * Busca titulo e descricao atuais de uma tarefa. A tela pode estar com uma copia
+ * antiga do card — se o PO editou depois do ultimo refresh, reavaliar pelo que o
+ * navegador tem em memoria avaliaria o texto errado sem avisar ninguem.
+ */
+export async function fetchTaskContent(
+  taskId: string
+): Promise<{ title: string; description: string } | null> {
+  try {
+    const task = (await clickupFetch(`/task/${taskId}`)) as ClickUpTaskResponse;
+    return {
+      title: task.name,
+      description: task.text_content || task.description || "",
+    };
+  } catch {
+    return null;
+  }
+}
