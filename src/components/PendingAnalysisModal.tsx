@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from "motion/react";
 import type { ActivityItem, AiProvider, AnalyzedActivityRecord } from "@/lib/types";
 import { truncate } from "@/lib/truncate";
 import { scoreColor } from "@/lib/score-color";
-import { ScoreIcon } from "@/components/ScoreIcon";
 import { AiIcon } from "@/components/AiIcon";
 
 type RowStatus = "idle" | "loading" | "error";
@@ -83,8 +82,7 @@ function PendingAnalysisRow({
               backgroundColor: scoreColor(analysis.score).bg,
             }}
           >
-            <ScoreIcon score={analysis.score} size={11} />
-            {analysis.score}/10
+            qua {analysis.score}/10
           </span>
         ) : (
           <motion.button

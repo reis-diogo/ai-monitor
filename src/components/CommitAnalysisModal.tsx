@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { AnalyzedActivityRecord } from "@/lib/types";
 import { scoreColor } from "@/lib/score-color";
-import { ScoreIcon } from "@/components/ScoreIcon";
 
 const PROVIDER_LABEL: Record<AnalyzedActivityRecord["provider"], string> = {
   anthropic: "Claude",
@@ -66,8 +65,7 @@ export function CommitAnalysisModal({
                 className="flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[11px] font-medium"
                 style={{ color: scoreColor(record.score).color, backgroundColor: scoreColor(record.score).bg }}
               >
-                <ScoreIcon score={record.score} size={12} />
-                {record.score}/10
+                qua {record.score}/10
               </span>
               <span className="text-[11px] text-black/30 dark:text-white/30">
                 análise via {PROVIDER_LABEL[record.provider]} · {record.authorName}
