@@ -4,11 +4,16 @@ import type { AiProvider } from "@/lib/types";
 
 const JOB_TTL_MS = 12 * 60 * 60 * 1000;
 
+export type LocalJobKind = "architect" | "review";
+
 export type LocalJob = {
   id: string;
   provider: AiProvider;
   project: string;
   activityIds: string[];
+  kind: LocalJobKind;
+  receivedIds: string[];
+  mentionEmails: string[];
   expiresAt: string;
 };
 
@@ -19,6 +24,9 @@ type LocalJobRow = {
   activity_ids: string[];
   expires_at: string;
   received_count: number;
+  kind: LocalJobKind;
+  received_ids: string[];
+  mention_emails: string[] | null;
 };
 
 function hashToken(token: string): string {
@@ -30,6 +38,8 @@ export async function createLocalJob(params: {
   project: string;
   activityIds: string[];
   createdBy: string | null;
+  kind: LocalJobKind;
+  mentionEmails: string[];
 }): Promise<{ job: LocalJob; token: string }> {
   if (!params.activityIds.length) {
     throw new Error("Nenhum card pendente para delegar.");
@@ -46,6 +56,8 @@ export async function createLocalJob(params: {
       project: params.project,
       activity_ids: params.activityIds,
       created_by: params.createdBy,
+      kind: params.kind,
+      mention_emails: params.mentionEmails,
       expires_at: expiresAt,
     })
     .select("*")
@@ -61,6 +73,9 @@ export async function createLocalJob(params: {
       provider: row.provider,
       project: row.project,
       activityIds: row.activity_ids,
+      kind: row.kind,
+      receivedIds: row.received_ids ?? [],
+      mentionEmails: row.mention_emails ?? [],
       expiresAt: row.expires_at,
     },
   };
@@ -85,20 +100,28 @@ export async function resolveLocalJob(token: string): Promise<LocalJob | null> {
     provider: row.provider,
     project: row.project,
     activityIds: row.activity_ids,
+    kind: row.kind,
+    receivedIds: row.received_ids ?? [],
+    mentionEmails: row.mention_emails ?? [],
     expiresAt: row.expires_at,
   };
 }
 
-export async function markLocalJobReceived(id: string): Promise<void> {
+export async function markLocalJobReceived(id: string, activityId: string): Promise<void> {
   const { data } = await getSupabase()
     .from("local_jobs")
-    .select("received_count")
+    .select("received_count, received_ids")
     .eq("id", id)
     .maybeSingle();
 
-  const current = (data as { received_count: number } | null)?.received_count ?? 0;
+  const row = data as { received_count: number; received_ids: string[] | null } | null;
+  const receivedIds = row?.received_ids ?? [];
+
   await getSupabase()
     .from("local_jobs")
-    .update({ received_count: current + 1 })
+    .update({
+      received_count: (row?.received_count ?? 0) + 1,
+      received_ids: receivedIds.includes(activityId) ? receivedIds : [...receivedIds, activityId],
+    })
     .eq("id", id);
 }

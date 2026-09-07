@@ -179,3 +179,22 @@ export function CheckIcon({ size = 11, className = "" }: { size?: number; classN
     </svg>
   );
 }
+
+export function FilterOffIcon({ size = 11, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      className={`shrink-0 ${className}`}
+    >
+      <path
+        d="M2 3h12l-4.6 5.4v4.1l-2.8 1.4V8.4L2 3Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

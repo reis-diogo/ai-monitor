@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type {
   ActivityItem,
@@ -33,6 +33,7 @@ export function ActivityGroup({
   onSelectDifficulty,
   onSelectArchitecture,
   onSelectDevPrompt,
+  onSelectReview,
   matchingProject,
   allProjectCommits,
   projectAnalysis,
@@ -52,6 +53,7 @@ export function ActivityGroup({
   onSelectDifficulty: (record: AnalyzedActivityRecord) => void;
   onSelectArchitecture: (record: AnalyzedActivityRecord) => void;
   onSelectDevPrompt: (record: AnalyzedActivityRecord) => void;
+  onSelectReview: (record: AnalyzedActivityRecord) => void;
   matchingProject?: Project | null;
   allProjectCommits?: ActivityItem[];
   projectAnalysis?: AnalyzedProjectRecord | null;
@@ -73,6 +75,14 @@ export function ActivityGroup({
   const [scopeError, setScopeError] = useState<string | null>(null);
 
   const [localArchitectCards, setLocalArchitectCards] = useState<ActivityItem[] | null>(null);
+  const [localReviewCards, setLocalReviewCards] = useState<ActivityItem[] | null>(null);
+  const projectAuthors = useMemo(
+    () => Array.from(new Set(items.map((item) => item.authorName))).sort(),
+    [items]
+  );
+
+  const [showDevDoneTasks, setShowDevDoneTasks] = useState(false);
+  const [showReviewTasks, setShowReviewTasks] = useState(false);
 
   const commitCount = items.filter((item) => item.source === "commit").length;
   const pendingTaskItems = items.filter(
@@ -87,6 +97,14 @@ export function ActivityGroup({
     (item) => item.source === "clickup" && item.status?.toLowerCase() === "refinar arquiteto"
   );
   const architectTaskCount = architectTaskItems.length;
+  const devDoneTaskItems = items.filter(
+    (item) => item.source === "clickup" && item.status?.toLowerCase() === "dev finalizado"
+  );
+  const devDoneTaskCount = devDoneTaskItems.length;
+  const reviewTaskItems = items.filter(
+    (item) => item.source === "clickup" && item.status?.toLowerCase() === "revisar dev"
+  );
+  const reviewTaskCount = reviewTaskItems.length;
   const devReleasedTaskItems = items.filter(
     (item) => item.source === "clickup" && item.status?.toLowerCase() === "dev liberado"
   );
@@ -188,6 +206,34 @@ export function ActivityGroup({
             >
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" />
               {architectTaskCount} refinar arquiteto
+            </button>
+          )}
+
+          {reviewTaskCount > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowReviewTasks(true);
+              }}
+              className="flex items-center gap-1 rounded-full border border-orange-400/30 bg-orange-400/10 px-2 py-0.5 font-medium text-orange-700 dark:text-orange-300 hover:bg-orange-400/20"
+              title={`${reviewTaskCount} tarefa${reviewTaskCount > 1 ? "s" : ""} com status "revisar dev"`}
+            >
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400" />
+              {reviewTaskCount} revisar dev
+            </button>
+          )}
+
+          {devDoneTaskCount > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDevDoneTasks(true);
+              }}
+              className="flex items-center gap-1 rounded-full border border-teal-400/30 bg-teal-400/10 px-2 py-0.5 font-medium text-teal-700 dark:text-teal-300 hover:bg-teal-400/20"
+              title={`${devDoneTaskCount} tarefa${devDoneTaskCount > 1 ? "s" : ""} com status "dev finalizado"`}
+            >
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-teal-400" />
+              {devDoneTaskCount} dev finalizado
             </button>
           )}
 
@@ -355,6 +401,8 @@ export function ActivityGroup({
                         onSelectArchitecture={onSelectArchitecture}
                         onArchitectLocal={(card) => setLocalArchitectCards([card])}
                         onSelectDevPrompt={onSelectDevPrompt}
+                        onSelectReview={onSelectReview}
+                        onReviewLocal={(card) => setLocalReviewCards([card])}
                         onStatusUpdate={onTaskStatusUpdate}
                       />
                     ))}
@@ -390,6 +438,18 @@ export function ActivityGroup({
       />
 
       <PendingTasksModal
+        items={showDevDoneTasks ? devDoneTaskItems : null}
+        onClose={() => setShowDevDoneTasks(false)}
+        label="dev finalizado"
+      />
+
+      <PendingTasksModal
+        items={showReviewTasks ? reviewTaskItems : null}
+        onClose={() => setShowReviewTasks(false)}
+        label="revisar dev"
+      />
+
+      <PendingTasksModal
         items={showQaTasks ? qaTaskItems : null}
         onClose={() => setShowQaTasks(false)}
         label="em qa"
@@ -399,7 +459,17 @@ export function ActivityGroup({
         project={localArchitectCards ? project : null}
         cards={localArchitectCards ?? []}
         provider={provider}
+        projectAuthors={projectAuthors}
         onClose={() => setLocalArchitectCards(null)}
+      />
+
+      <LocalArchitectModal
+        project={localReviewCards ? project : null}
+        cards={localReviewCards ?? []}
+        provider={provider}
+        kind="review"
+        projectAuthors={projectAuthors}
+        onClose={() => setLocalReviewCards(null)}
       />
 
       <PendingPullRequestsModal

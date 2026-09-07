@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { applyArchitectResult, loadExistingAnalysis } from "@/lib/architect-apply";
+import { applyReviewResult, type ReviewResultInput } from "@/lib/review-apply";
 import { markLocalJobReceived, resolveLocalJob } from "@/lib/local-jobs-store";
-import { fetchListTasks } from "@/lib/clickup";
+import { fetchListTasks, fetchTeamMemberIdsByEmail } from "@/lib/clickup";
 import type { ArchitectResultInput } from "@/lib/architect-apply";
 
 function clampScore(value: unknown): number | null {
-  if (typeof value !== "number" || !Number.isFinite(value)) return null;
-  const rounded = Math.round(value);
-  if (rounded < 0 || rounded > 10) return null;
-  return rounded;
+  // Recusa em vez de arredondar: 6.6 virando 7 cruzaria o limiar de aprovacao e
+  // liberaria uma entrega que a IA local nao aprovou.
+  if (typeof value !== "number" || !Number.isInteger(value)) return null;
+  if (value < 0 || value > 10) return null;
+  return value;
 }
 
 function strings(value: unknown): string[] {
@@ -43,6 +45,100 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Um card por token, uma vez. Sem isso o mesmo POST reaplicaria o gate durante
+  // as 12h de validade — e um reenvio depois da aprovacao tiraria o card de "em qa".
+  if (job.receivedIds.includes(activityId)) {
+    return NextResponse.json(
+      { error: "Este card já foi enviado neste lote. Gere um novo prompt para reavaliar." },
+      { status: 409 }
+    );
+  }
+
+  const kind = body?.kind === "review" ? "review" : "architect";
+  if (kind !== job.kind) {
+    return NextResponse.json(
+      { error: `Este token é da etapa "${job.kind}", não "${kind}".` },
+      { status: 403 }
+    );
+  }
+
+  const existing = await loadExistingAnalysis(job.provider, activityId);
+  if (!existing) {
+    return NextResponse.json(
+      { error: "Card ainda não possui análise de qualidade registrada." },
+      { status: 400 }
+    );
+  }
+
+  let authorClickupId: number | null = null;
+  try {
+    const listId = process.env.CLICKUP_LIST_ID;
+    if (listId) {
+      const tasks = await fetchListTasks(listId);
+      authorClickupId = tasks.find((task) => task.id === activityId)?.authorClickupId ?? null;
+    }
+  } catch {
+    authorClickupId = null;
+  }
+
+  if (kind === "review") {
+    const review = clampScore(body?.review);
+    if (review === null) {
+      return NextResponse.json(
+        { error: "Campo 'review' deve ser um inteiro de 0 a 10." },
+        { status: 400 }
+      );
+    }
+
+    const reviewReasoning = typeof body?.reasoning === "string" ? body.reasoning.trim() : "";
+    if (!reviewReasoning) {
+      return NextResponse.json({ error: "Campo 'reasoning' é obrigatório." }, { status: 400 });
+    }
+
+    const reviewResult: ReviewResultInput = {
+      review,
+      reasoning: reviewReasoning,
+      delivered: strings(body?.delivered),
+      missing: strings(body?.missing),
+      deviations: strings(body?.deviations),
+      fixPrompt: typeof body?.fixPrompt === "string" ? body.fixPrompt : "",
+    };
+
+    try {
+      // Menciona quem atua no projeto; o autor do card entra como reserva para o
+      // comentario nunca sair sem destinatario.
+      let mentionUserIds: number[] = [];
+      try {
+        if (job.mentionEmails.length) {
+          const idsByEmail = await fetchTeamMemberIdsByEmail();
+          mentionUserIds = job.mentionEmails
+            .map((email) => idsByEmail.get(email.trim().toLowerCase()))
+            .filter((id): id is number => typeof id === "number");
+        }
+      } catch {
+        mentionUserIds = [];
+      }
+      if (!mentionUserIds.length && authorClickupId) mentionUserIds = [authorClickupId];
+
+      const applied = await applyReviewResult({
+        provider: job.provider,
+        activityId,
+        result: reviewResult,
+        mentionUserIds,
+        existing,
+      });
+      await markLocalJobReceived(job.id, activityId);
+      return NextResponse.json({
+        ok: true,
+        appliedStatus: applied.appliedStatus,
+        statusError: applied.statusError,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao registrar a revisão.";
+      return NextResponse.json({ error: message }, { status: 502 });
+    }
+  }
+
   const architecture = clampScore(body?.architecture);
   if (architecture === null) {
     return NextResponse.json(
@@ -54,14 +150,6 @@ export async function POST(request: NextRequest) {
   const reasoning = typeof body?.reasoning === "string" ? body.reasoning.trim() : "";
   if (!reasoning) {
     return NextResponse.json({ error: "Campo 'reasoning' é obrigatório." }, { status: 400 });
-  }
-
-  const existing = await loadExistingAnalysis(job.provider, activityId);
-  if (!existing) {
-    return NextResponse.json(
-      { error: "Card ainda não possui análise de qualidade registrada." },
-      { status: 400 }
-    );
   }
 
   const result: ArchitectResultInput = {
@@ -77,17 +165,6 @@ export async function POST(request: NextRequest) {
     devPrompt: typeof body?.devPrompt === "string" ? body.devPrompt : "",
   };
 
-  let authorClickupId: number | null = null;
-  try {
-    const listId = process.env.CLICKUP_LIST_ID;
-    if (listId) {
-      const tasks = await fetchListTasks(listId);
-      authorClickupId = tasks.find((task) => task.id === activityId)?.authorClickupId ?? null;
-    }
-  } catch {
-    authorClickupId = null;
-  }
-
   try {
     const applied = await applyArchitectResult({
       provider: job.provider,
@@ -97,7 +174,7 @@ export async function POST(request: NextRequest) {
       existing,
     });
 
-    await markLocalJobReceived(job.id);
+    await markLocalJobReceived(job.id, activityId);
 
     return NextResponse.json({
       ok: true,

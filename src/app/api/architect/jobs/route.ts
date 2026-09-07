@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createLocalJob } from "@/lib/local-jobs-store";
-import { buildLocalArchitectPrompt, type LocalPromptCard } from "@/lib/ai/local-prompt";
+import { createLocalJob, type LocalJobKind } from "@/lib/local-jobs-store";
+import {
+  buildLocalArchitectPrompt,
+  buildLocalReviewPrompt,
+  type LocalPromptCard,
+  type ReviewPromptCard,
+} from "@/lib/ai/local-prompt";
 import { getPromptContent } from "@/lib/prompts-store";
-import { ARCHITECT_RESEARCH_PROMPT_KEY } from "@/lib/ai/schema";
+import { ARCHITECT_RESEARCH_PROMPT_KEY, REVIEW_PROMPT_KEY } from "@/lib/ai/schema";
+import { getCachedAnalysis } from "@/lib/analysis-cache";
 import { fetchTaskContent } from "@/lib/clickup";
 import { getCurrentUserEmail, isAllowedUser } from "@/lib/require-allowed-user";
+import { getProfessionals } from "@/lib/professionals-store";
+import { resolveMentionEmails } from "@/lib/mention-emails";
 import type { AiProvider } from "@/lib/types";
 
 function parseProvider(value: unknown): AiProvider {
@@ -39,6 +47,10 @@ export async function POST(request: NextRequest) {
   const project = typeof body?.project === "string" ? body.project : "";
   const provider = parseProvider(body?.provider);
   const cards = parseCards(body?.cards);
+  const kind: LocalJobKind = body?.kind === "review" ? "review" : "architect";
+  const projectAuthors: string[] = Array.isArray(body?.projectAuthors)
+    ? body.projectAuthors.filter((name: unknown): name is string => typeof name === "string")
+    : [];
 
   if (!project || !cards.length) {
     return NextResponse.json({ error: "Informe o projeto e os cards." }, { status: 400 });
@@ -50,6 +62,8 @@ export async function POST(request: NextRequest) {
       project,
       activityIds: cards.map((card) => card.id),
       createdBy: await getCurrentUserEmail(),
+      kind,
+      mentionEmails: resolveMentionEmails(projectAuthors, await getProfessionals()),
     });
 
     // A IA local roda fora do navegador do usuario, entao o POST precisa ir para a
@@ -64,13 +78,43 @@ export async function POST(request: NextRequest) {
       })
     );
 
-    const prompt = buildLocalArchitectPrompt({
-      project,
-      cards: freshCards,
-      token,
-      ingestUrl: `${origin}/api/architect/ingest`,
-      systemPrompt: await getPromptContent(ARCHITECT_RESEARCH_PROMPT_KEY),
-    });
+    const ingestUrl = `${origin}/api/architect/ingest`;
+
+    let prompt: string;
+    if (kind === "review") {
+      // O revisor precisa da especificacao, nao da descricao do card: ele confere
+      // a org contra o devPrompt que o arquiteto gerou.
+      const reviewCards: ReviewPromptCard[] = [];
+      for (const card of freshCards) {
+        const analysis = await getCachedAnalysis(provider, card.id);
+        const devPrompt = analysis?.architecturePayload?.devPrompt ?? "";
+        if (!devPrompt.trim()) continue;
+        reviewCards.push({ ...card, devPrompt });
+      }
+
+      if (!reviewCards.length) {
+        return NextResponse.json(
+          { error: "Nenhum dos cards tem prompt de desenvolvimento para revisar." },
+          { status: 400 }
+        );
+      }
+
+      prompt = buildLocalReviewPrompt({
+        project,
+        cards: reviewCards,
+        token,
+        ingestUrl,
+        systemPrompt: await getPromptContent(REVIEW_PROMPT_KEY),
+      });
+    } else {
+      prompt = buildLocalArchitectPrompt({
+        project,
+        cards: freshCards,
+        token,
+        ingestUrl,
+        systemPrompt: await getPromptContent(ARCHITECT_RESEARCH_PROMPT_KEY),
+      });
+    }
 
     return NextResponse.json({ prompt, expiresAt: job.expiresAt, cardCount: cards.length });
   } catch (error) {

@@ -13,6 +13,7 @@ import { ActivityItemDetailModal } from "@/components/ActivityItemDetailModal";
 const ARCHITECT_QUEUE_STATUS = "refinar arquiteto";
 const DEV_RELEASED_STATUS = "dev liberado";
 const APPROVAL_THRESHOLD = 7;
+const REVIEW_QUEUE_STATUS = "dev finalizado";
 
 type Status = "idle" | "loading" | "error";
 
@@ -28,6 +29,8 @@ export function ActivityTableRow({
   onSelectArchitecture,
   onArchitectLocal,
   onSelectDevPrompt,
+  onSelectReview,
+  onReviewLocal,
   onStatusUpdate,
 }: {
   item: ActivityItem;
@@ -41,6 +44,8 @@ export function ActivityTableRow({
   onSelectArchitecture: (record: AnalyzedActivityRecord) => void;
   onArchitectLocal: (item: ActivityItem) => void;
   onSelectDevPrompt: (record: AnalyzedActivityRecord) => void;
+  onSelectReview: (record: AnalyzedActivityRecord) => void;
+  onReviewLocal: (item: ActivityItem) => void;
   onStatusUpdate?: (taskId: string, status: string) => void;
 }) {
   const columnCount = showLocation ? 6 : 5;
@@ -205,6 +210,27 @@ export function ActivityTableRow({
                   className="flex items-center gap-1 rounded-full bg-[#38BDF8]/10 px-2 py-0.5 font-mono font-medium text-[#38BDF8] hover:underline"
                 >
                   arq {analysis.architecture}/10
+                </button>
+              )}
+              {item.source === "clickup" &&
+                item.status?.toLowerCase() === REVIEW_QUEUE_STATUS &&
+                (analysis.architecture ?? 0) >= APPROVAL_THRESHOLD &&
+                !!analysis.architecturePayload?.devPrompt && (
+                  <button
+                    onClick={() => onReviewLocal(item)}
+                    title="Gerar prompt para revisar esta entrega na sua IA local"
+                    className="flex items-center gap-1 rounded-full border border-dashed border-teal-400/40 px-2 py-0.5 font-mono font-medium text-teal-400/70 hover:border-teal-400/70 hover:text-teal-400"
+                  >
+                    + rev
+                  </button>
+                )}
+              {analysis.review !== null && analysis.review !== undefined && (
+                <button
+                  onClick={() => onSelectReview(analysis)}
+                  title="Ver parecer da revisão"
+                  className="flex items-center gap-1 rounded-full bg-[#2dd4bf]/10 px-2 py-0.5 font-mono font-medium text-[#2dd4bf] hover:underline"
+                >
+                  rev {analysis.review}/10
                 </button>
               )}
               {item.status?.toLowerCase() === DEV_RELEASED_STATUS &&

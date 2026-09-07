@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import type {
   ActivityItem,
@@ -16,14 +17,27 @@ import { CommitAnalysisModal } from "@/components/CommitAnalysisModal";
 import { DifficultyAnalysisModal } from "@/components/DifficultyAnalysisModal";
 import { ArchitectAnalysisModal } from "@/components/ArchitectAnalysisModal";
 import { DevPromptModal } from "@/components/DevPromptModal";
+import { ReviewAnalysisModal } from "@/components/ReviewAnalysisModal";
 import { ProjectScopeAnalysisModal } from "@/components/ProjectScopeAnalysisModal";
 import { AuthorFilter, type AuthorFilterOption } from "@/components/AuthorFilter";
 import { ActivityRoleFilter } from "@/components/ActivityRoleFilter";
 import { ProjectFilter } from "@/components/ProjectFilter";
-import { CloseIcon, RefreshIcon } from "@/components/icons";
+import { FilterOffIcon, RefreshIcon } from "@/components/icons";
+import { AiIcon } from "@/components/AiIcon";
 import { timeAgo } from "@/lib/time-ago";
 import { STATUS_OPTIONS } from "@/lib/status-options";
 import { ActivityGroup } from "@/components/ActivityGroup";
+
+function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="mb-1.5 font-mono text-[11px] text-muted-foreground/45">{label}</p>
+      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-border/60 px-3 py-2.5">
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export function ActivityTable({
   items,
@@ -44,6 +58,8 @@ export function ActivityTable({
   projectFilter,
   projectCounts,
   onProjectFilterChange,
+  canEditPrompts,
+  onOpenPrompts,
 }: {
   items: ActivityItem[];
   allItems: ActivityItem[];
@@ -63,6 +79,8 @@ export function ActivityTable({
   projectFilter: string[];
   projectCounts: Map<string, number>;
   onProjectFilterChange: (projects: string[]) => void;
+  canEditPrompts: boolean;
+  onOpenPrompts: () => void;
 }) {
   const [selected, setSelected] = useState<AnalyzedActivityRecord | null>(null);
   const [selectedDifficulty, setSelectedDifficulty] = useState<AnalyzedActivityRecord | null>(null);
@@ -70,6 +88,7 @@ export function ActivityTable({
     null
   );
   const [selectedDevPrompt, setSelectedDevPrompt] = useState<AnalyzedActivityRecord | null>(null);
+  const [selectedReview, setSelectedReview] = useState<AnalyzedActivityRecord | null>(null);
   const [selectedProjectAnalysis, setSelectedProjectAnalysis] = useState<AnalyzedProjectRecord | null>(
     null
   );
@@ -123,6 +142,22 @@ export function ActivityTable({
     return counts;
   }, [roleFilteredItems]);
 
+  // Em quais projetos cada pessoa aparece, no mesmo escopo da contagem.
+  const authorProjects = useMemo(() => {
+    const byAuthor = new Map<string, Set<string>>();
+    for (const item of roleFilteredItems) {
+      const set = byAuthor.get(item.authorName) ?? new Set<string>();
+      set.add(item.location);
+      byAuthor.set(item.authorName, set);
+    }
+    return new Map(
+      Array.from(byAuthor.entries()).map(([author, set]) => [
+        author,
+        Array.from(set).sort((a, b) => a.localeCompare(b)),
+      ])
+    );
+  }, [roleFilteredItems]);
+
   const authors: AuthorFilterOption[] = Array.from(
     new Map(
       roleFilteredItems.map((item) => [
@@ -159,6 +194,15 @@ export function ActivityTable({
       statusFilter.includes("pr_pendente") && (pendingPrsByProject.get(item.location)?.length ?? 0) > 0;
     return matchesStatus || matchesPendingPr;
   });
+
+  // O portal so pode montar no cliente. useSyncExternalStore devolve o snapshot
+  // do servidor (false) na renderizacao inicial e o do cliente (true) depois,
+  // sem setState em efeito.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   const activeFilterCount =
     projectFilter.length + roleFilter.length + authorFilter.length + statusFilter.length;
@@ -197,97 +241,57 @@ export function ActivityTable({
       animate={{ opacity: 1, y: 0 }}
       className="rounded-xl border border-border bg-card p-5 font-mono dark:shadow-lg dark:shadow-black/40"
     >
-      <div className="flex items-center gap-2">
-          <p className="text-sm text-muted-foreground dark:text-[#ffd9e8]/70">
-            Atividades ({filteredItems.length})
-          </p>
-          <motion.button
-            onClick={onSyncStatuses}
-            disabled={syncingStatuses}
-            whileHover={!syncingStatuses ? { scale: 1.04 } : undefined}
-            whileTap={!syncingStatuses ? { scale: 0.96 } : undefined}
-            title="Buscar status e pareceres atualizados no ClickUp"
-            className="flex items-center gap-1.5 rounded-full border border-black/10 dark:border-white/10 px-2.5 py-1 text-xs text-muted-foreground hover:border-primary/40 hover:text-foreground disabled:opacity-40"
-          >
-            <motion.span
-              className="flex items-center justify-center"
-              animate={syncingStatuses ? { rotate: 360 } : { rotate: 0 }}
-              transition={
-                syncingStatuses
-                  ? { repeat: Infinity, duration: 0.8, ease: "linear" }
-                  : { duration: 0.2 }
-              }
-            >
-              <RefreshIcon size={11} />
-            </motion.span>
-            {syncingStatuses ? "atualizando..." : "status"}
-          </motion.button>
-          {lastSyncedAt && !syncingStatuses && (
-            <span className="font-mono text-[11px] text-muted-foreground/50">
-              {timeAgo(lastSyncedAt.toISOString())}
-            </span>
-          )}
+      <p className="text-sm text-muted-foreground dark:text-[#ffd9e8]/70">
+        Atividades ({filteredItems.length})
+      </p>
 
-          <AnimatePresence>
-            {activeFilterCount > 0 && (
-              <motion.button
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: "auto" }}
-                exit={{ opacity: 0, width: 0 }}
-                transition={{ duration: 0.15 }}
-                onClick={clearAllFilters}
-                title="Remover todos os filtros aplicados"
-                className="flex shrink-0 items-center gap-1 overflow-hidden whitespace-nowrap rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 font-mono text-[11px] text-primary hover:bg-primary/20"
-              >
-                <CloseIcon size={9} />
-                limpar {activeFilterCount} filtro{activeFilterCount > 1 ? "s" : ""}
-              </motion.button>
-            )}
-          </AnimatePresence>
-      </div>
-
-      {/* Tres faixas fixas — projetos, pessoas, status. Cada uma em sua propria
-          linha para que mudar a contagem de uma nao reflua as outras. */}
-      {projectNames.length > 1 && (
-        <div className="mt-4">
-          <ProjectFilter
-            projects={projectNames}
-            value={projectFilter}
-            counts={projectCounts}
-            onChange={onProjectFilterChange}
-          />
-        </div>
-      )}
-
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <ActivityRoleFilter
-          value={roleFilter}
-          counts={roleCounts}
-          onChange={(next) => {
-            setRoleFilter(next);
-            setAuthorFilter([]);
-          }}
-        />
-        {authors.length > 1 && (
-          <AuthorFilter
-            authors={authors}
-            value={authorFilter}
-            counts={authorCounts}
-            onChange={setAuthorFilter}
-          />
+      {/* Tres faixas fixas — projeto, profissionais, status. Cada uma em sua
+          propria linha para que mudar a contagem de uma nao reflua as outras. */}
+      <div className="mt-4 flex flex-col gap-3">
+        {projectNames.length > 1 && (
+          <FilterRow label="projeto">
+            <ProjectFilter
+              projects={projectNames}
+              value={projectFilter}
+              counts={projectCounts}
+              onChange={onProjectFilterChange}
+            />
+          </FilterRow>
         )}
-      </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <FilterRow label="profissionais">
+          <ActivityRoleFilter
+            value={roleFilter}
+            counts={roleCounts}
+            onChange={(next) => {
+              setRoleFilter(next);
+              setAuthorFilter([]);
+            }}
+          />
+          {authors.length > 1 && (
+            <AuthorFilter
+              authors={authors}
+              value={authorFilter}
+              counts={authorCounts}
+              projectsByAuthor={authorProjects}
+              allProjects={projectNames}
+              onChange={setAuthorFilter}
+            />
+          )}
+        </FilterRow>
+
+        <FilterRow label="status">
         {STATUS_OPTIONS.map((option) => {
           const active = statusFilter.includes(option.value);
           const count = statusCounts.get(option.value) ?? 0;
-          const empty = count === 0;
+
+          // Some quando nao ha nada nesse status. Se estiver selecionado, fica:
+          // esconder um filtro ativo deixaria a lista vazia sem como desfazer.
+          if (count === 0 && !active) return null;
 
           return (
             <motion.button
               key={option.value}
-              disabled={empty}
               onClick={() =>
                 setStatusFilter(
                   active
@@ -295,20 +299,16 @@ export function ActivityTable({
                     : [...statusFilter, option.value]
                 )
               }
-              whileHover={!empty ? { y: -1 } : undefined}
-              whileTap={!empty ? { scale: 0.98 } : undefined}
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.98 }}
               transition={{ type: "spring", stiffness: 500, damping: 34 }}
-              title={
-                empty
-                  ? `Nenhuma atividade em "${option.label.toLowerCase()}"`
-                  : `${count} em "${option.label.toLowerCase()}"`
-              }
-              className="flex items-baseline gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] transition-colors disabled:cursor-default"
+              title={`${count} em "${option.label.toLowerCase()}"`}
+              className="flex items-baseline gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] transition-colors"
               style={{
                 borderColor: active ? `${option.color}80` : `${option.color}24`,
                 backgroundColor: active ? `${option.color}1f` : "transparent",
                 color: option.color,
-                opacity: empty ? 0.22 : active ? 1 : 0.7,
+                opacity: active ? 1 : 0.7,
               }}
             >
               {option.label.toLowerCase()}
@@ -318,7 +318,7 @@ export function ActivityTable({
             </motion.button>
           );
         })}
-
+        </FilterRow>
       </div>
 
       <div className="mt-4 flex flex-col gap-2">
@@ -335,6 +335,7 @@ export function ActivityTable({
             onSelectDifficulty={setSelectedDifficulty}
             onSelectArchitecture={setSelectedArchitecture}
             onSelectDevPrompt={setSelectedDevPrompt}
+            onSelectReview={setSelectedReview}
             matchingProject={group.matchingProject}
             allProjectCommits={allCommitsByLocation.get(group.project) ?? []}
             projectAnalysis={group.projectAnalysis}
@@ -357,6 +358,78 @@ export function ActivityTable({
         onClose={() => setSelectedArchitecture(null)}
       />
       <DevPromptModal record={selectedDevPrompt} onClose={() => setSelectedDevPrompt(null)} />
+      <ReviewAnalysisModal record={selectedReview} onClose={() => setSelectedReview(null)} />
+
+      {/* Portal e nao um fixed inline: este card e um motion.div com layout, e o
+          transform dele faria um position:fixed filho ancorar no card, nao na tela. */}
+      {mounted &&
+        createPortal(
+          <div className="pointer-events-none fixed right-6 bottom-6 z-40 flex flex-col items-end gap-2">
+            <AnimatePresence>
+              {activeFilterCount > 0 && (
+                <motion.button
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 34 }}
+                  onClick={clearAllFilters}
+                  title="Remover todos os filtros aplicados"
+                  className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/15 px-3 py-2 font-mono text-[11px] text-primary shadow-lg shadow-black/30 backdrop-blur hover:bg-primary/25"
+                >
+                  <FilterOffIcon size={11} />
+                  limpar {activeFilterCount} filtro{activeFilterCount > 1 ? "s" : ""}
+                </motion.button>
+              )}
+            </AnimatePresence>
+
+            {canEditPrompts && (
+              <motion.button
+                onClick={onOpenPrompts}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+                title="Editar os prompts das análises"
+                className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 font-mono text-[11px] text-muted-foreground shadow-lg shadow-black/40 backdrop-blur hover:border-primary/40 hover:text-foreground"
+              >
+                <AiIcon size={12} />
+                prompts
+              </motion.button>
+            )}
+
+            <motion.button
+              onClick={onSyncStatuses}
+              disabled={syncingStatuses}
+              whileHover={!syncingStatuses ? { scale: 1.04 } : undefined}
+              whileTap={!syncingStatuses ? { scale: 0.96 } : undefined}
+              title="Buscar status e pareceres atualizados no ClickUp"
+              className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 font-mono text-[11px] text-muted-foreground shadow-lg shadow-black/40 backdrop-blur hover:border-primary/40 hover:text-foreground disabled:opacity-60"
+            >
+              <motion.span
+                className="flex items-center justify-center"
+                animate={syncingStatuses ? { rotate: 360 } : { rotate: 0 }}
+                transition={
+                  syncingStatuses
+                    ? { repeat: Infinity, duration: 0.8, ease: "linear" }
+                    : { duration: 0.2 }
+                }
+              >
+                <RefreshIcon size={12} />
+              </motion.span>
+              {syncingStatuses ? (
+                "atualizando..."
+              ) : (
+                <>
+                  atualizar
+                  {lastSyncedAt && (
+                    <span className="text-muted-foreground/45">
+                      {timeAgo(lastSyncedAt.toISOString())}
+                    </span>
+                  )}
+                </>
+              )}
+            </motion.button>
+          </div>,
+          document.body
+        )}
       <ProjectScopeAnalysisModal
         record={selectedProjectAnalysis}
         onClose={() => setSelectedProjectAnalysis(null)}

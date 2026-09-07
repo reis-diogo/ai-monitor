@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProfessionals, upsertProfessional } from "@/lib/professionals-store";
+import {
+  getProfessionals,
+  removeProfessional,
+  upsertProfessional,
+} from "@/lib/professionals-store";
 import { isAllowedUser } from "@/lib/require-allowed-user";
 
 export async function GET() {
@@ -35,4 +39,24 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json({ professionals });
+}
+
+export async function DELETE(request: NextRequest) {
+  if (!(await isAllowedUser())) {
+    return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
+  }
+
+  const body = await request.json().catch(() => null);
+  const authorName = body?.authorName;
+
+  if (typeof authorName !== "string" || !authorName.trim()) {
+    return NextResponse.json({ error: "Informe a pessoa." }, { status: 400 });
+  }
+
+  try {
+    return NextResponse.json({ professionals: await removeProfessional(authorName.trim()) });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erro ao remover profissional.";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
 }

@@ -87,7 +87,21 @@ export async function POST(request: NextRequest) {
       analyzedAt: new Date().toISOString(),
     };
 
-    await setCachedAnalysis(provider, id, record);
+    // Preserva o que as etapas seguintes gravaram na mesma linha. setCachedAnalysis
+    // faz upsert da linha inteira, entao reavaliar a qualidade sem isso apagaria
+    // a dificuldade, o parecer do arquiteto (incluindo o devPrompt) e a revisao.
+    const previous = await getCachedAnalysis(provider, id);
+    await setCachedAnalysis(provider, id, {
+      ...record,
+      difficulty: previous?.difficulty ?? null,
+      difficultyReasoning: previous?.difficultyReasoning ?? null,
+      architecture: previous?.architecture ?? null,
+      architectureReasoning: previous?.architectureReasoning ?? null,
+      architecturePayload: previous?.architecturePayload ?? null,
+      review: previous?.review ?? null,
+      reviewReasoning: previous?.reviewReasoning ?? null,
+      reviewPayload: previous?.reviewPayload ?? null,
+    });
 
     let clickupStatusUpdate: string | null = null;
     if (source === "clickup" && str(body?.status).toLowerCase() === PENDING_DEV_STATUS) {

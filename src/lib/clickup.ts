@@ -128,10 +128,14 @@ export async function updateTaskStatus(taskId: string, status: string): Promise<
 export async function createTaskComment(
   taskId: string,
   text: string,
-  mentionUserId: number | null
+  mentionUserIds: number | number[] | null
 ): Promise<void> {
-  const comment = mentionUserId
-    ? [{ type: "tag", user: { id: mentionUserId } }, { text: ` ${text}` }]
+  const ids = (
+    typeof mentionUserIds === "number" ? [mentionUserIds] : mentionUserIds ?? []
+  ).filter((id, index, list) => list.indexOf(id) === index);
+
+  const comment = ids.length
+    ? [...ids.map((id) => ({ type: "tag", user: { id } })), { text: ` ${text}` }]
     : [{ text }];
 
   await clickupFetch(`/task/${taskId}/comment`, {
@@ -146,7 +150,7 @@ type ClickUpChecklistResponse = { checklist?: { id: string } };
 type ClickUpTaskChecklists = { checklists?: { id: string; name: string }[] };
 
 /** Remove checklists com esse nome, para a reavaliacao substituir em vez de empilhar. */
-async function deleteChecklistsNamed(taskId: string, name: string): Promise<void> {
+export async function deleteChecklistsNamed(taskId: string, name: string): Promise<void> {
   const task = (await clickupFetch(`/task/${taskId}`)) as ClickUpTaskChecklists;
   const existing = (task.checklists ?? []).filter((c) => c.name === name);
 
@@ -207,4 +211,26 @@ export async function fetchTaskContent(
   } catch {
     return null;
   }
+}
+
+
+type ClickUpTeamMember = { user: { id: number; email?: string | null } };
+
+/**
+ * Mapa email -> id de usuario do ClickUp. Mencionar alguem exige o id numerico, e
+ * o que o app guarda em professionals e o email — este e o unico ponto de traducao.
+ */
+export async function fetchTeamMemberIdsByEmail(): Promise<Map<string, number>> {
+  const data = (await clickupFetch("/team")) as {
+    teams?: { members?: ClickUpTeamMember[] }[];
+  };
+
+  const map = new Map<string, number>();
+  for (const team of data.teams ?? []) {
+    for (const member of team.members ?? []) {
+      const email = member.user.email?.trim().toLowerCase();
+      if (email) map.set(email, member.user.id);
+    }
+  }
+  return map;
 }

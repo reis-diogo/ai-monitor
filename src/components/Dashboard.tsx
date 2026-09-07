@@ -43,6 +43,9 @@ const AUTO_ANALYZE_STATUS = "para desenvolver";
 const PR_MONITOR_INTERVAL_MS = 30_000;
 const CLICKUP_ID_REGEX = /CLICKUP-\d+/i;
 const QA_STATUS = "em qa";
+// Status que o gate do revisor controla: o monitor de PR nao pode arrastar o card
+// para QA por cima deles, senao a entrega chega em QA sem ninguem ter conferido.
+const REVIEW_OWNED_STATUSES = ["dev finalizado", "revisar dev"];
 const DIFFICULTY_INTERVAL_MS = 30_000;
 // Desligada: a arquitetura passou a ser delegada para a IA local do usuario
 // (botao "arquitetar N local" em cada projeto). Volte para true para gastar
@@ -66,8 +69,6 @@ export function Dashboard() {
   const [clickupStatuses, setClickupStatuses] = useState<ClickUpStatusOption[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [datePreset, setDatePreset] = useState<DatePreset>("all");
-  const [customStart, setCustomStart] = useState("");
-  const [customEnd, setCustomEnd] = useState("");
   const [projectFilter, setProjectFilter] = useState<string[]>([]);
   const [repoPullRequests, setRepoPullRequests] = useState<
     { owner: string; name: string; pullRequests: PullRequestInfo[] }[]
@@ -531,7 +532,9 @@ export function Dashboard() {
             const task = clickupTasksRef.current.find(
               (t) => t.customId?.toUpperCase() === customId
             );
-            if (!task || task.status.toLowerCase() === QA_STATUS) continue;
+            const taskStatus = task?.status.toLowerCase();
+            if (!task || taskStatus === QA_STATUS) continue;
+            if (taskStatus && REVIEW_OWNED_STATUSES.includes(taskStatus)) continue;
 
             const entryId = startEntry(
               `PR #${pr.number} (${repo.owner}/${repo.name}) referencia ${customId} — movendo para "${QA_STATUS}"`,
@@ -870,8 +873,8 @@ export function Dashboard() {
   }, [repoPullRequests, projects]);
 
   const dateRange = useMemo(
-    () => getPresetRange(datePreset, { start: customStart, end: customEnd }),
-    [datePreset, customStart, customEnd]
+    () => getPresetRange(datePreset),
+    [datePreset]
   );
 
   const filteredActivityItems = useMemo(
@@ -1027,16 +1030,6 @@ export function Dashboard() {
             click-up
           </a>
 
-          {canEditPrompts && (
-            <motion.button
-              onClick={() => setPromptEditorOpen(true)}
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              className="flex items-center gap-1.5 rounded-full border border-black/10 dark:border-white/10 px-3 py-1 text-xs text-black/50 dark:text-white/50 hover:border-black/30 dark:hover:border-white/30 hover:text-black/80 dark:hover:text-white/80"
-            >
-              prompts
-            </motion.button>
-          )}
         </div>
       </motion.header>
 
@@ -1053,16 +1046,7 @@ export function Dashboard() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.05 }}
       >
-        <DateRangeFilter
-          value={datePreset}
-          customStart={customStart}
-          customEnd={customEnd}
-          onChange={setDatePreset}
-          onCustomChange={(start, end) => {
-            setCustomStart(start);
-            setCustomEnd(end);
-          }}
-        />
+        <DateRangeFilter value={datePreset} onChange={setDatePreset} />
       </motion.div>
 
       <AnimatePresence>
@@ -1122,6 +1106,8 @@ export function Dashboard() {
               projectFilter={projectFilter}
               projectCounts={projectCounts}
               onProjectFilterChange={setProjectFilter}
+              canEditPrompts={canEditPrompts}
+              onOpenPrompts={() => setPromptEditorOpen(true)}
             />
 
             <CardsOpenedChart data={activityByDay.data} config={activityByDay.config} />
