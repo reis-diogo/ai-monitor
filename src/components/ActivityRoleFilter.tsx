@@ -3,54 +3,51 @@
 import { motion } from "motion/react";
 import type { ActivitySource } from "@/lib/types";
 
-const OPTIONS: { value: ActivitySource; label: string }[] = [
-  { value: "commit", label: "Devs" },
-  { value: "clickup", label: "PO's" },
+const OPTIONS: { value: ActivitySource; label: string; color: string }[] = [
+  { value: "commit", label: "devs", color: "#22c55e" },
+  { value: "clickup", label: "po's", color: "#a855f7" },
 ];
 
 export function ActivityRoleFilter({
   value,
+  counts,
   onChange,
 }: {
-  value: ActivitySource | null;
-  onChange: (source: ActivitySource | null) => void;
+  value: ActivitySource[];
+  counts: Map<ActivitySource, number>;
+  onChange: (sources: ActivitySource[]) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-1 rounded-full border border-black/10 bg-black/5 p-0.5 text-xs dark:border-white/10 dark:bg-white/5">
-      <button
-        onClick={() => onChange(null)}
-        className={`relative rounded-full px-3 py-1.5 font-medium transition-colors ${
-          value === null ? "text-background" : "text-foreground/50"
-        }`}
-      >
-        {value === null && (
-          <motion.span
-            layoutId="role-filter-pill"
-            className="absolute inset-0 rounded-full bg-foreground"
-            transition={{ type: "spring", stiffness: 500, damping: 34 }}
-          />
-        )}
-        <span className="relative">Todos</span>
-      </button>
+    <div className="flex flex-wrap items-center gap-1.5">
+      {OPTIONS.map((option) => {
+        const active = value.includes(option.value);
+        const count = counts.get(option.value) ?? 0;
 
-      {OPTIONS.map((option) => (
-        <button
-          key={option.value}
-          onClick={() => onChange(option.value)}
-          className={`relative rounded-full px-3 py-1.5 font-medium transition-colors ${
-            value === option.value ? "text-background" : "text-foreground/50"
-          }`}
-        >
-          {value === option.value && (
-            <motion.span
-              layoutId="role-filter-pill"
-              className="absolute inset-0 rounded-full bg-foreground"
-              transition={{ type: "spring", stiffness: 500, damping: 34 }}
-            />
-          )}
-          <span className="relative">{option.label}</span>
-        </button>
-      ))}
+        return (
+          <motion.button
+            key={option.value}
+            onClick={() =>
+              onChange(active ? value.filter((v) => v !== option.value) : [...value, option.value])
+            }
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 500, damping: 34 }}
+            title={`${count} ${option.label}`}
+            className="flex items-baseline gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] transition-colors"
+            style={{
+              borderColor: active ? `${option.color}80` : `${option.color}24`,
+              backgroundColor: active ? `${option.color}1f` : "transparent",
+              color: option.color,
+              opacity: active ? 1 : 0.7,
+            }}
+          >
+            {option.label}
+            <span className="tabular-nums" style={{ opacity: active ? 0.75 : 0.55 }}>
+              {count}
+            </span>
+          </motion.button>
+        );
+      })}
     </div>
   );
 }

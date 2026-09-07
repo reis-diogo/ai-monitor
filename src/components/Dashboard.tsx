@@ -29,7 +29,7 @@ import { ActivityTable } from "@/components/ActivityTable";
 import { ProfessionalsManager } from "@/components/ProfessionalsManager";
 import { ProjectsManager } from "@/components/ProjectsManager";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
-import { ProjectFilter } from "@/components/ProjectFilter";
+import { projectColor } from "@/lib/project-color";
 import { normalizeLocation } from "@/lib/normalize-location";
 import { resolveAuthorName } from "@/lib/normalize-author";
 import { getPresetRange, isWithinRange, type DatePreset } from "@/lib/date-range";
@@ -68,7 +68,7 @@ export function Dashboard() {
   const [datePreset, setDatePreset] = useState<DatePreset>("all");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
-  const [projectFilter, setProjectFilter] = useState<string | null>(null);
+  const [projectFilter, setProjectFilter] = useState<string[]>([]);
   const [repoPullRequests, setRepoPullRequests] = useState<
     { owner: string; name: string; pullRequests: PullRequestInfo[] }[]
   >([]);
@@ -878,7 +878,7 @@ export function Dashboard() {
     () =>
       activityItems
         .filter((item) => isWithinRange(item.date, dateRange))
-        .filter((item) => !projectFilter || item.location === projectFilter),
+        .filter((item) => !projectFilter.length || projectFilter.includes(item.location)),
     [activityItems, dateRange, projectFilter]
   );
 
@@ -895,23 +895,11 @@ export function Dashboard() {
     () =>
       resolvedAnalyzedActivities
         .filter((record) => isWithinRange(record.date, dateRange))
-        .filter((record) => !projectFilter || record.location === projectFilter),
+        .filter((record) => !projectFilter.length || projectFilter.includes(record.location)),
     [resolvedAnalyzedActivities, dateRange, projectFilter]
   );
 
   const activityByDay = useMemo(() => {
-    const palette = [
-      "#FE2B77",
-      "#8B5CF6",
-      "#22c55e",
-      "#eab308",
-      "#38bdf8",
-      "#f97316",
-      "#a855f7",
-      "#14b8a6",
-      "#f43f5e",
-      "#0ea5e9",
-    ];
     const slugify = (value: string) =>
       value
         .toLowerCase()
@@ -971,12 +959,22 @@ export function Dashboard() {
       });
 
     const config: ChartConfig = {};
-    Array.from(projectBySlug.entries()).forEach(([slug, name], index) => {
-      config[slug] = { label: name, color: palette[index % palette.length] };
-    });
+    for (const [slug, name] of projectBySlug.entries()) {
+      config[slug] = { label: name, color: projectColor(name, projectNames) };
+    }
 
     return { data, config };
-  }, [filteredActivityItems]);
+  }, [filteredActivityItems, projectNames]);
+
+  const projectCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const item of activityItems) {
+      if (!isWithinRange(item.date, dateRange)) continue;
+      counts.set(item.location, (counts.get(item.location) ?? 0) + 1);
+    }
+    return counts;
+  }, [activityItems, dateRange]);
+
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-16">
@@ -1050,16 +1048,6 @@ export function Dashboard() {
         doneLastHour={doneLastHour}
       />
 
-      {projectNames.length > 1 && (
-        <motion.div
-          initial={{ opacity: 0, y: -6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.03 }}
-        >
-          <ProjectFilter projects={projectNames} value={projectFilter} onChange={setProjectFilter} />
-        </motion.div>
-      )}
-
       <motion.div
         initial={{ opacity: 0, y: -6 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1115,8 +1103,6 @@ export function Dashboard() {
           </motion.p>
         ) : (
           <motion.div key="content" className="flex flex-col gap-8">
-            <CardsOpenedChart data={activityByDay.data} config={activityByDay.config} />
-
             <ActivityTable
               items={filteredActivityItems}
               allItems={activityItems}
@@ -1132,7 +1118,13 @@ export function Dashboard() {
               onSyncStatuses={syncClickupStatuses}
               syncingStatuses={syncingStatuses}
               lastSyncedAt={lastSync}
+              projectNames={projectNames}
+              projectFilter={projectFilter}
+              projectCounts={projectCounts}
+              onProjectFilterChange={setProjectFilter}
             />
+
+            <CardsOpenedChart data={activityByDay.data} config={activityByDay.config} />
           </motion.div>
         )}
       </AnimatePresence>

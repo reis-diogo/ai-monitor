@@ -118,7 +118,7 @@ export function FlowLog({
       <div className="flex items-center justify-between border-b border-[#FE2B77]/20 px-3 py-2 text-[11px] tracking-wide">
         <span className="text-[#ffd9e8]/60">
           FLUXO DE ACIONAMENTOS <span className="ml-2 font-semibold text-[#ffd9e8]">
-            atualiza a cada 30s</span>
+            roda a cada 30s</span>
         </span>
         <span className="text-[#ffd9e8]/40">
           {entries.length} registro{entries.length !== 1 ? "s" : ""}

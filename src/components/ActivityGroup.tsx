@@ -75,7 +75,6 @@ export function ActivityGroup({
   const [localArchitectCards, setLocalArchitectCards] = useState<ActivityItem[] | null>(null);
 
   const commitCount = items.filter((item) => item.source === "commit").length;
-  const taskCount = items.length - commitCount;
   const pendingTaskItems = items.filter(
     (item) => item.source === "clickup" && item.status?.toLowerCase() === "para desenvolver"
   );
@@ -121,14 +120,11 @@ export function ActivityGroup({
     }
   }
 
-  const needsAttention = pendingTaskCount > 0 || refiningTaskCount > 0 || architectTaskCount > 0;
 
   return (
     <motion.div
       layout
-      className={`rounded-lg border-y border-r bg-card ${
-        needsAttention ? "border-l-2 border-l-[#FE2B77] border-y-border/60 border-r-border/60" : "border-l border-border/60"
-      }`}
+      className="rounded-lg border border-border/60 bg-card"
     >
       <div
         role="button"
@@ -147,11 +143,11 @@ export function ActivityGroup({
             {project} <span className="font-normal text-muted-foreground">({items.length})</span>
           </span>
 
-          <span className="text-muted-foreground">
-            {commitCount > 0 && `${commitCount} commit${commitCount > 1 ? "s" : ""}`}
-            {commitCount > 0 && taskCount > 0 && " · "}
-            {taskCount > 0 && `${taskCount} tarefa${taskCount > 1 ? "s" : ""}`}
-          </span>
+          {commitCount > 0 && (
+            <span className="text-muted-foreground">
+              {commitCount} commit{commitCount > 1 ? "s" : ""}
+            </span>
+          )}
 
           {pendingTaskCount > 0 && (
             <button
@@ -229,7 +225,7 @@ export function ActivityGroup({
                 e.stopPropagation();
                 setShowPendingPrs(true);
               }}
-              className="flex items-center gap-1 rounded-full border border-sky-400/30 bg-sky-400/10 px-2 py-0.5 font-medium text-sky-700 dark:text-sky-300 hover:bg-sky-400/20"
+              className="flex items-center gap-1 rounded-full border border-indigo-400/30 bg-indigo-400/10 px-2 py-0.5 font-medium text-indigo-700 dark:text-indigo-300 hover:bg-indigo-400/20"
               title={`${pendingPrCount} pull request${pendingPrCount > 1 ? "s" : ""} aberto${pendingPrCount > 1 ? "s" : ""} aguardando merge`}
             >
               <PullRequestIcon size={11} />

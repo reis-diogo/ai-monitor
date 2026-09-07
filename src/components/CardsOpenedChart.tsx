@@ -1,5 +1,6 @@
 "use client";
 
+import { useReducedMotion } from "motion/react";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 import {
   type ChartConfig,
@@ -107,6 +108,7 @@ export function CardsOpenedChart({
   config: ChartConfig;
 }) {
   const seriesKeys = Object.keys(config);
+  const reduceMotion = useReducedMotion();
 
   return (
     <div className="rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] p-5">
@@ -130,7 +132,7 @@ export function CardsOpenedChart({
             />
             <ChartTooltip content={<ActivityTooltip config={config} />} />
             <ChartLegend content={<ChartLegendContent className="flex-wrap" />} />
-            {seriesKeys.map((key) => (
+            {seriesKeys.map((key, index) => (
               <Area
                 key={key}
                 dataKey={key}
@@ -138,6 +140,13 @@ export function CardsOpenedChart({
                 fill={`var(--color-${key})`}
                 fillOpacity={0.25}
                 stroke={`var(--color-${key})`}
+                // Redesenha em ~450ms quando o filtro muda, em vez dos 1500ms
+                // padrao do Recharts. O atraso por serie escalona a entrada
+                // quando varios projetos aparecem de uma vez.
+                isAnimationActive={!reduceMotion}
+                animationDuration={450}
+                animationBegin={index * 60}
+                animationEasing="ease-out"
               />
             ))}
           </AreaChart>
