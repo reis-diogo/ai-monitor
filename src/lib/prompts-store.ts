@@ -5,6 +5,8 @@ import {
   ARCHITECT_RESEARCH_SYSTEM_PROMPT,
   ARCHITECT_STRUCTURE_PROMPT_KEY,
   ARCHITECT_STRUCTURE_SYSTEM_PROMPT,
+  REVIEW_PROMPT_KEY,
+  REVIEW_SYSTEM_PROMPT,
 } from "@/lib/ai/schema";
 
 type PromptRow = {
@@ -24,6 +26,11 @@ export const PROMPT_DEFAULTS: { key: string; label: string; content: string }[] 
     key: ARCHITECT_STRUCTURE_PROMPT_KEY,
     label: "Arquiteto — parecer e nota",
     content: ARCHITECT_STRUCTURE_SYSTEM_PROMPT,
+  },
+  {
+    key: REVIEW_PROMPT_KEY,
+    label: "Revisor — entrega vs especificação",
+    content: REVIEW_SYSTEM_PROMPT,
   },
 ];
 

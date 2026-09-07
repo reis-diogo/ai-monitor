@@ -109,6 +109,18 @@ export type AnalyzedActivityRecord = CommitAnalysis & {
   architecture?: number | null;
   architectureReasoning?: string | null;
   architecturePayload?: ArchitectPayload | null;
+  review?: number | null;
+  reviewReasoning?: string | null;
+  reviewPayload?: ReviewPayload | null;
+};
+
+export type ReviewPayload = {
+  delivered: string[];
+  missing: string[];
+  deviations: string[];
+  fixPrompt: string;
+  appliedStatus?: string | null;
+  statusError?: string | null;
 };
 
 export type ArchitectDocReference = {

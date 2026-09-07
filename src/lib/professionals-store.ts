@@ -53,6 +53,16 @@ export async function upsertProfessional(params: {
   return getProfessionals();
 }
 
+export async function removeProfessional(authorName: string): Promise<Professional[]> {
+  const { error } = await getSupabase()
+    .from("professionals")
+    .delete()
+    .eq("author_name", authorName);
+
+  if (error) throw new Error(`Erro ao remover profissional: ${error.message}`);
+  return getProfessionals();
+}
+
 export async function ensurePoFromClickupEmail(email: string, name: string): Promise<void> {
   const list = await getProfessionals();
   const alreadyRegistered = list.some(

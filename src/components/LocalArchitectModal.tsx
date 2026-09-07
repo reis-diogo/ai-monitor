@@ -9,11 +9,15 @@ export function LocalArchitectModal({
   project,
   cards,
   provider,
+  kind = "architect",
+  projectAuthors,
   onClose,
 }: {
   project: string | null;
   cards: ActivityItem[];
   provider: AiProvider;
+  kind?: "architect" | "review";
+  projectAuthors: string[];
   onClose: () => void;
 }) {
   const [prompt, setPrompt] = useState("");
@@ -33,6 +37,8 @@ export function LocalArchitectModal({
       body: JSON.stringify({
         project,
         provider,
+        kind,
+        projectAuthors,
         cards: cards.map((card) => ({
           id: card.id,
           customId: card.customId,
@@ -58,7 +64,7 @@ export function LocalArchitectModal({
     return () => {
       cancelled = true;
     };
-  }, [project, provider, cards]);
+  }, [project, provider, cards, kind, projectAuthors]);
 
   useEffect(() => {
     if (!project) return;
@@ -103,11 +109,13 @@ export function LocalArchitectModal({
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="font-mono text-xs text-black/40 dark:text-white/40">
-                  arquitetura local · {project}
+                  {kind === "review" ? "revisão da entrega" : "arquitetura local"} · {project}
                 </p>
                 <p className="mt-1 text-sm text-black/80 dark:text-white/80">
-                  Cole na sua IA local, dentro do repositório de metadados do projeto. Ela analisa{" "}
-                  {cards.length} card(s) e devolve o parecer pro app.
+                  Cole na sua IA local, apontando para o retrieve da org.{" "}
+                  {kind === "review"
+                    ? `Ela confere ${cards.length} entrega(s) contra a especificação e devolve o parecer.`
+                    : `Ela analisa ${cards.length} card(s) e devolve o parecer pro app.`}
                 </p>
               </div>
               <button

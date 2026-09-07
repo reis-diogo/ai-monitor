@@ -1,5 +1,10 @@
 import { getSupabase } from "@/lib/supabase";
-import type { AiProvider, AnalyzedActivityRecord, ArchitectPayload } from "@/lib/types";
+import type {
+  AiProvider,
+  AnalyzedActivityRecord,
+  ArchitectPayload,
+  ReviewPayload,
+} from "@/lib/types";
 
 type AnalysisCacheRow = {
   provider: AiProvider;
@@ -22,6 +27,9 @@ type AnalysisCacheRow = {
   architecture: number | null;
   architecture_reasoning: string | null;
   architecture_payload: ArchitectPayload | null;
+  review: number | null;
+  review_reasoning: string | null;
+  review_payload: ReviewPayload | null;
 };
 
 function rowToRecord(row: AnalysisCacheRow): AnalyzedActivityRecord {
@@ -46,6 +54,9 @@ function rowToRecord(row: AnalysisCacheRow): AnalyzedActivityRecord {
     architecture: row.architecture,
     architectureReasoning: row.architecture_reasoning,
     architecturePayload: row.architecture_payload,
+    review: row.review,
+    reviewReasoning: row.review_reasoning,
+    reviewPayload: row.review_payload,
   };
 }
 
@@ -90,6 +101,9 @@ export async function setCachedAnalysis(
     architecture: record.architecture ?? null,
     architecture_reasoning: record.architectureReasoning ?? null,
     architecture_payload: record.architecturePayload ?? null,
+    review: record.review ?? null,
+    review_reasoning: record.reviewReasoning ?? null,
+    review_payload: record.reviewPayload ?? null,
   };
 
   const { error } = await getSupabase()

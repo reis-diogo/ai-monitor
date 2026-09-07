@@ -66,6 +66,9 @@ create table if not exists analysis_cache (
   architecture int,
   architecture_reasoning text,
   architecture_payload jsonb,
+  review int,
+  review_reasoning text,
+  review_payload jsonb,
   primary key (provider, activity_id)
 );
 
@@ -96,6 +99,9 @@ create table if not exists local_jobs (
   provider text not null,
   project text not null,
   activity_ids text[] not null,
+  kind text not null default 'architect',
+  received_ids text[] not null default '{}',
+  mention_emails text[] not null default '{}',
   created_by text,
   created_at timestamptz not null default now(),
   expires_at timestamptz not null,

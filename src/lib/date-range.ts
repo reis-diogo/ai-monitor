@@ -1,11 +1,8 @@
-export type DatePreset = "all" | "today" | "yesterday" | "7d" | "30d" | "custom";
+export type DatePreset = "all" | "today" | "yesterday" | "7d" | "30d";
 
 export type DateRange = { start: Date; end: Date };
 
-export function getPresetRange(
-  preset: DatePreset,
-  custom: { start: string; end: string }
-): DateRange | null {
+export function getPresetRange(preset: DatePreset): DateRange | null {
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
@@ -29,10 +26,6 @@ export function getPresetRange(
       const start = new Date(startOfToday);
       start.setDate(start.getDate() - 29);
       return { start, end: now };
-    }
-    case "custom": {
-      if (!custom.start || !custom.end) return null;
-      return { start: new Date(custom.start), end: new Date(`${custom.end}T23:59:59`) };
     }
   }
 }

@@ -196,6 +196,32 @@ export function ProfessionalsManager({
       });
   }
 
+  const [removingName, setRemovingName] = useState<string | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+
+  function handleRemove(authorName: string) {
+    const previous = professionals;
+    setProfessionals((list) => (list ?? []).filter((p) => p.authorName !== authorName));
+    setRemovingName(null);
+    setRemoveError(null);
+
+    fetch("/api/professionals", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ authorName }),
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Erro ao remover pessoa.");
+        setProfessionals(data.professionals);
+        onChange();
+      })
+      .catch(() => {
+        setProfessionals(previous);
+        setRemoveError(`Erro ao remover ${authorName}.`);
+      });
+  }
+
   function handleAdd() {
     if (!newName.trim()) return;
     handleSetRole(newName.trim(), newRole, {
@@ -424,6 +450,35 @@ export function ProfessionalsManager({
                             })
                           }
                         />
+
+                        {removingName === person.name ? (
+                          <span className="flex items-center gap-1.5 text-[11px]">
+                            <span className="text-red-500/80">remover?</span>
+                            <button
+                              onClick={() => handleRemove(person.name)}
+                              className="rounded-md border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-red-500 hover:bg-red-500/20"
+                            >
+                              sim
+                            </button>
+                            <button
+                              onClick={() => setRemovingName(null)}
+                              className="rounded-md border border-black/10 dark:border-white/10 px-1.5 py-0.5 text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                            >
+                              não
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setRemovingName(person.name);
+                              setRemoveError(null);
+                            }}
+                            title={`Remover ${person.name} do cadastro`}
+                            className="text-[11px] text-black/25 dark:text-white/25 hover:text-red-500"
+                          >
+                            {removeError?.includes(person.name) ? "falhou, tentar de novo" : "remover"}
+                          </button>
+                        )}
                       </div>
 
                       <AnimatePresence initial={false}>
