@@ -1,52 +1,52 @@
 "use client";
 
 import { motion } from "motion/react";
+import { projectColor } from "@/lib/project-color";
 
 export function ProjectFilter({
   projects,
   value,
+  counts,
   onChange,
 }: {
   projects: string[];
-  value: string | null;
-  onChange: (project: string | null) => void;
+  value: string[];
+  counts: Map<string, number>;
+  onChange: (projects: string[]) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-1 rounded-full border border-black/10 bg-black/5 p-0.5 text-xs dark:border-white/10 dark:bg-white/5">
-      <button
-        onClick={() => onChange(null)}
-        className={`relative rounded-full px-3 py-1.5 font-medium transition-colors ${
-          value === null ? "text-primary-foreground" : "text-foreground/50"
-        }`}
-      >
-        {value === null && (
-          <motion.span
-            layoutId="project-filter-pill"
-            className="absolute inset-0 rounded-full bg-primary"
-            transition={{ type: "spring", stiffness: 500, damping: 34 }}
-          />
-        )}
-        <span className="relative">Todos os projetos</span>
-      </button>
+    <div className="flex flex-wrap items-center gap-1.5">
+      {projects.map((project) => {
+        const active = value.includes(project);
+        const color = projectColor(project, projects);
+        const count = counts.get(project) ?? 0;
 
-      {projects.map((project) => (
-        <button
-          key={project}
-          onClick={() => onChange(project)}
-          className={`relative rounded-full px-3 py-1.5 font-medium transition-colors ${
-            value === project ? "text-primary-foreground" : "text-foreground/50"
-          }`}
-        >
-          {value === project && (
-            <motion.span
-              layoutId="project-filter-pill"
-              className="absolute inset-0 rounded-full bg-primary"
-              transition={{ type: "spring", stiffness: 500, damping: 34 }}
-            />
-          )}
-          <span className="relative">{project}</span>
-        </button>
-      ))}
+        return (
+          <motion.button
+            key={project}
+            onClick={() =>
+              onChange(active ? value.filter((p) => p !== project) : [...value, project])
+            }
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 500, damping: 34 }}
+            title={`${count} atividade${count === 1 ? "" : "s"} em ${project}`}
+            className="flex items-baseline gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] transition-colors"
+            style={{
+              borderColor: active ? `${color}80` : `${color}24`,
+              backgroundColor: active ? `${color}1f` : "transparent",
+              color,
+              opacity: active ? 1 : 0.7,
+            }}
+          >
+            {project}
+            <span className="tabular-nums" style={{ opacity: active ? 0.75 : 0.55 }}>
+              {count}
+            </span>
+          </motion.button>
+        );
+      })}
+
     </div>
   );
 }

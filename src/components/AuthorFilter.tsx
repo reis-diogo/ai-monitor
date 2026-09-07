@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { motion } from "motion/react";
 
 export type AuthorFilterOption = {
@@ -8,95 +7,65 @@ export type AuthorFilterOption = {
   avatarUrl: string | null;
 };
 
-const MAX_VISIBLE = 6;
+function firstName(name: string): string {
+  return name.trim().split(/\s+/)[0].toLowerCase();
+}
 
 export function AuthorFilter({
   authors,
   value,
+  counts,
   onChange,
-  max = MAX_VISIBLE,
 }: {
   authors: AuthorFilterOption[];
-  value: string | null;
-  onChange: (author: string | null) => void;
-  max?: number;
+  value: string[];
+  counts: Map<string, number>;
+  onChange: (authors: string[]) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
-
-  const overflow = Math.max(0, authors.length - max);
-  const visible = expanded || overflow === 0 ? authors : authors.slice(0, max);
-
   return (
-    <div className="flex items-center gap-2">
-      <button
-        onClick={() => onChange(null)}
-        className={`relative rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-          value === null
-            ? "border-transparent text-background"
-            : "border-white/10 text-foreground/50 hover:text-foreground/80"
-        }`}
-      >
-        {value === null && (
-          <motion.span
-            layoutId="author-filter-pill"
-            className="absolute inset-0 rounded-full bg-foreground"
-            transition={{ type: "spring", stiffness: 500, damping: 34 }}
-          />
-        )}
-        <span className="relative">Todos</span>
-      </button>
+    <div className="flex flex-wrap items-center gap-1.5">
+      {authors.map((author) => {
+        const active = value.includes(author.name);
+        const count = counts.get(author.name) ?? 0;
 
-      <motion.div layout className="flex items-center">
-        {visible.map((author, index) => {
-          const selected = value === author.name;
-          const dimmed = value !== null && !selected;
-
-          return (
-            <motion.button
-              layout
-              key={author.name}
-              onClick={() => onChange(selected ? null : author.name)}
-              title={author.name}
-              whileHover={{ scale: 1.14, y: -2 }}
-              whileTap={{ scale: 1.02 }}
-              animate={{ scale: selected ? 1.14 : 1, opacity: dimmed ? 0.45 : 1 }}
-              transition={{ type: "spring", stiffness: 500, damping: 34 }}
-              className={`relative rounded-full ring-2 transition-[filter] hover:z-20 ${
-                index > 0 ? "-ml-2.5" : ""
-              } ${selected ? "z-10 ring-primary" : "ring-card"} ${
-                dimmed ? "saturate-0" : ""
-              }`}
-            >
-              {author.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={author.avatarUrl}
-                  alt={author.name}
-                  className="block h-7 w-7 rounded-full object-cover"
-                />
-              ) : (
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-[10px] font-medium text-foreground/70">
-                  {author.name.slice(0, 2).toUpperCase()}
-                </span>
-              )}
-            </motion.button>
-          );
-        })}
-
-        {overflow > 0 && (
+        return (
           <motion.button
-            layout
-            onClick={() => setExpanded((prev) => !prev)}
-            title={expanded ? "Recolher" : `+${overflow} autores`}
-            whileHover={{ scale: 1.14, y: -2 }}
-            whileTap={{ scale: 1.02 }}
+            key={author.name}
+            onClick={() =>
+              onChange(
+                active ? value.filter((a) => a !== author.name) : [...value, author.name]
+              )
+            }
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.98 }}
             transition={{ type: "spring", stiffness: 500, damping: 34 }}
-            className="relative -ml-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-[10px] font-medium text-foreground/70 ring-2 ring-card transition-colors hover:z-20 hover:bg-white/20"
+            title={`${author.name} — ${count} atividade${count === 1 ? "" : "s"}`}
+            className={`flex items-center gap-1.5 rounded-full border py-0.5 pr-2.5 pl-0.5 font-mono text-[11px] transition-colors ${
+              active
+                ? "border-foreground/30 bg-foreground/10 text-foreground"
+                : "border-white/10 text-foreground/50 hover:text-foreground/80"
+            }`}
           >
-            {expanded ? "−" : `+${overflow}`}
+            {author.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={author.avatarUrl}
+                alt=""
+                className={`h-5 w-5 rounded-full object-cover transition-[filter] ${
+                  active ? "" : "saturate-50"
+                }`}
+              />
+            ) : (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[9px]">
+                {author.name.slice(0, 2).toUpperCase()}
+              </span>
+            )}
+            {firstName(author.name)}
+            <span className="tabular-nums opacity-55">{count}</span>
           </motion.button>
-        )}
-      </motion.div>
+        );
+      })}
+
     </div>
   );
 }
