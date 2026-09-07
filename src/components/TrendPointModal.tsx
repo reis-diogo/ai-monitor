@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "motion/react";
 import type { AnalyzedActivityRecord } from "@/lib/types";
 import type { TrendPoint } from "@/lib/trend";
 import { scoreColor } from "@/lib/score-color";
-import { ScoreIcon } from "@/components/ScoreIcon";
 import { truncate } from "@/lib/truncate";
 
 export function TrendPointModal({
@@ -61,8 +60,7 @@ export function TrendPointModal({
                       backgroundColor: scoreColor(record.score).bg,
                     }}
                   >
-                    <ScoreIcon score={record.score} size={11} />
-                    {record.score}/10
+                    qua {record.score}/10
                   </span>
                   <span className="min-w-0 flex-1 truncate text-black/70 dark:text-white/70">
                     {truncate(record.title, 40)}

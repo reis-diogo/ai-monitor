@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "motion/react";
 import type { ActivityItem, AiProvider, AnalyzedActivityRecord, ClickUpStatusOption } from "@/lib/types";
 import { scoreColor } from "@/lib/score-color";
 import { truncate } from "@/lib/truncate";
-import { ScoreIcon } from "@/components/ScoreIcon";
 import { AiIcon } from "@/components/AiIcon";
 import { RefreshIcon } from "@/components/icons";
 import { StatusMenu } from "@/components/StatusMenu";
@@ -96,7 +95,7 @@ export function ActivityTableRow({
         layout
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="border-t border-border/60"
+        className="group border-t border-border/60"
       >
         <td className="py-2 pr-3">
           <div className="flex items-center gap-2">
@@ -164,8 +163,7 @@ export function ActivityTableRow({
                   backgroundColor: scoreColor(analysis.score).bg,
                 }}
               >
-                <ScoreIcon score={analysis.score} size={11} />
-                {analysis.score}/10
+                qua {analysis.score}/10
               </button>
               {analysis.difficulty !== null && analysis.difficulty !== undefined && (
                 <button
@@ -177,19 +175,14 @@ export function ActivityTableRow({
                 </button>
               )}
               {item.source === "clickup" &&
-                item.status?.toLowerCase() === ARCHITECT_QUEUE_STATUS && (
+                item.status?.toLowerCase() === ARCHITECT_QUEUE_STATUS &&
+                (analysis.architecture === null || analysis.architecture === undefined) && (
                   <button
                     onClick={() => onArchitectLocal(item)}
-                    title={
-                      analysis.architecture === null || analysis.architecture === undefined
-                        ? "Gerar prompt para arquitetar este card na sua IA local"
-                        : "Gerar prompt para reavaliar a arquitetura deste card"
-                    }
+                    title="Gerar prompt para arquitetar este card na sua IA local"
                     className="flex items-center gap-1 rounded-full border border-dashed border-sky-400/40 px-2 py-0.5 font-mono font-medium text-sky-400/70 hover:border-sky-400/70 hover:text-sky-400"
                   >
-                    {analysis.architecture === null || analysis.architecture === undefined
-                      ? "+ arq"
-                      : "rever arq"}
+                    + arq
                   </button>
                 )}
               {analysis.architecture !== null && analysis.architecture !== undefined && (
@@ -211,6 +204,20 @@ export function ActivityTableRow({
                   >
                     prompt dev
                   </button>
+                )}
+              {item.source === "clickup" &&
+                item.status?.toLowerCase() === ARCHITECT_QUEUE_STATUS &&
+                analysis.architecture !== null &&
+                analysis.architecture !== undefined && (
+                  <motion.button
+                    onClick={() => onArchitectLocal(item)}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    title="Reavaliar arquitetura na sua IA local"
+                    className="flex h-4 w-4 items-center justify-center text-[#38BDF8]/0 transition-colors group-hover:text-[#38BDF8]/50 hover:!text-[#38BDF8]"
+                  >
+                    <RefreshIcon size={11} />
+                  </motion.button>
                 )}
               <motion.button
                 onClick={() => handleAnalyze(true)}
