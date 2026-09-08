@@ -50,8 +50,8 @@ export function AuthorFilter({
             }`}
             className={`flex items-center gap-1.5 rounded-full border py-0.5 pr-2.5 pl-0.5 font-mono text-[11px] transition-colors ${
               active
-                ? "border-foreground/30 bg-foreground/10 text-foreground"
-                : "border-white/10 text-foreground/50 hover:text-foreground/80"
+                ? "border-foreground/30 bg-accent text-foreground"
+                : "border-white/10 bg-card text-foreground/50 hover:text-foreground/80"
             }`}
           >
             {author.avatarUrl ? (
