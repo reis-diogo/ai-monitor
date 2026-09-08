@@ -34,7 +34,6 @@ import { normalizeLocation } from "@/lib/normalize-location";
 import { resolveAuthorName } from "@/lib/normalize-author";
 import { getPresetRange, isWithinRange, type DatePreset } from "@/lib/date-range";
 import { truncate } from "@/lib/truncate";
-import { ExternalLinkIcon } from "@/components/icons";
 
 const RELATIVE_TIME_TICK_MS = 30_000;
 const PROVIDER_STORAGE_KEY = "getnow:ai-provider";
@@ -1020,15 +1019,6 @@ export function Dashboard() {
             <ProviderToggle value={provider} onChange={handleProviderChange} />
             <UserButton />
           </div>
-          <a
-            href="https://app.clickup.com/9007062280/v/l/6-901328264773-1"
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1.5 rounded-full border border-black/10 dark:border-white/10 px-3 py-1 text-xs text-black/50 dark:text-white/50 hover:border-black/30 dark:hover:border-white/30 hover:text-black/80 dark:hover:text-white/80"
-          >
-            <ExternalLinkIcon size={11} />
-            click-up
-          </a>
 
         </div>
       </motion.header>

@@ -22,21 +22,14 @@ import { ProjectScopeAnalysisModal } from "@/components/ProjectScopeAnalysisModa
 import { AuthorFilter, type AuthorFilterOption } from "@/components/AuthorFilter";
 import { ActivityRoleFilter } from "@/components/ActivityRoleFilter";
 import { ProjectFilter } from "@/components/ProjectFilter";
-import { FilterOffIcon, RefreshIcon } from "@/components/icons";
+import { ExternalLinkIcon, FilterOffIcon, RefreshIcon } from "@/components/icons";
 import { AiIcon } from "@/components/AiIcon";
 import { timeAgo } from "@/lib/time-ago";
 import { STATUS_OPTIONS } from "@/lib/status-options";
 import { ActivityGroup } from "@/components/ActivityGroup";
 
-function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <p className="mb-1.5 font-mono text-[11px] text-muted-foreground/45">{label}</p>
-      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-border/60 px-3 py-2.5">
-        {children}
-      </div>
-    </div>
-  );
+function FilterRow({ children }: { children: React.ReactNode }) {
+  return <div className="flex flex-wrap items-center gap-1.5">{children}</div>;
 }
 
 export function ActivityTable({
@@ -245,82 +238,6 @@ export function ActivityTable({
         Atividades ({filteredItems.length})
       </p>
 
-      {/* Tres faixas fixas — projeto, profissionais, status. Cada uma em sua
-          propria linha para que mudar a contagem de uma nao reflua as outras. */}
-      <div className="mt-4 flex flex-col gap-3">
-        {projectNames.length > 1 && (
-          <FilterRow label="projeto">
-            <ProjectFilter
-              projects={projectNames}
-              value={projectFilter}
-              counts={projectCounts}
-              onChange={onProjectFilterChange}
-            />
-          </FilterRow>
-        )}
-
-        <FilterRow label="profissionais">
-          <ActivityRoleFilter
-            value={roleFilter}
-            counts={roleCounts}
-            onChange={(next) => {
-              setRoleFilter(next);
-              setAuthorFilter([]);
-            }}
-          />
-          {authors.length > 1 && (
-            <AuthorFilter
-              authors={authors}
-              value={authorFilter}
-              counts={authorCounts}
-              projectsByAuthor={authorProjects}
-              allProjects={projectNames}
-              onChange={setAuthorFilter}
-            />
-          )}
-        </FilterRow>
-
-        <FilterRow label="status">
-        {STATUS_OPTIONS.map((option) => {
-          const active = statusFilter.includes(option.value);
-          const count = statusCounts.get(option.value) ?? 0;
-
-          // Some quando nao ha nada nesse status. Se estiver selecionado, fica:
-          // esconder um filtro ativo deixaria a lista vazia sem como desfazer.
-          if (count === 0 && !active) return null;
-
-          return (
-            <motion.button
-              key={option.value}
-              onClick={() =>
-                setStatusFilter(
-                  active
-                    ? statusFilter.filter((v) => v !== option.value)
-                    : [...statusFilter, option.value]
-                )
-              }
-              whileHover={{ y: -1 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 500, damping: 34 }}
-              title={`${count} em "${option.label.toLowerCase()}"`}
-              className="flex items-baseline gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] transition-colors"
-              style={{
-                borderColor: active ? `${option.color}80` : `${option.color}24`,
-                backgroundColor: active ? `${option.color}1f` : "transparent",
-                color: option.color,
-                opacity: active ? 1 : 0.7,
-              }}
-            >
-              {option.label.toLowerCase()}
-              <span className="tabular-nums" style={{ opacity: active ? 0.75 : 0.55 }}>
-                {count}
-              </span>
-            </motion.button>
-          );
-        })}
-        </FilterRow>
-      </div>
-
       <div className="mt-4 flex flex-col gap-2">
         {groups.map((group) => (
           <ActivityGroup
@@ -364,7 +281,85 @@ export function ActivityTable({
           transform dele faria um position:fixed filho ancorar no card, nao na tela. */}
       {mounted &&
         createPortal(
-          <div className="pointer-events-none fixed right-6 bottom-6 z-40 flex flex-col items-end gap-2">
+          <div className="pointer-events-none fixed right-6 bottom-6 left-6 z-40 flex items-end justify-end gap-3">
+            <div className="pointer-events-auto max-h-[60vh] flex-1 overflow-y-auto">
+            <div className="flex flex-col gap-1.5">
+        {projectNames.length > 1 && (
+          <FilterRow>
+            <ProjectFilter
+              projects={projectNames}
+              value={projectFilter}
+              counts={projectCounts}
+              onChange={onProjectFilterChange}
+            />
+          </FilterRow>
+        )}
+
+        <FilterRow>
+          <ActivityRoleFilter
+            value={roleFilter}
+            counts={roleCounts}
+            onChange={(next) => {
+              setRoleFilter(next);
+              setAuthorFilter([]);
+            }}
+          />
+          {authors.length > 1 && (
+            <AuthorFilter
+              authors={authors}
+              value={authorFilter}
+              counts={authorCounts}
+              projectsByAuthor={authorProjects}
+              allProjects={projectNames}
+              onChange={setAuthorFilter}
+            />
+          )}
+        </FilterRow>
+
+        <FilterRow>
+        {STATUS_OPTIONS.map((option) => {
+          const active = statusFilter.includes(option.value);
+          const count = statusCounts.get(option.value) ?? 0;
+
+          // Some quando nao ha nada nesse status. Se estiver selecionado, fica:
+          // esconder um filtro ativo deixaria a lista vazia sem como desfazer.
+          if (count === 0 && !active) return null;
+
+          return (
+            <motion.button
+              key={option.value}
+              onClick={() =>
+                setStatusFilter(
+                  active
+                    ? statusFilter.filter((v) => v !== option.value)
+                    : [...statusFilter, option.value]
+                )
+              }
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 500, damping: 34 }}
+              title={`${count} em "${option.label.toLowerCase()}"`}
+              className="flex items-baseline gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] transition-colors"
+              style={{
+                borderColor: active ? `${option.color}80` : `${option.color}24`,
+                backgroundColor: active
+                  ? `color-mix(in srgb, ${option.color} 14%, var(--card))`
+                  : "var(--card)",
+                color: active ? option.color : `${option.color}a6`,
+              }}
+            >
+              {option.label.toLowerCase()}
+              <span className="tabular-nums" style={{ opacity: 0.6 }}>
+                {count}
+              </span>
+            </motion.button>
+          );
+        })}
+        </FilterRow>
+      </div>
+            </div>
+
+            <div className="flex shrink-0 flex-col items-end gap-2">
             <AnimatePresence>
               {activeFilterCount > 0 && (
                 <motion.button
@@ -388,12 +383,25 @@ export function ActivityTable({
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
                 title="Editar os prompts das análises"
-                className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 font-mono text-[11px] text-muted-foreground shadow-lg shadow-black/40 backdrop-blur hover:border-primary/40 hover:text-foreground"
-              >
+                  className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 font-mono text-[11px] text-muted-foreground shadow-lg shadow-black/40 backdrop-blur hover:border-primary/40 hover:text-foreground"
+                >
                 <AiIcon size={12} />
                 prompts
               </motion.button>
             )}
+
+            <motion.a
+              href="https://app.clickup.com/9007062280/v/l/6-901328264773-1"
+              target="_blank"
+              rel="noreferrer"
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              title="Abrir a lista no ClickUp"
+                className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 font-mono text-[11px] text-muted-foreground shadow-lg shadow-black/40 backdrop-blur hover:border-primary/40 hover:text-foreground"
+              >
+              <ExternalLinkIcon size={11} />
+              click-up
+            </motion.a>
 
             <motion.button
               onClick={onSyncStatuses}
@@ -427,6 +435,7 @@ export function ActivityTable({
                 </>
               )}
             </motion.button>
+            </div>
           </div>,
           document.body
         )}

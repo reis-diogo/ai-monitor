@@ -36,13 +36,14 @@ export function ActivityRoleFilter({
             className="flex items-baseline gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] transition-colors"
             style={{
               borderColor: active ? `${option.color}80` : `${option.color}24`,
-              backgroundColor: active ? `${option.color}1f` : "transparent",
-              color: option.color,
-              opacity: active ? 1 : 0.7,
+              backgroundColor: active
+                ? `color-mix(in srgb, ${option.color} 14%, var(--card))`
+                : "var(--card)",
+              color: active ? option.color : `${option.color}a6`,
             }}
           >
             {option.label}
-            <span className="tabular-nums" style={{ opacity: active ? 0.75 : 0.55 }}>
+            <span className="tabular-nums" style={{ opacity: 0.6 }}>
               {count}
             </span>
           </motion.button>

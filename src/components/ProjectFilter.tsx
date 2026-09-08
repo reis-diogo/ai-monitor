@@ -34,13 +34,14 @@ export function ProjectFilter({
             className="flex items-baseline gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] transition-colors"
             style={{
               borderColor: active ? `${color}80` : `${color}24`,
-              backgroundColor: active ? `${color}1f` : "transparent",
-              color,
-              opacity: active ? 1 : 0.7,
+              backgroundColor: active
+                ? `color-mix(in srgb, ${color} 14%, var(--card))`
+                : "var(--card)",
+              color: active ? color : `${color}a6`,
             }}
           >
             {project}
-            <span className="tabular-nums" style={{ opacity: active ? 0.75 : 0.55 }}>
+            <span className="tabular-nums" style={{ opacity: 0.6 }}>
               {count}
             </span>
           </motion.button>
