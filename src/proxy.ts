@@ -1,12 +1,14 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-// A ingestao do arquiteto e chamada pela IA local do usuario, fora do navegador,
-// entao nao tem sessao do Clerk. Ela se autentica pelo token do lote (hash no banco,
-// escopo fixo de cards, validade curta) — ver app/api/architect/ingest.
+// A ingestao e o progresso do arquiteto sao chamados pela IA local do usuario, fora
+// do navegador, entao nao tem sessao do Clerk. Eles se autenticam pelo token do lote
+// (hash no banco, escopo fixo de cards, validade curta). O GET de /progress e da tela
+// e checa isAllowedUser dentro do proprio handler — ver app/api/architect/progress.
 const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/unauthorized",
   "/api/architect/ingest",
+  "/api/architect/progress",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

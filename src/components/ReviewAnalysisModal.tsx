@@ -93,12 +93,24 @@ export function ReviewAnalysisModal({
                   {record.title}
                 </p>
               </div>
-              <button
-                onClick={onClose}
-                className="shrink-0 rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
-              >
-                fechar
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                {record.url && (
+                  <a
+                    href={record.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                  >
+                    {"ver no ClickUp"}
+                  </a>
+                )}
+                <button
+                  onClick={onClose}
+                  className="rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                >
+                  fechar
+                </button>
+              </div>
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -155,14 +167,6 @@ export function ReviewAnalysisModal({
               </div>
             )}
 
-            <a
-              href={record.url}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-4 inline-block text-xs text-black/40 dark:text-white/40 hover:underline"
-            >
-              ver atividade no ClickUp
-            </a>
           </motion.div>
         </motion.div>
       )}

@@ -2,13 +2,20 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import type { ActivityItem, AiProvider, AnalyzedActivityRecord, ClickUpStatusOption } from "@/lib/types";
+import type {
+  ActivityItem,
+  ActivityProgress,
+  AiProvider,
+  AnalyzedActivityRecord,
+  ClickUpStatusOption,
+} from "@/lib/types";
 import { scoreColor } from "@/lib/score-color";
 import { truncate } from "@/lib/truncate";
 import { AiIcon } from "@/components/AiIcon";
 import { ExternalLinkIcon, RefreshIcon } from "@/components/icons";
 import { StatusMenu } from "@/components/StatusMenu";
 import { ActivityItemDetailModal } from "@/components/ActivityItemDetailModal";
+import { ActivityProgressBadge } from "@/components/ActivityProgressBadge";
 
 const ARCHITECT_QUEUE_STATUS = "refinar arquiteto";
 const DEV_RELEASED_STATUS = "dev liberado";
@@ -21,6 +28,7 @@ export function ActivityTableRow({
   item,
   provider,
   cachedAnalysis,
+  progress = null,
   showLocation = true,
   clickupStatuses = [],
   onAnalyzed,
@@ -36,6 +44,7 @@ export function ActivityTableRow({
   item: ActivityItem;
   provider: AiProvider;
   cachedAnalysis: AnalyzedActivityRecord | null;
+  progress?: ActivityProgress | null;
   showLocation?: boolean;
   clickupStatuses?: ClickUpStatusOption[];
   onAnalyzed: () => void;
@@ -143,6 +152,7 @@ export function ActivityTableRow({
                 <ExternalLinkIcon size={10} />
               </a>
             )}
+            {progress && <ActivityProgressBadge progress={progress} />}
           </div>
         </td>
         {showLocation && <td className="py-2 pr-3 text-muted-foreground">{item.location}</td>}
@@ -181,7 +191,7 @@ export function ActivityTableRow({
                   backgroundColor: scoreColor(analysis.score).bg,
                 }}
               >
-                qua {analysis.score}/10
+                qlt {analysis.score}/10
               </button>
               {analysis.difficulty !== null && analysis.difficulty !== undefined && (
                 <button

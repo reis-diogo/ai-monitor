@@ -172,3 +172,14 @@ export type AnalyzedProjectRecord = ProjectScopeAnalysis & {
   commitCount: number;
   analyzedAt: string;
 };
+
+export type ProgressKind = "architect" | "dev" | "review";
+
+export type ActivityProgress = {
+  activityId: string;
+  kind: ProgressKind;
+  stage: string;
+  detail: string | null;
+  state: "running" | "failed";
+  updatedAt: string;
+};

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type {
   ActivityItem,
+  ActivityProgress,
   AiProvider,
   AnalyzedActivityRecord,
   AnalyzedProjectRecord,
@@ -27,6 +28,7 @@ export function ActivityGroup({
   items,
   provider,
   analyzedMap,
+  progressMap,
   defaultOpen = true,
   onActivityAnalyzed,
   onSelect,
@@ -47,6 +49,7 @@ export function ActivityGroup({
   items: ActivityItem[];
   provider: AiProvider;
   analyzedMap: Map<string, AnalyzedActivityRecord>;
+  progressMap: Map<string, ActivityProgress>;
   defaultOpen?: boolean;
   onActivityAnalyzed: () => void;
   onSelect: (record: AnalyzedActivityRecord) => void;
@@ -393,6 +396,7 @@ export function ActivityGroup({
                         item={item}
                         provider={provider}
                         cachedAnalysis={analyzedMap.get(`${provider}:${item.id}`) ?? null}
+                        progress={progressMap.get(item.id) ?? null}
                         showLocation={false}
                         clickupStatuses={clickupStatuses}
                         onAnalyzed={onActivityAnalyzed}

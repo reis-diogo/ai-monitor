@@ -60,7 +60,7 @@ export function TrendPointModal({
                       backgroundColor: scoreColor(record.score).bg,
                     }}
                   >
-                    qua {record.score}/10
+                    qlt {record.score}/10
                   </span>
                   <span className="min-w-0 flex-1 truncate text-black/70 dark:text-white/70">
                     {truncate(record.title, 40)}

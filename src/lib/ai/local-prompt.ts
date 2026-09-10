@@ -5,11 +5,40 @@ export type LocalPromptCard = {
   content: string;
 };
 
+type ProgressSectionParams = {
+  progressUrl: string;
+  token: string;
+  examples: string;
+  closingNote: string;
+};
+
+// A tela nao consegue enxergar a IA local: ela roda no terminal do usuario, sem
+// callback nenhum. O indicador ao vivo da linha do card so existe porque o proprio
+// prompt manda avisar a cada etapa.
+function buildProgressSection(params: ProgressSectionParams): string {
+  return `## Como avisar o app do que você está fazendo
+
+Enquanto você trabalha, o card mostra um indicador ao vivo no monitor. Ele só se mexe se você avisar. Mande um POST curto ANTES de começar cada etapa:
+
+\`\`\`bash
+curl -sS -X POST '${params.progressUrl}' \\
+  -H 'Content-Type: application/json' \\
+  -d '{"token":"${params.token}","activityId":"<o activityId do card>","stage":"lendo os metadados"}'
+\`\`\`
+
+- \`stage\` — três a cinco palavras, minúsculas, dizendo o que você está fazendo AGORA. Ex.: ${params.examples}.
+- \`detail\` — opcional, uma linha com o alvo concreto: o nome do objeto, do flow, do permission set.
+- \`state\` — omita enquanto estiver trabalhando. Mande \`"failed"\`, com o motivo em \`stage\`, se você travar e parar no meio.
+
+Esse POST é barato e a resposta dele não interessa: não pare para conferir e não interrompa o trabalho se ele falhar. Ele não substitui o POST de resultado. ${params.closingNote}`;
+}
+
 export function buildLocalArchitectPrompt(params: {
   project: string;
   cards: LocalPromptCard[];
   token: string;
   ingestUrl: string;
+  progressUrl: string;
   systemPrompt: string;
 }): string {
   const cardsBlock = params.cards
@@ -41,6 +70,13 @@ Depois de localizar, leia de \`force-app/main/default/**\` (ou do caminho que o 
 ${params.systemPrompt}
 
 Use sua própria busca web para confirmar o comportamento atual na documentação oficial da Salesforce (help.salesforce.com, developer.salesforce.com, trailhead.salesforce.com, architect.salesforce.com). Nunca afirme uma limitação da plataforma de memória.
+
+${buildProgressSection({
+  progressUrl: params.progressUrl,
+  token: params.token,
+  examples: `"escolhendo a org", "lendo os metadados", "consultando a documentação", "escrevendo o parecer"`,
+  closingNote: "Quando o parecer do card chegar, o app apaga o indicador sozinho.",
+})}
 
 ## Como enviar o resultado
 
@@ -75,7 +111,7 @@ Campos:
 - \`ambiguities\` — perguntas objetivas para o PO. Vazio se não houver.
 - \`metadataFindings\` — o que os metadados já cobrem ou conflitam.
 - \`docReferences\` — a documentação oficial que sustenta a decisão.
-- \`devPrompt\` — este é o entregável final. **Não escreva o alias de nenhuma org dentro dele.** Em vez disso, instrua quem for implementar a rodar \`sf org list\`, mostrar todas as orgs ao usuário e confirmar qual usar antes de aplicar qualquer mudança. O alias não indica o ambiente, então nem quem implementa nem você conseguem deduzir qual é a de desenvolvimento — e um alias fixo no texto vira erro silencioso quando o prompt for reaproveitado depois, com o ambiente já diferente. Escreva um prompt autocontido, em português, para a IA que vai APLICAR o desenvolvimento na org. Ele aparece no app como um badge próprio, visível só em cards que foram para "dev liberado", e é copiado dali direto para a IA que implementa — quem recebe não terá acesso a esta conversa, ao card, nem aos metadados. Então o prompt precisa carregar tudo sozinho: o objetivo, os metadados relevantes que você leu (nomes reais de objetos, campos e automações), o passo a passo da configuração com os caminhos de Setup, o que NÃO fazer e por quê, e os critérios de aceite verificáveis. Escreva como instrução de execução, não como parecer.
+- \`devPrompt\` — este é o entregável final. **Não escreva o alias de nenhuma org dentro dele.** Em vez disso, instrua quem for implementar a rodar \`sf org list\`, mostrar todas as orgs ao usuário e confirmar qual usar antes de aplicar qualquer mudança. O alias não indica o ambiente, então nem quem implementa nem você conseguem deduzir qual é a de desenvolvimento — e um alias fixo no texto vira erro silencioso quando o prompt for reaproveitado depois, com o ambiente já diferente. Escreva um prompt autocontido, em português, para a IA que vai APLICAR o desenvolvimento na org. Ele aparece no app como um badge próprio, visível só em cards que foram para "dev liberado", e é copiado dali direto para a IA que implementa — quem recebe não terá acesso a esta conversa, ao card, nem aos metadados. Então o prompt precisa carregar tudo sozinho: o objetivo, os metadados relevantes que você leu (nomes reais de objetos, campos e automações), o passo a passo da configuração com os caminhos de Setup, o que NÃO fazer e por quê, e os critérios de aceite verificáveis. Escreva como instrução de execução, não como parecer. Não escreva instruções de progresso dentro dele: o app acrescenta isso sozinho quando entrega o prompt ao dev.
 
   Se a nota for menor que 7, o card não vai para "dev liberado" e o badge não aparece — ainda assim preencha \`devPrompt\` com o que já dá para instruir, deixando explícito o que depende das \`ambiguities\` serem resolvidas.
 
@@ -100,6 +136,7 @@ export function buildLocalReviewPrompt(params: {
   cards: ReviewPromptCard[];
   token: string;
   ingestUrl: string;
+  progressUrl: string;
   systemPrompt: string;
 }): string {
   const cardsBlock = params.cards
@@ -130,6 +167,13 @@ Se possível, atualize o retrieve antes de revisar (\`sf project retrieve start\
 ## Como revisar
 
 ${params.systemPrompt}
+
+${buildProgressSection({
+  progressUrl: params.progressUrl,
+  token: params.token,
+  examples: `"escolhendo a org", "atualizando o retrieve", "conferindo os metadados", "escrevendo o parecer"`,
+  closingNote: "Quando o parecer do card chegar, o app apaga o indicador sozinho.",
+})}
 
 ## Como enviar o resultado
 
@@ -170,4 +214,34 @@ responder erro, mostre a resposta e siga para o próximo card.
 ## Cards
 
 ${cardsBlock}`;
+}
+
+export type DevPromptCard = LocalPromptCard & {
+  devPrompt: string;
+};
+
+// O dev nao devolve nota nenhuma: o token dele serve so para o indicador de
+// progresso. Quem move o card para "dev finalizado" continua sendo o dev, porque
+// esse status e a afirmacao de que a entrega foi testada — nao de que o script rodou.
+export function buildLocalDevPrompt(params: {
+  card: DevPromptCard;
+  token: string;
+  progressUrl: string;
+}): string {
+  const label = params.card.customId ?? params.card.id;
+
+  return `${params.card.devPrompt.trim()}
+
+---
+
+## Card no monitor
+
+activityId: ${params.card.id} (${label} — ${params.card.title})
+
+${buildProgressSection({
+  progressUrl: params.progressUrl,
+  token: params.token,
+  examples: `"escolhendo a org", "lendo os metadados", "aplicando as mudanças", "fazendo o deploy", "validando na org"`,
+  closingNote: `Aqui não existe POST de resultado: mande \`"state":"done"\` no último POST, quando terminar, senão o indicador fica aceso até expirar sozinho. Terminar de aplicar não move o card no ClickUp — mover para "dev finalizado" é você quem faz, depois de testar.`,
+})}`;
 }
