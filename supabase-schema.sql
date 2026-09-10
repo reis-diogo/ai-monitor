@@ -110,6 +110,18 @@ create table if not exists local_jobs (
 
 create index if not exists local_jobs_token_hash_idx on local_jobs (token_hash);
 
+create table if not exists activity_progress (
+  activity_id text primary key,
+  kind text not null,
+  stage text not null,
+  detail text,
+  state text not null default 'running',
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists activity_progress_updated_at_idx on activity_progress (updated_at desc);
+
+
 alter table repos enable row level security;
 alter table projects enable row level security;
 alter table professionals enable row level security;
@@ -118,3 +130,4 @@ alter table analysis_cache enable row level security;
 alter table project_analysis_cache enable row level security;
 alter table ai_prompts enable row level security;
 alter table local_jobs enable row level security;
+alter table activity_progress enable row level security;

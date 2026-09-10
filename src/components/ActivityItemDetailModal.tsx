@@ -70,12 +70,24 @@ export function ActivityItemDetailModal({
                 )}
                 <p className="text-sm text-black/70 dark:text-white/70">{item.title}</p>
               </div>
-              <button
-                onClick={onClose}
-                className="shrink-0 rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
-              >
-                fechar
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                {item.url && (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                  >
+                    {item.source === "commit" ? "ver no GitHub" : "ver no ClickUp"}
+                  </a>
+                )}
+                <button
+                  onClick={onClose}
+                  className="rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                >
+                  fechar
+                </button>
+              </div>
             </div>
 
             <div className="mt-4 flex flex-col gap-3 overflow-y-auto pr-1">
@@ -97,14 +109,6 @@ export function ActivityItemDetailModal({
               <p className="whitespace-pre-wrap text-sm text-black/70 dark:text-white/70">
                 {item.content || "(sem descrição)"}
               </p>
-              <a
-                href={item.url}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs text-black/40 dark:text-white/40 hover:underline"
-              >
-                {item.source === "commit" ? "ver commit no GitHub" : "ver atividade no ClickUp"}
-              </a>
             </div>
           </motion.div>
         </motion.div>

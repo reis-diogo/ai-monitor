@@ -13,6 +13,10 @@ export const REVIEW_REJECTED_STATUS = "revisar dev";
 export const REVIEW_THRESHOLD = 7;
 
 const CHECKLIST_NAME = "Pendências de revisão";
+// Aprovado com ressalva: os desvios viram um checklist proprio, com nome
+// diferente do de pendencias, para o PO ler o parecer sem confundir "veja isto"
+// com "corrija isto antes de devolver".
+const DEVIATIONS_CHECKLIST_NAME = "Desvios da revisão";
 
 export type ReviewResultInput = {
   review: number;
@@ -22,6 +26,12 @@ export type ReviewResultInput = {
   deviations: string[];
   fixPrompt: string;
 };
+
+function buildApprovedWithDeviationsComment(score: number, deviationCount: number): string {
+  return `Revisão de entrega: ${score}/10 — aprovado para "${REVIEW_APPROVED_STATUS}". A entrega atende à especificação, mas anotei ${deviationCount} ${
+    deviationCount === 1 ? "desvio" : "desvios"
+  } no checklist "${DEVIATIONS_CHECKLIST_NAME}" deste card. Não bloqueiam o teste: são pontos do parecer que valem a sua leitura.`;
+}
 
 function buildRejectComment(score: number, pendingCount: number): string {
   if (!pendingCount) {
@@ -71,6 +81,22 @@ export async function applyReviewResult(params: {
     // quando a reprovacao nao listou pendencias — senao ele viaja para "em qa"
     // contradizendo o parecer atual.
     await deleteChecklistsNamed(params.activityId, CHECKLIST_NAME);
+    await deleteChecklistsNamed(params.activityId, DEVIATIONS_CHECKLIST_NAME);
+
+    if (approved && result.deviations.length) {
+      await createTaskChecklist(
+        params.activityId,
+        DEVIATIONS_CHECKLIST_NAME,
+        result.deviations.map(
+          (item, index) => `${String(index + 1).padStart(2, "0")}. ${item}`
+        )
+      );
+      await createTaskComment(
+        params.activityId,
+        buildApprovedWithDeviationsComment(result.review, result.deviations.length),
+        params.mentionUserIds
+      );
+    }
 
     if (!approved) {
       await createTaskChecklist(

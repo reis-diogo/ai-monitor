@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { applyArchitectResult, loadExistingAnalysis } from "@/lib/architect-apply";
 import { applyReviewResult, type ReviewResultInput } from "@/lib/review-apply";
 import { markLocalJobReceived, resolveLocalJob } from "@/lib/local-jobs-store";
+import { clearProgress } from "@/lib/progress-store";
 import { fetchListTasks, fetchTeamMemberIdsByEmail } from "@/lib/clickup";
 import type { ArchitectResultInput } from "@/lib/architect-apply";
 
@@ -56,10 +57,12 @@ export async function POST(request: NextRequest) {
 
   const kind = body?.kind === "review" ? "review" : "architect";
   if (kind !== job.kind) {
-    return NextResponse.json(
-      { error: `Este token é da etapa "${job.kind}", não "${kind}".` },
-      { status: 403 }
-    );
+    // O lote do dev cai aqui: ele nao devolve parecer nenhum, so progresso.
+    const detail =
+      job.kind === "dev"
+        ? 'O lote do dev nao envia parecer: use /api/architect/progress.'
+        : `Este token é da etapa "${job.kind}", não "${kind}".`;
+    return NextResponse.json({ error: detail }, { status: 403 });
   }
 
   const existing = await loadExistingAnalysis(job.provider, activityId);
@@ -128,6 +131,7 @@ export async function POST(request: NextRequest) {
         existing,
       });
       await markLocalJobReceived(job.id, activityId);
+      await clearProgress(activityId);
       return NextResponse.json({
         ok: true,
         appliedStatus: applied.appliedStatus,
@@ -175,6 +179,7 @@ export async function POST(request: NextRequest) {
     });
 
     await markLocalJobReceived(job.id, activityId);
+    await clearProgress(activityId);
 
     return NextResponse.json({
       ok: true,

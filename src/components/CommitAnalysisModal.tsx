@@ -52,12 +52,24 @@ export function CommitAnalysisModal({
                 </p>
                 <p className="mt-1 text-sm text-black/80 dark:text-white/80">{record.title}</p>
               </div>
-              <button
-                onClick={onClose}
-                className="shrink-0 rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
-              >
-                fechar
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                {record.url && (
+                  <a
+                    href={record.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                  >
+                    {record.source === "commit" ? "ver no GitHub" : "ver no ClickUp"}
+                  </a>
+                )}
+                <button
+                  onClick={onClose}
+                  className="rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                >
+                  fechar
+                </button>
+              </div>
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -65,7 +77,7 @@ export function CommitAnalysisModal({
                 className="flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[11px] font-medium"
                 style={{ color: scoreColor(record.score).color, backgroundColor: scoreColor(record.score).bg }}
               >
-                qua {record.score}/10
+                qlt {record.score}/10
               </span>
               <span className="text-[11px] text-black/30 dark:text-white/30">
                 análise via {PROVIDER_LABEL[record.provider]} · {record.authorName}
@@ -81,14 +93,6 @@ export function CommitAnalysisModal({
             <p className="mt-4 text-sm text-black/80 dark:text-white/80">{record.intent}</p>
             <p className="mt-2 text-sm text-black/50 dark:text-white/50">{record.critique}</p>
 
-            <a
-              href={record.url}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-4 inline-block text-xs text-black/40 dark:text-white/40 hover:underline"
-            >
-              {record.source === "commit" ? "ver commit no GitHub" : "ver atividade no ClickUp"}
-            </a>
           </motion.div>
         </motion.div>
       )}

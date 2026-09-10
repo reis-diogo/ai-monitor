@@ -3,16 +3,66 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { CheckIcon, CopyIcon } from "@/components/icons";
-import type { AnalyzedActivityRecord } from "@/lib/types";
+import type { AiProvider, AnalyzedActivityRecord } from "@/lib/types";
 
 export function DevPromptModal({
   record,
+  provider,
   onClose,
 }: {
   record: AnalyzedActivityRecord | null;
+  provider: AiProvider;
   onClose: () => void;
 }) {
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState("");
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const recordId = record?.id ?? null;
+
+  // O prompt gravado e so o texto do arquiteto. O bloco de progresso precisa de um
+  // token proprio, entao o lote do dev nasce aqui, na hora de abrir o modal.
+  useEffect(() => {
+    if (!recordId || !record) return;
+
+    let cancelled = false;
+
+    fetch("/api/architect/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        project: record.location,
+        provider,
+        kind: "dev",
+        projectAuthors: [],
+        cards: [
+          {
+            id: record.id,
+            customId: null,
+            title: record.title,
+            content: "",
+          },
+        ],
+      }),
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Erro ao gerar o prompt.");
+        if (cancelled) return;
+        setPrompt(data.prompt);
+        setStatus("ready");
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Erro ao gerar o prompt.");
+        setStatus("error");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [recordId, record, provider]);
 
   useEffect(() => {
     if (!record) return;
@@ -23,23 +73,28 @@ export function DevPromptModal({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [record, onClose]);
 
-  const devPrompt = record?.architecturePayload?.devPrompt ?? "";
-  const copied = !!record && copiedId === record.id;
+  function close() {
+    setStatus("loading");
+    setPrompt("");
+    setError(null);
+    setCopied(false);
+    onClose();
+  }
 
   async function copyPrompt() {
-    if (!record || !devPrompt) return;
-    await navigator.clipboard.writeText(devPrompt);
-    setCopiedId(record.id);
+    if (!prompt) return;
+    await navigator.clipboard.writeText(prompt);
+    setCopied(true);
   }
 
   return (
     <AnimatePresence>
-      {record && devPrompt && (
+      {record && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={onClose}
+          onClick={close}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
         >
           <motion.div
@@ -57,34 +112,61 @@ export function DevPromptModal({
                 </p>
                 <p className="mt-1 text-sm text-black/80 dark:text-white/80">{record.title}</p>
               </div>
-              <button
-                onClick={onClose}
-                className="shrink-0 rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
-              >
-                fechar
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                {record.url && (
+                  <a
+                    href={record.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                  >
+                    {"ver no ClickUp"}
+                  </a>
+                )}
+                <button
+                  onClick={close}
+                  className="rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                >
+                  fechar
+                </button>
+              </div>
             </div>
 
             <p className="mt-3 text-[11px] text-black/40 dark:text-white/40">
               Cole na IA que vai aplicar o desenvolvimento na org. Ele é autocontido — quem receber
-              não precisa do card nem desta tela.
+              não precisa do card nem desta tela. Enquanto ela trabalha, a linha do card mostra em
+              que etapa está.
             </p>
 
-            <pre className="mt-3 flex-1 overflow-auto rounded-lg border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 p-3 font-mono text-[11px] leading-5 whitespace-pre-wrap text-black/70 dark:text-white/70">
-              {devPrompt}
-            </pre>
+            {status === "loading" && (
+              <p className="mt-6 text-center font-mono text-xs text-black/40 dark:text-white/40">
+                gerando o prompt...
+              </p>
+            )}
 
-            <div className="mt-3 flex justify-end">
-              <motion.button
-                onClick={copyPrompt}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                className="flex items-center gap-1.5 rounded-md bg-foreground px-3 py-1.5 font-mono text-[11px] font-medium text-background"
-              >
-                {copied ? <CheckIcon size={11} /> : <CopyIcon size={11} />}
-                {copied ? "copiado" : "copiar prompt"}
-              </motion.button>
-            </div>
+            {status === "error" && (
+              <p className="mt-6 text-center font-mono text-xs text-red-400">{error}</p>
+            )}
+
+            {status === "ready" && (
+              <>
+                <pre className="mt-3 flex-1 overflow-auto rounded-lg border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 p-3 font-mono text-[11px] leading-5 whitespace-pre-wrap text-black/70 dark:text-white/70">
+                  {prompt}
+                </pre>
+
+                <div className="mt-3 flex justify-end">
+                  <motion.button
+                    onClick={copyPrompt}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="flex items-center gap-1.5 rounded-md bg-foreground px-3 py-1.5 font-mono text-[11px] font-medium text-background"
+                  >
+                    {copied ? <CheckIcon size={11} /> : <CopyIcon size={11} />}
+                    {copied ? "copiado" : "copiar prompt"}
+                  </motion.button>
+                </div>
+              </>
+            )}
           </motion.div>
         </motion.div>
       )}

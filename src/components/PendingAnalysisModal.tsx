@@ -82,7 +82,7 @@ function PendingAnalysisRow({
               backgroundColor: scoreColor(analysis.score).bg,
             }}
           >
-            qua {analysis.score}/10
+            qlt {analysis.score}/10
           </span>
         ) : (
           <motion.button

@@ -27,6 +27,7 @@ import { AiIcon } from "@/components/AiIcon";
 import { timeAgo } from "@/lib/time-ago";
 import { STATUS_OPTIONS } from "@/lib/status-options";
 import { ActivityGroup } from "@/components/ActivityGroup";
+import { useActivityProgress } from "@/lib/use-activity-progress";
 
 function FilterRow({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-wrap items-center gap-1.5">{children}</div>;
@@ -188,6 +189,8 @@ export function ActivityTable({
     return matchesStatus || matchesPendingPr;
   });
 
+  const progressMap = useActivityProgress();
+
   // O portal so pode montar no cliente. useSyncExternalStore devolve o snapshot
   // do servidor (false) na renderizacao inicial e o do cliente (true) depois,
   // sem setState em efeito.
@@ -238,52 +241,7 @@ export function ActivityTable({
         Atividades ({filteredItems.length})
       </p>
 
-      <div className="mt-4 flex flex-col gap-2">
-        {groups.map((group) => (
-          <ActivityGroup
-            key={group.project}
-            project={group.project}
-            items={group.items}
-            provider={provider}
-            analyzedMap={analyzedMap}
-            defaultOpen={false}
-            onActivityAnalyzed={onActivityAnalyzed}
-            onSelect={setSelected}
-            onSelectDifficulty={setSelectedDifficulty}
-            onSelectArchitecture={setSelectedArchitecture}
-            onSelectDevPrompt={setSelectedDevPrompt}
-            onSelectReview={setSelectedReview}
-            matchingProject={group.matchingProject}
-            allProjectCommits={allCommitsByLocation.get(group.project) ?? []}
-            projectAnalysis={group.projectAnalysis}
-            pendingPullRequests={pendingPrsByProject.get(group.project) ?? []}
-            clickupStatuses={clickupStatuses}
-            onProjectAnalyzed={onProjectAnalyzed}
-            onTaskStatusUpdate={onTaskStatusUpdate}
-            onSelectProjectAnalysis={setSelectedProjectAnalysis}
-          />
-        ))}
-      </div>
-
-      <CommitAnalysisModal record={selected} onClose={() => setSelected(null)} />
-      <DifficultyAnalysisModal
-        record={selectedDifficulty}
-        onClose={() => setSelectedDifficulty(null)}
-      />
-      <ArchitectAnalysisModal
-        record={selectedArchitecture}
-        onClose={() => setSelectedArchitecture(null)}
-      />
-      <DevPromptModal record={selectedDevPrompt} onClose={() => setSelectedDevPrompt(null)} />
-      <ReviewAnalysisModal record={selectedReview} onClose={() => setSelectedReview(null)} />
-
-      {/* Portal e nao um fixed inline: este card e um motion.div com layout, e o
-          transform dele faria um position:fixed filho ancorar no card, nao na tela. */}
-      {mounted &&
-        createPortal(
-          <div className="pointer-events-none fixed right-6 bottom-6 left-6 z-40 flex items-end justify-end gap-3">
-            <div className="pointer-events-auto max-h-[60vh] flex-1 overflow-y-auto">
-            <div className="flex flex-col gap-1.5">
+      <div className="mt-4 flex flex-col gap-1.5">
         {projectNames.length > 1 && (
           <FilterRow>
             <ProjectFilter
@@ -317,48 +275,96 @@ export function ActivityTable({
         </FilterRow>
 
         <FilterRow>
-        {STATUS_OPTIONS.map((option) => {
-          const active = statusFilter.includes(option.value);
-          const count = statusCounts.get(option.value) ?? 0;
+          {STATUS_OPTIONS.map((option) => {
+            const active = statusFilter.includes(option.value);
+            const count = statusCounts.get(option.value) ?? 0;
 
-          // Some quando nao ha nada nesse status. Se estiver selecionado, fica:
-          // esconder um filtro ativo deixaria a lista vazia sem como desfazer.
-          if (count === 0 && !active) return null;
+            // Some quando nao ha nada nesse status. Se estiver selecionado, fica:
+            // esconder um filtro ativo deixaria a lista vazia sem como desfazer.
+            if (count === 0 && !active) return null;
 
-          return (
-            <motion.button
-              key={option.value}
-              onClick={() =>
-                setStatusFilter(
-                  active
-                    ? statusFilter.filter((v) => v !== option.value)
-                    : [...statusFilter, option.value]
-                )
-              }
-              whileHover={{ y: -1 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 500, damping: 34 }}
-              title={`${count} em "${option.label.toLowerCase()}"`}
-              className="flex items-baseline gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] transition-colors"
-              style={{
-                borderColor: active ? `${option.color}80` : `${option.color}24`,
-                backgroundColor: active
-                  ? `color-mix(in srgb, ${option.color} 14%, var(--card))`
-                  : "var(--card)",
-                color: active ? option.color : `${option.color}a6`,
-              }}
-            >
-              {option.label.toLowerCase()}
-              <span className="tabular-nums" style={{ opacity: 0.6 }}>
-                {count}
-              </span>
-            </motion.button>
-          );
-        })}
+            return (
+              <motion.button
+                key={option.value}
+                onClick={() =>
+                  setStatusFilter(
+                    active
+                      ? statusFilter.filter((v) => v !== option.value)
+                      : [...statusFilter, option.value]
+                  )
+                }
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ type: "spring", stiffness: 500, damping: 34 }}
+                title={`${count} em "${option.label.toLowerCase()}"`}
+                className="flex items-baseline gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] transition-colors"
+                style={{
+                  borderColor: active ? `${option.color}80` : `${option.color}24`,
+                  backgroundColor: active
+                    ? `color-mix(in srgb, ${option.color} 14%, var(--card))`
+                    : "var(--card)",
+                  color: active ? option.color : `${option.color}a6`,
+                }}
+              >
+                {option.label.toLowerCase()}
+                <span className="tabular-nums" style={{ opacity: 0.6 }}>
+                  {count}
+                </span>
+              </motion.button>
+            );
+          })}
         </FilterRow>
       </div>
-            </div>
 
+      <div className="mt-4 flex flex-col gap-2">
+        {groups.map((group) => (
+          <ActivityGroup
+            key={group.project}
+            project={group.project}
+            items={group.items}
+            provider={provider}
+            analyzedMap={analyzedMap}
+            progressMap={progressMap}
+            defaultOpen={false}
+            onActivityAnalyzed={onActivityAnalyzed}
+            onSelect={setSelected}
+            onSelectDifficulty={setSelectedDifficulty}
+            onSelectArchitecture={setSelectedArchitecture}
+            onSelectDevPrompt={setSelectedDevPrompt}
+            onSelectReview={setSelectedReview}
+            matchingProject={group.matchingProject}
+            allProjectCommits={allCommitsByLocation.get(group.project) ?? []}
+            projectAnalysis={group.projectAnalysis}
+            pendingPullRequests={pendingPrsByProject.get(group.project) ?? []}
+            clickupStatuses={clickupStatuses}
+            onProjectAnalyzed={onProjectAnalyzed}
+            onTaskStatusUpdate={onTaskStatusUpdate}
+            onSelectProjectAnalysis={setSelectedProjectAnalysis}
+          />
+        ))}
+      </div>
+
+      <CommitAnalysisModal record={selected} onClose={() => setSelected(null)} />
+      <DifficultyAnalysisModal
+        record={selectedDifficulty}
+        onClose={() => setSelectedDifficulty(null)}
+      />
+      <ArchitectAnalysisModal
+        record={selectedArchitecture}
+        onClose={() => setSelectedArchitecture(null)}
+      />
+      <DevPromptModal
+        record={selectedDevPrompt}
+        provider={provider}
+        onClose={() => setSelectedDevPrompt(null)}
+      />
+      <ReviewAnalysisModal record={selectedReview} onClose={() => setSelectedReview(null)} />
+
+      {/* Portal e nao um fixed inline: este card e um motion.div com layout, e o
+          transform dele faria um position:fixed filho ancorar no card, nao na tela. */}
+      {mounted &&
+        createPortal(
+          <div className="pointer-events-none fixed right-6 bottom-6 z-40 flex items-end justify-end gap-3">
             <div className="flex shrink-0 flex-col items-end gap-2">
             <AnimatePresence>
               {activeFilterCount > 0 && (

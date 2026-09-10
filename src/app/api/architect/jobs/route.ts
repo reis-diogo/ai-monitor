@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createLocalJob, type LocalJobKind } from "@/lib/local-jobs-store";
 import {
   buildLocalArchitectPrompt,
+  buildLocalDevPrompt,
   buildLocalReviewPrompt,
   type LocalPromptCard,
   type ReviewPromptCard,
@@ -47,7 +48,8 @@ export async function POST(request: NextRequest) {
   const project = typeof body?.project === "string" ? body.project : "";
   const provider = parseProvider(body?.provider);
   const cards = parseCards(body?.cards);
-  const kind: LocalJobKind = body?.kind === "review" ? "review" : "architect";
+  const kind: LocalJobKind =
+    body?.kind === "review" || body?.kind === "dev" ? body.kind : "architect";
   const projectAuthors: string[] = Array.isArray(body?.projectAuthors)
     ? body.projectAuthors.filter((name: unknown): name is string => typeof name === "string")
     : [];
@@ -79,9 +81,29 @@ export async function POST(request: NextRequest) {
     );
 
     const ingestUrl = `${origin}/api/architect/ingest`;
+    const progressUrl = `${origin}/api/architect/progress`;
 
     let prompt: string;
-    if (kind === "review") {
+    if (kind === "dev") {
+      // O prompt do dev ja foi escrito pelo arquiteto e esta gravado: aqui ele so
+      // ganha o bloco de progresso, com um token proprio deste lote.
+      const card = freshCards[0];
+      const analysis = await getCachedAnalysis(provider, card.id);
+      const devPrompt = analysis?.architecturePayload?.devPrompt ?? "";
+
+      if (!devPrompt.trim()) {
+        return NextResponse.json(
+          { error: "Este card não tem prompt de desenvolvimento gravado." },
+          { status: 400 }
+        );
+      }
+
+      prompt = buildLocalDevPrompt({
+        card: { ...card, devPrompt },
+        token,
+        progressUrl,
+      });
+    } else if (kind === "review") {
       // O revisor precisa da especificacao, nao da descricao do card: ele confere
       // a org contra o devPrompt que o arquiteto gerou.
       const reviewCards: ReviewPromptCard[] = [];
@@ -104,6 +126,7 @@ export async function POST(request: NextRequest) {
         cards: reviewCards,
         token,
         ingestUrl,
+        progressUrl,
         systemPrompt: await getPromptContent(REVIEW_PROMPT_KEY),
       });
     } else {
@@ -112,6 +135,7 @@ export async function POST(request: NextRequest) {
         cards: freshCards,
         token,
         ingestUrl,
+        progressUrl,
         systemPrompt: await getPromptContent(ARCHITECT_RESEARCH_PROMPT_KEY),
       });
     }
