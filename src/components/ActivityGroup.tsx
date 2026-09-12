@@ -18,6 +18,7 @@ import { ScoreIcon } from "@/components/ScoreIcon";
 import { AiIcon } from "@/components/AiIcon";
 import { ChevronIcon, PullRequestIcon, RefreshIcon } from "@/components/icons";
 import { LocalArchitectModal } from "@/components/LocalArchitectModal";
+import { ActivityProgressBadge } from "@/components/ActivityProgressBadge";
 import { PendingTasksModal } from "@/components/PendingTasksModal";
 import { PendingPullRequestsModal } from "@/components/PendingPullRequestsModal";
 
@@ -117,6 +118,13 @@ export function ActivityGroup({
   );
   const qaTaskCount = qaTaskItems.length;
 
+  // Com o grupo fechado a linha do card nao existe, e e justamente quando alguem
+  // esta rodando uma etapa que a pessoa precisa saber sem ter que abrir tudo.
+  const runningItems = items.flatMap((item) => {
+    const progress = progressMap.get(item.id);
+    return progress ? [{ item, progress }] : [];
+  });
+
   async function handleAnalyzeScope(force = false) {
     if (!matchingProject) return;
     setScopeStatus("loading");
@@ -169,6 +177,18 @@ export function ActivityGroup({
               {commitCount} commit{commitCount > 1 ? "s" : ""}
             </span>
           )}
+
+          {runningItems.map(({ item, progress }) => (
+            <ActivityProgressBadge
+              key={item.id}
+              progress={progress}
+              label={item.customId ?? item.id}
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen(true);
+              }}
+            />
+          ))}
 
           {pendingTaskCount > 0 && (
             <button

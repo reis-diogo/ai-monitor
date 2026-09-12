@@ -242,6 +242,10 @@ ${buildProgressSection({
   progressUrl: params.progressUrl,
   token: params.token,
   examples: `"escolhendo a org", "lendo os metadados", "aplicando as mudanças", "fazendo o deploy", "validando na org"`,
-  closingNote: `Aqui não existe POST de resultado: mande \`"state":"done"\` no último POST, quando terminar, senão o indicador fica aceso até expirar sozinho. Terminar de aplicar não move o card no ClickUp — mover para "dev finalizado" é você quem faz, depois de testar.`,
+  closingNote: `Aqui não existe POST de resultado: o último POST, com \`"state":"done"\`, é o que encerra a etapa — ele apaga o indicador E move o card para "dev finalizado", entregando a implementação para o revisor.
+
+Por isso ele não é automático. Antes de mandá-lo, mostre ao usuário o que você aplicou e **pergunte se ele testou e confirma o encerramento**. Só dispare com a resposta dele. "dev finalizado" significa que a entrega foi testada, não que o script rodou — se você mandar sozinho, o revisor vai conferir algo que ninguém olhou.
+
+A resposta desse POST você confere: ela pode vir com HTTP 200 e \`statusError\` preenchido, quando o ClickUp recusa a mudança de status. Nesse caso mostre a mensagem ao usuário e avise que o card continua onde estava.`,
 })}`;
 }
