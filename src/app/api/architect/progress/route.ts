@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveLocalJob } from "@/lib/local-jobs-store";
 import { clearProgress, fetchProgress, recordProgress } from "@/lib/progress-store";
 import { isAllowedUser } from "@/lib/require-allowed-user";
+import { updateTaskStatus } from "@/lib/clickup";
+import { REVIEW_QUEUE_STATUS } from "@/lib/review-apply";
 
 const MAX_IDS_PER_READ = 200;
 
@@ -38,7 +40,21 @@ export async function POST(request: NextRequest) {
     // tem ingest, entao esse e o unico jeito de o indicador dele sumir antes do TTL.
     if (body?.state === "done") {
       await clearProgress(activityId);
-      return NextResponse.json({ ok: true });
+
+      // So o lote do dev move o card: encerrar a implementacao e o que coloca a
+      // entrega na fila do revisor. Arquiteto e revisor ja tem o proprio gate no ingest.
+      if (job.kind !== "dev") return NextResponse.json({ ok: true });
+
+      try {
+        await updateTaskStatus(activityId, REVIEW_QUEUE_STATUS);
+        return NextResponse.json({ ok: true, appliedStatus: REVIEW_QUEUE_STATUS });
+      } catch (error) {
+        // O progresso ja foi apagado: devolver 200 com o erro deixa a IA local
+        // avisar o usuario sem fazer parecer que a implementacao falhou.
+        const message =
+          error instanceof Error ? error.message : "Erro ao aplicar o status no ClickUp.";
+        return NextResponse.json({ ok: true, appliedStatus: null, statusError: message });
+      }
     }
 
     await recordProgress({
