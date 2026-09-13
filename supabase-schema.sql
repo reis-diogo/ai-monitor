@@ -121,6 +121,19 @@ create table if not exists activity_progress (
 
 create index if not exists activity_progress_updated_at_idx on activity_progress (updated_at desc);
 
+create table if not exists skill_tokens (
+  id uuid primary key default gen_random_uuid(),
+  token_hash text not null unique,
+  owner_email text not null,
+  label text,
+  created_at timestamptz not null default now(),
+  last_used_at timestamptz,
+  revoked_at timestamptz
+);
+
+create index if not exists skill_tokens_token_hash_idx on skill_tokens (token_hash);
+create index if not exists skill_tokens_owner_idx on skill_tokens (owner_email);
+
 
 alter table repos enable row level security;
 alter table projects enable row level security;

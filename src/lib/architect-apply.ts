@@ -6,7 +6,7 @@ export const APPROVED_STATUS = "dev liberado";
 export const REFINE_STATUS = "refinar po";
 export const APPROVAL_THRESHOLD = 7;
 const CHECKLIST_NAME = "Pendências de arquitetura";
-const ARCHITECT_QUEUE_STATUS = "refinar arquiteto";
+export const ARCHITECT_QUEUE_STATUS = "refinar arquiteto";
 
 export type ArchitectResultInput = {
   architecture: number;
