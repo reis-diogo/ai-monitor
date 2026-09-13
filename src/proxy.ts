@@ -9,6 +9,10 @@ const isPublicRoute = createRouteMatcher([
   "/unauthorized",
   "/api/architect/ingest",
   "/api/architect/progress",
+  // A skill local chama estas duas com o token por pessoa no Authorization; cada
+  // handler resolve o token e, na ausencia dele, ainda exige isAllowedUser.
+  "/api/architect/queue",
+  "/api/architect/jobs",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

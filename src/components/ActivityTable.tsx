@@ -22,12 +22,13 @@ import { ProjectScopeAnalysisModal } from "@/components/ProjectScopeAnalysisModa
 import { AuthorFilter, type AuthorFilterOption } from "@/components/AuthorFilter";
 import { ActivityRoleFilter } from "@/components/ActivityRoleFilter";
 import { ProjectFilter } from "@/components/ProjectFilter";
-import { ExternalLinkIcon, FilterOffIcon, RefreshIcon } from "@/components/icons";
+import { ExternalLinkIcon, FilterOffIcon, RefreshIcon, TerminalIcon } from "@/components/icons";
 import { AiIcon } from "@/components/AiIcon";
 import { timeAgo } from "@/lib/time-ago";
 import { STATUS_OPTIONS } from "@/lib/status-options";
 import { ActivityGroup } from "@/components/ActivityGroup";
 import { useActivityProgress } from "@/lib/use-activity-progress";
+import { SkillPromptModal } from "@/components/SkillPromptModal";
 
 function FilterRow({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-wrap items-center gap-1.5">{children}</div>;
@@ -190,6 +191,7 @@ export function ActivityTable({
   });
 
   const progressMap = useActivityProgress();
+  const [skillModalOpen, setSkillModalOpen] = useState(false);
 
   // O portal so pode montar no cliente. useSyncExternalStore devolve o snapshot
   // do servidor (false) na renderizacao inicial e o do cliente (true) depois,
@@ -383,6 +385,17 @@ export function ActivityTable({
               )}
             </AnimatePresence>
 
+            <motion.button
+              onClick={() => setSkillModalOpen(true)}
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              title="Instalar a skill do Claude Code para refinar arquitetura pelo terminal"
+              className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 font-mono text-[11px] text-muted-foreground shadow-lg shadow-black/40 backdrop-blur hover:border-primary/40 hover:text-foreground"
+            >
+              <TerminalIcon size={12} />
+              skill
+            </motion.button>
+
             {canEditPrompts && (
               <motion.button
                 onClick={onOpenPrompts}
@@ -445,6 +458,8 @@ export function ActivityTable({
           </div>,
           document.body
         )}
+      <SkillPromptModal open={skillModalOpen} onClose={() => setSkillModalOpen(false)} />
+
       <ProjectScopeAnalysisModal
         record={selectedProjectAnalysis}
         onClose={() => setSelectedProjectAnalysis(null)}

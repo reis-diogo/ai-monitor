@@ -198,3 +198,32 @@ export function FilterOffIcon({ size = 11, className = "" }: { size?: number; cl
     </svg>
   );
 }
+
+export function TerminalIcon({ size = 11, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      className={`shrink-0 ${className}`}
+    >
+      <rect
+        x="1.5"
+        y="2.5"
+        width="13"
+        height="11"
+        rx="1.6"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
+      <path
+        d="m4.6 6.2 2 1.8-2 1.8M8.4 10.2h3"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
