@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchListTasks } from "@/lib/clickup";
 import { resolveSkillToken } from "@/lib/skill-tokens-store";
 import { ARCHITECT_QUEUE_STATUS } from "@/lib/architect-apply";
+import { REVIEW_QUEUE_STATUS } from "@/lib/review-apply";
 
 function bearerToken(request: NextRequest): string {
   const header = request.headers.get("authorization") ?? "";
@@ -21,11 +22,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "CLICKUP_LIST_ID não configurado." }, { status: 500 });
   }
 
+  const kind = request.nextUrl.searchParams.get("kind") === "review" ? "review" : "architect";
+  const queueStatus = kind === "review" ? REVIEW_QUEUE_STATUS : ARCHITECT_QUEUE_STATUS;
+
   try {
     const tasks = await fetchListTasks(listId);
-    const pending = tasks.filter(
-      (task) => task.status?.toLowerCase() === ARCHITECT_QUEUE_STATUS
-    );
+    const pending = tasks.filter((task) => task.status?.toLowerCase() === queueStatus);
 
     const byProject = new Map<string, { id: string; customId: string | null; title: string }[]>();
     for (const task of pending) {
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest) {
       .map(([project, cards]) => ({ project, pending: cards.length, cards }))
       .sort((a, b) => b.pending - a.pending);
 
-    return NextResponse.json({ status: ARCHITECT_QUEUE_STATUS, projects });
+    return NextResponse.json({ status: queueStatus, kind, projects });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro ao ler a fila do ClickUp.";
     return NextResponse.json({ error: message }, { status: 502 });

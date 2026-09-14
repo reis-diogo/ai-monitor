@@ -340,11 +340,11 @@ export function ActivityTable({
               onClick={() => setSkillModalOpen(true)}
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.96 }}
-              title="Instalar a skill do Claude Code para refinar arquitetura pelo terminal"
+              title="Instalar as skills do Claude Code para refinar arquitetura e revisar entregas pelo terminal"
               className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 font-mono text-[11px] text-muted-foreground shadow-lg shadow-black/40 backdrop-blur hover:border-primary/40 hover:text-foreground"
             >
               <TerminalIcon size={12} />
-              skill
+              skills
             </motion.button>
 
             {canEditPrompts && (

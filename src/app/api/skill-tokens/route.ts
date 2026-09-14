@@ -5,8 +5,9 @@ import {
   revokeSkillToken,
 } from "@/lib/skill-tokens-store";
 import { getCurrentUserEmail, isAllowedUser } from "@/lib/require-allowed-user";
-import { buildSkillInstallPrompt } from "@/lib/ai/skill-prompt";
+import { buildSkillInstallPrompt, skillName, type SkillKind } from "@/lib/ai/skill-prompt";
 import { ARCHITECT_QUEUE_STATUS } from "@/lib/architect-apply";
+import { REVIEW_QUEUE_STATUS } from "@/lib/review-apply";
 
 export async function GET() {
   const email = await getCurrentUserEmail();
@@ -29,7 +30,11 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json().catch(() => null);
-  const label = typeof body?.label === "string" && body.label.trim() ? body.label.trim() : null;
+  const skill: SkillKind = body?.skill === "review" ? "review" : "architect";
+  const label =
+    typeof body?.label === "string" && body.label.trim()
+      ? body.label.trim()
+      : `skill ${skillName(skill)}`;
 
   try {
     const { token, record } = await createSkillToken({ ownerEmail: email, label });
@@ -41,10 +46,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       token,
       record,
+      skill,
       installPrompt: buildSkillInstallPrompt({
         apiBase,
         token,
-        queueStatus: ARCHITECT_QUEUE_STATUS,
+        skill,
+        queueStatus: skill === "review" ? REVIEW_QUEUE_STATUS : ARCHITECT_QUEUE_STATUS,
       }),
     });
   } catch (error) {
