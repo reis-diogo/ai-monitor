@@ -22,17 +22,13 @@ import { ProjectScopeAnalysisModal } from "@/components/ProjectScopeAnalysisModa
 import { AuthorFilter, type AuthorFilterOption } from "@/components/AuthorFilter";
 import { ActivityRoleFilter } from "@/components/ActivityRoleFilter";
 import { ProjectFilter } from "@/components/ProjectFilter";
+import { StatusFilter } from "@/components/StatusFilter";
 import { ExternalLinkIcon, FilterOffIcon, RefreshIcon, TerminalIcon } from "@/components/icons";
 import { AiIcon } from "@/components/AiIcon";
 import { timeAgo } from "@/lib/time-ago";
-import { STATUS_OPTIONS } from "@/lib/status-options";
 import { ActivityGroup } from "@/components/ActivityGroup";
 import { useActivityProgress } from "@/lib/use-activity-progress";
 import { SkillPromptModal } from "@/components/SkillPromptModal";
-
-function FilterRow({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-wrap items-center gap-1.5">{children}</div>;
-}
 
 export function ActivityTable({
   items,
@@ -243,79 +239,34 @@ export function ActivityTable({
         Atividades ({filteredItems.length})
       </p>
 
-      <div className="mt-4 flex flex-col gap-1.5">
+      <div className="mt-4 flex flex-wrap items-center gap-1.5">
         {projectNames.length > 1 && (
-          <FilterRow>
-            <ProjectFilter
-              projects={projectNames}
-              value={projectFilter}
-              counts={projectCounts}
-              onChange={onProjectFilterChange}
-            />
-          </FilterRow>
-        )}
-
-        <FilterRow>
-          <ActivityRoleFilter
-            value={roleFilter}
-            counts={roleCounts}
-            onChange={(next) => {
-              setRoleFilter(next);
-              setAuthorFilter([]);
-            }}
+          <ProjectFilter
+            projects={projectNames}
+            value={projectFilter}
+            counts={projectCounts}
+            onChange={onProjectFilterChange}
           />
-          {authors.length > 1 && (
-            <AuthorFilter
-              authors={authors}
-              value={authorFilter}
-              counts={authorCounts}
-              projectsByAuthor={authorProjects}
-              allProjects={projectNames}
-              onChange={setAuthorFilter}
-            />
-          )}
-        </FilterRow>
-
-        <FilterRow>
-          {STATUS_OPTIONS.map((option) => {
-            const active = statusFilter.includes(option.value);
-            const count = statusCounts.get(option.value) ?? 0;
-
-            // Some quando nao ha nada nesse status. Se estiver selecionado, fica:
-            // esconder um filtro ativo deixaria a lista vazia sem como desfazer.
-            if (count === 0 && !active) return null;
-
-            return (
-              <motion.button
-                key={option.value}
-                onClick={() =>
-                  setStatusFilter(
-                    active
-                      ? statusFilter.filter((v) => v !== option.value)
-                      : [...statusFilter, option.value]
-                  )
-                }
-                whileHover={{ y: -1 }}
-                whileTap={{ scale: 0.98 }}
-                transition={{ type: "spring", stiffness: 500, damping: 34 }}
-                title={`${count} em "${option.label.toLowerCase()}"`}
-                className="flex items-baseline gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] transition-colors"
-                style={{
-                  borderColor: active ? `${option.color}80` : `${option.color}24`,
-                  backgroundColor: active
-                    ? `color-mix(in srgb, ${option.color} 14%, var(--card))`
-                    : "var(--card)",
-                  color: active ? option.color : `${option.color}a6`,
-                }}
-              >
-                {option.label.toLowerCase()}
-                <span className="tabular-nums" style={{ opacity: 0.6 }}>
-                  {count}
-                </span>
-              </motion.button>
-            );
-          })}
-        </FilterRow>
+        )}
+        <ActivityRoleFilter
+          value={roleFilter}
+          counts={roleCounts}
+          onChange={(next) => {
+            setRoleFilter(next);
+            setAuthorFilter([]);
+          }}
+        />
+        {authors.length > 1 && (
+          <AuthorFilter
+            authors={authors}
+            value={authorFilter}
+            counts={authorCounts}
+            projectsByAuthor={authorProjects}
+            allProjects={projectNames}
+            onChange={setAuthorFilter}
+          />
+        )}
+        <StatusFilter value={statusFilter} counts={statusCounts} onChange={setStatusFilter} />
       </div>
 
       <div className="mt-4 flex flex-col gap-2">
