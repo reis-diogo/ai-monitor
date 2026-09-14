@@ -13,6 +13,7 @@ import { getCachedAnalysis } from "@/lib/analysis-cache";
 import { fetchListTasks, fetchTaskContent } from "@/lib/clickup";
 import { resolveSkillToken } from "@/lib/skill-tokens-store";
 import { ARCHITECT_QUEUE_STATUS } from "@/lib/architect-apply";
+import { REVIEW_QUEUE_STATUS } from "@/lib/review-apply";
 import { getCurrentUserEmail, isAllowedUser } from "@/lib/require-allowed-user";
 import { getProfessionals } from "@/lib/professionals-store";
 import { resolveMentionEmails } from "@/lib/mention-emails";
@@ -46,18 +47,19 @@ function bearerToken(request: NextRequest): string {
   return (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
 }
 
+function queueStatusFor(kind: LocalJobKind): string {
+  return kind === "review" ? REVIEW_QUEUE_STATUS : ARCHITECT_QUEUE_STATUS;
+}
+
 // A skill manda so o nome do projeto: quem sabe quais cards estao na fila e o
 // servidor, nao ela. Assim a lista nunca vem de uma copia velha do outro lado.
-async function fetchQueueCards(project: string): Promise<LocalPromptCard[]> {
+async function fetchQueueCards(project: string, status: string): Promise<LocalPromptCard[]> {
   const listId = process.env.CLICKUP_LIST_ID;
   if (!listId) return [];
 
   const tasks = await fetchListTasks(listId);
   return tasks
-    .filter(
-      (task) =>
-        task.location === project && task.status?.toLowerCase() === ARCHITECT_QUEUE_STATUS
-    )
+    .filter((task) => task.location === project && task.status?.toLowerCase() === status)
     .map((task) => ({
       id: task.id,
       customId: task.customId,
@@ -88,14 +90,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Informe o projeto." }, { status: 400 });
   }
 
+  const queueStatus = queueStatusFor(kind);
+
   try {
-    if (!cards.length && kind === "architect") {
-      cards = await fetchQueueCards(project);
+    if (!cards.length && kind !== "dev") {
+      cards = await fetchQueueCards(project, queueStatus);
     }
 
     if (!cards.length) {
       return NextResponse.json(
-        { error: `Nenhum card em "${ARCHITECT_QUEUE_STATUS}" no projeto "${project}".` },
+        { error: `Nenhum card em "${queueStatus}" no projeto "${project}".` },
         { status: 400 }
       );
     }
@@ -125,6 +129,7 @@ export async function POST(request: NextRequest) {
     const progressUrl = `${origin}/api/architect/progress`;
 
     let prompt: string;
+    let cardCount = cards.length;
     if (kind === "dev") {
       // O prompt do dev ja foi escrito pelo arquiteto e esta gravado: aqui ele so
       // ganha o bloco de progresso, com um token proprio deste lote.
@@ -162,6 +167,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      cardCount = reviewCards.length;
       prompt = buildLocalReviewPrompt({
         project,
         cards: reviewCards,
@@ -181,7 +187,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({ prompt, expiresAt: job.expiresAt, cardCount: cards.length });
+    return NextResponse.json({ prompt, expiresAt: job.expiresAt, cardCount });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro ao criar tarefa local.";
     return NextResponse.json({ error: message }, { status: 502 });

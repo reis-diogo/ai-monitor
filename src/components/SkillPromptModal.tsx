@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, LayoutGroup } from "motion/react";
 import { CheckIcon, CopyIcon } from "@/components/icons";
+import type { SkillKind } from "@/lib/ai/skill-prompt";
 
 type SkillTokenRecord = {
   id: string;
@@ -11,13 +12,40 @@ type SkillTokenRecord = {
   lastUsedAt: string | null;
 };
 
+const SKILL_OPTIONS: {
+  value: SkillKind;
+  label: string;
+  command: string;
+  headline: string;
+  blurb: string;
+}[] = [
+  {
+    value: "architect",
+    label: "arquiteto",
+    command: "/refinar-arquiteto",
+    headline: "refinar arquitetura direto do terminal",
+    blurb: "lista os projetos com fila, pergunta qual você quer e executa o crivo do arquiteto.",
+  },
+  {
+    value: "review",
+    label: "revisor",
+    command: "/revisar-entrega",
+    headline: "revisar entregas direto do terminal",
+    blurb:
+      'lista os projetos com cards em "dev finalizado", pergunta qual você quer e confere a entrega contra a especificação do arquiteto.',
+  },
+];
+
 export function SkillPromptModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [skill, setSkill] = useState<SkillKind>("architect");
   const [prompt, setPrompt] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [tokens, setTokens] = useState<SkillTokenRecord[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
+
+  const option = SKILL_OPTIONS.find((item) => item.value === skill) ?? SKILL_OPTIONS[0];
 
   useEffect(() => {
     if (!open) return;
@@ -49,6 +77,19 @@ export function SkillPromptModal({ open, onClose }: { open: boolean; onClose: ()
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose]);
 
+  function resetPrompt() {
+    setPrompt("");
+    setStatus("idle");
+    setError(null);
+    setCopied(false);
+  }
+
+  function selectSkill(next: SkillKind) {
+    if (next === skill) return;
+    setSkill(next);
+    resetPrompt();
+  }
+
   async function generate() {
     setStatus("loading");
     setError(null);
@@ -57,7 +98,7 @@ export function SkillPromptModal({ open, onClose }: { open: boolean; onClose: ()
       const res = await fetch("/api/skill-tokens", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: "skill refinar-arquiteto" }),
+        body: JSON.stringify({ skill }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Erro ao gerar o token.");
@@ -76,10 +117,7 @@ export function SkillPromptModal({ open, onClose }: { open: boolean; onClose: ()
   }
 
   function close() {
-    setPrompt("");
-    setStatus("idle");
-    setError(null);
-    setCopied(false);
+    resetPrompt();
     onClose();
   }
 
@@ -110,11 +148,20 @@ export function SkillPromptModal({ open, onClose }: { open: boolean; onClose: ()
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="font-mono text-xs text-black/40 dark:text-white/40">
-                  skill do claude code
+                  skills do claude code
                 </p>
-                <p className="mt-1 text-sm text-black/80 dark:text-white/80">
-                  refinar arquitetura direto do terminal
-                </p>
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.p
+                    key={option.value}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.15 }}
+                    className="mt-1 text-sm text-black/80 dark:text-white/80"
+                  >
+                    {option.headline}
+                  </motion.p>
+                </AnimatePresence>
               </div>
               <button
                 onClick={close}
@@ -124,11 +171,36 @@ export function SkillPromptModal({ open, onClose }: { open: boolean; onClose: ()
               </button>
             </div>
 
+            <LayoutGroup id="skill-kind">
+              <div className="mt-4 inline-flex self-start rounded-full border border-black/10 bg-black/5 p-0.5 font-mono text-[11px] dark:border-white/10 dark:bg-white/5">
+                {SKILL_OPTIONS.map((item) => {
+                  const active = item.value === skill;
+                  return (
+                    <button
+                      key={item.value}
+                      onClick={() => selectSkill(item.value)}
+                      className={`relative rounded-full px-3 py-1 transition-colors ${
+                        active ? "text-background" : "text-foreground/50 hover:text-foreground/80"
+                      }`}
+                    >
+                      {active && (
+                        <motion.span
+                          layoutId="skill-kind-pill"
+                          className="absolute inset-0 rounded-full bg-foreground"
+                          transition={{ type: "spring", stiffness: 500, damping: 34 }}
+                        />
+                      )}
+                      <span className="relative">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </LayoutGroup>
+
             <p className="mt-3 text-[11px] text-black/40 dark:text-white/40">
               Gere o prompt e cole no Claude Code. Ele instala a skill; rodar
-              <span className="font-mono"> /refinar-arquiteto </span>
-              lista os projetos com fila, pergunta qual você quer e executa o crivo do arquiteto.
-              O token dentro do prompt é seu: não versione e não compartilhe.
+              <span className="font-mono"> {option.command} </span>
+              {option.blurb} O token dentro do prompt é seu: não versione e não compartilhe.
             </p>
 
             {status !== "ready" && (
@@ -140,7 +212,7 @@ export function SkillPromptModal({ open, onClose }: { open: boolean; onClose: ()
                   whileTap={{ scale: status === "loading" ? 1 : 0.97 }}
                   className="rounded-md bg-foreground px-3 py-1.5 font-mono text-[11px] font-medium text-background disabled:opacity-50"
                 >
-                  {status === "loading" ? "gerando..." : "gerar prompt da skill"}
+                  {status === "loading" ? "gerando..." : `gerar prompt da skill ${option.command}`}
                 </motion.button>
                 {status === "error" && (
                   <p className="font-mono text-xs text-red-400">{error}</p>
@@ -180,6 +252,11 @@ export function SkillPromptModal({ open, onClose }: { open: boolean; onClose: ()
                       className="flex items-center justify-between gap-3 font-mono text-[11px] text-black/50 dark:text-white/50"
                     >
                       <span className="truncate">
+                        {token.label && (
+                          <span className="text-black/70 dark:text-white/70">
+                            {token.label.replace(/^skill\s+/, "")} ·{" "}
+                          </span>
+                        )}
                         {new Date(token.createdAt).toLocaleDateString("pt-BR")}
                         {token.lastUsedAt
                           ? ` · usado em ${new Date(token.lastUsedAt).toLocaleDateString("pt-BR")}`
