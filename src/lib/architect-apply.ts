@@ -1,10 +1,14 @@
 import { getCachedAnalysis, setCachedAnalysis } from "@/lib/analysis-cache";
 import { createTaskChecklist, createTaskComment, updateTaskStatus } from "@/lib/clickup";
 import type { AiProvider, AnalyzedActivityRecord, ArchitectPayload } from "@/lib/types";
+import {
+  APPROVAL_THRESHOLD,
+  APPROVED_STATUS,
+  REFINE_STATUS,
+  architectureApproves,
+} from "@/lib/architect-gate";
 
-export const APPROVED_STATUS = "dev liberado";
-export const REFINE_STATUS = "refinar po";
-export const APPROVAL_THRESHOLD = 7;
+export { APPROVAL_THRESHOLD, APPROVED_STATUS, REFINE_STATUS };
 const CHECKLIST_NAME = "Pendências de arquitetura";
 export const ARCHITECT_QUEUE_STATUS = "refinar arquiteto";
 
@@ -26,9 +30,13 @@ function buildRefineComment(score: number, ambiguityCount: number): string {
     return `Revisão de arquitetura: ${score}/10. A atividade não tem definição suficiente para ser arquitetada. Detalhe o escopo antes de devolver para "${ARCHITECT_QUEUE_STATUS}".`;
   }
 
-  return `Revisão de arquitetura: ${score}/10. Abri o checklist "${CHECKLIST_NAME}" neste card com ${ambiguityCount} ${
-    ambiguityCount === 1 ? "ponto" : "pontos"
-  } que precisam ser esclarecidos. Resolva e marque todos os itens antes de devolver o card para "${ARCHITECT_QUEUE_STATUS}".`;
+  const points = `${ambiguityCount} ${ambiguityCount === 1 ? "ponto" : "pontos"}`;
+  const lead =
+    score >= APPROVAL_THRESHOLD
+      ? `A solução está desenhada, mas depende de ${points} que só o PO pode responder.`
+      : `Há ${points} que precisam ser esclarecidos antes de arquitetar.`;
+
+  return `Revisão de arquitetura: ${score}/10. ${lead} Abri o checklist "${CHECKLIST_NAME}" neste card com esses itens. Resolva e marque todos antes de devolver o card para "${ARCHITECT_QUEUE_STATUS}".`;
 }
 
 export async function applyArchitectResult(params: {
@@ -39,7 +47,7 @@ export async function applyArchitectResult(params: {
   existing: AnalyzedActivityRecord;
 }): Promise<{ record: AnalyzedActivityRecord; appliedStatus: string | null; statusError: string | null }> {
   const { result } = params;
-  const approved = result.architecture >= APPROVAL_THRESHOLD;
+  const approved = architectureApproves(result.architecture, result.ambiguities);
   const targetStatus = approved ? APPROVED_STATUS : REFINE_STATUS;
 
   let appliedStatus: string | null = null;

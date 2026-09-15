@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { AnalyzedActivityRecord } from "@/lib/types";
-
-const APPROVAL_THRESHOLD = 7;
+import { APPROVAL_THRESHOLD, architectureReleased } from "@/lib/architect-gate";
 
 const PROVIDER_LABEL: Record<AnalyzedActivityRecord["provider"], string> = {
   anthropic: "Claude",
@@ -45,7 +44,7 @@ export function ArchitectAnalysisModal({
 
   const score = record?.architecture ?? null;
   const payload = record?.architecturePayload ?? null;
-  const approved = score !== null && score >= APPROVAL_THRESHOLD;
+  const approved = architectureReleased(score, payload);
 
   const copied = !!record && copiedId === record.id;
 
@@ -210,8 +209,8 @@ export function ArchitectAnalysisModal({
             {!approved && (
               <Section title="prompt para o desenvolvimento">
                 <p className="rounded-lg border border-red-500/25 bg-red-500/5 px-3 py-2 text-red-600 dark:text-red-300">
-                  Bloqueado: liberado só a partir de {APPROVAL_THRESHOLD}/10. Resolva os pontos
-                  acima e reavalie a arquitetura.
+                  Bloqueado: liberado só a partir de {APPROVAL_THRESHOLD}/10 e sem pontos para o
+                  PO esclarecer. Resolva os pontos acima e reavalie a arquitetura.
                 </p>
               </Section>
             )}
