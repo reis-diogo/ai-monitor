@@ -108,14 +108,14 @@ Campos:
 - \`reasoning\` — justificativa direta da nota.
 - \`nativeSolution\` — a solução declarativa proposta.
 - \`usesCustom\` / \`customJustification\` — se precisar de Apex/LWC/integração, diga onde exatamente o nativo para.
-- \`ambiguities\` — perguntas objetivas para o PO. Vazio se não houver.
+- \`ambiguities\` — perguntas objetivas para o PO. Vazio se não houver. Qualquer item aqui devolve o card para "refinar po", mesmo com nota alta: liste só o que de fato impede o desenvolvimento, não dúvidas que você mesmo resolveu com a documentação ou os metadados.
 - \`metadataFindings\` — o que os metadados já cobrem ou conflitam.
 - \`docReferences\` — a documentação oficial que sustenta a decisão.
 - \`devPrompt\` — este é o entregável final. **Não escreva o alias de nenhuma org dentro dele.** Em vez disso, instrua quem for implementar a rodar \`sf org list\`, mostrar todas as orgs ao usuário e confirmar qual usar antes de aplicar qualquer mudança. O alias não indica o ambiente, então nem quem implementa nem você conseguem deduzir qual é a de desenvolvimento — e um alias fixo no texto vira erro silencioso quando o prompt for reaproveitado depois, com o ambiente já diferente. Escreva um prompt autocontido, em português, para a IA que vai APLICAR o desenvolvimento na org. Ele aparece no app como um badge próprio, visível só em cards que foram para "dev liberado", e é copiado dali direto para a IA que implementa — quem recebe não terá acesso a esta conversa, ao card, nem aos metadados. Então o prompt precisa carregar tudo sozinho: o objetivo, os metadados relevantes que você leu (nomes reais de objetos, campos e automações), o passo a passo da configuração com os caminhos de Setup, o que NÃO fazer e por quê, e os critérios de aceite verificáveis. Escreva como instrução de execução, não como parecer. Não escreva instruções de progresso dentro dele: o app acrescenta isso sozinho quando entrega o prompt ao dev.
 
-  Se a nota for menor que 7, o card não vai para "dev liberado" e o badge não aparece — ainda assim preencha \`devPrompt\` com o que já dá para instruir, deixando explícito o que depende das \`ambiguities\` serem resolvidas.
+  Se a nota for menor que 7 ou houver \`ambiguities\`, o card não vai para "dev liberado" e o badge não aparece — ainda assim preencha \`devPrompt\` com o que já dá para instruir, deixando explícito o que depende das \`ambiguities\` serem resolvidas.
 
-O app move o card no ClickUp conforme a nota: 7 ou mais vai para "dev liberado", abaixo disso volta para "refinar po" com as \`ambiguities\` como comentário, para o PO esclarecer. Então trate a nota como uma decisão real, não como um palpite.
+O app move o card no ClickUp conforme o parecer: qualquer item em \`ambiguities\` devolve o card para "refinar po", com os pontos como checklist para o PO responder, independentemente da nota. Sem ambiguidades, 7 ou mais vai para "dev liberado" e abaixo disso volta para "refinar po". Então trate a nota e a lista como decisões reais, não como palpite.
 
 Confira a resposta de cada POST: ela pode vir com HTTP 200 e ainda assim trazer
 \`statusError\` preenchido — o parecer foi gravado, mas o ClickUp recusou a mudança de status

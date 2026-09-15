@@ -11,6 +11,7 @@ import type {
 } from "@/lib/types";
 import { scoreColor } from "@/lib/score-color";
 import { truncate } from "@/lib/truncate";
+import { architectureReleased } from "@/lib/architect-gate";
 import { AiIcon } from "@/components/AiIcon";
 import { ExternalLinkIcon, RefreshIcon } from "@/components/icons";
 import { StatusMenu } from "@/components/StatusMenu";
@@ -19,7 +20,6 @@ import { ActivityProgressBadge } from "@/components/ActivityProgressBadge";
 
 const ARCHITECT_QUEUE_STATUS = "refinar arquiteto";
 const DEV_RELEASED_STATUS = "dev liberado";
-const APPROVAL_THRESHOLD = 7;
 const REVIEW_QUEUE_STATUS = "dev finalizado";
 
 type Status = "idle" | "loading" | "error";
@@ -224,7 +224,7 @@ export function ActivityTableRow({
               )}
               {item.source === "clickup" &&
                 item.status?.toLowerCase() === REVIEW_QUEUE_STATUS &&
-                (analysis.architecture ?? 0) >= APPROVAL_THRESHOLD &&
+                architectureReleased(analysis.architecture, analysis.architecturePayload) &&
                 !!analysis.architecturePayload?.devPrompt && (
                   <button
                     onClick={() => onReviewLocal(item)}
@@ -244,7 +244,7 @@ export function ActivityTableRow({
                 </button>
               )}
               {item.status?.toLowerCase() === DEV_RELEASED_STATUS &&
-                (analysis.architecture ?? 0) >= APPROVAL_THRESHOLD &&
+                architectureReleased(analysis.architecture, analysis.architecturePayload) &&
                 !!analysis.architecturePayload?.devPrompt && (
                   <button
                     onClick={() => onSelectDevPrompt(analysis)}

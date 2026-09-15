@@ -163,7 +163,7 @@ export const ArchitectAnalysisSchema = z.object({
   ambiguities: z
     .array(z.string())
     .describe(
-      "Pontos de negócio que o PO precisa esclarecer antes do desenvolvimento. Vazio se não houver."
+      "Pontos de negócio que o PO precisa esclarecer antes do desenvolvimento. Qualquer item aqui devolve o card ao PO, mesmo com nota alta: liste só o que de fato impede o desenvolvimento. Vazio se não houver."
     ),
   metadataFindings: z
     .array(z.string())
@@ -205,7 +205,7 @@ Regras para a nota de arquitetura (0 a 10), que mede o quanto a atividade está 
 - 4 a 6 = a solução depende de decisões de negócio que o PO ainda não tomou.
 - 0 a 3 = a atividade é vaga ou contraditória demais para ser arquitetada.
 
-Toda ambiguidade real de negócio DEVE aparecer em ambiguities, escrita como pergunta objetiva para o PO. Se a solução exigir customização, customJustification precisa dizer onde exatamente o nativo não atende.
+Toda ambiguidade real de negócio DEVE aparecer em ambiguities, escrita como pergunta objetiva para o PO. Qualquer item em ambiguities devolve o card ao PO para esclarecer, mesmo com nota alta — então só entra ali o que de fato impede o desenvolvimento; dúvida menor que não trava vai no reasoning. Se a solução exigir customização, customJustification precisa dizer onde exatamente o nativo não atende.
 
 devPrompt é o entregável mais importante: um prompt autocontido, em português, para a IA que vai aplicar o desenvolvimento na org. Ele NÃO deve conter o alias de nenhuma org: mande quem for implementar rodar \`sf org list\`, mostrar todas as orgs ao usuário e confirmar qual usar antes de aplicar qualquer mudança. O alias é escolhido por quem autenticou e não indica o ambiente, então não há como deduzir — um alias fixo no texto leva a aplicar em homologação ou produção o que era para ir em desenvolvimento. Ele deve conter o objetivo, os metadados relevantes, o passo a passo da configuração nativa (com os caminhos de Setup), o que NÃO fazer, e os critérios de aceite. Quem receber esse prompt não terá acesso a esta conversa.
 
