@@ -53,17 +53,17 @@ export function buildLocalArchitectPrompt(params: {
 
 ## Onde estão os metadados
 
-Trabalhe sobre o retrieve de metadados da org de desenvolvimento deste projeto.
+Você só vai LER metadados: não faz deploy, não altera nada na org. Então trabalhe sobre o retrieve que já está em disco, e não gaste uma ida e volta perguntando org quando não precisa.
 
-Comece rodando \`sf org list\` e mostre ao usuário **todas** as orgs autorizadas que aparecerem.
+Comece olhando o diretório atual. Se houver um \`sfdx-project.json\`, ele é o projeto: leia os caminhos em \`packageDirectories\` e use esse retrieve direto, sem rodar \`sf org list\` e sem perguntar nada. Diga em uma linha qual caminho você está usando e siga para a análise.
 
-**Sempre pergunte qual usar e aguarde a resposta antes de qualquer outra coisa** — inclusive quando só houver uma, e inclusive quando alguma parecer obviamente a certa.
+Pergunte ao usuário apenas quando o diretório atual não for um projeto Salesforce, ou quando \`packageDirectories\` tiver mais de um caminho e não estiver claro qual cobre estes cards. Nesse caso, peça o caminho do retrieve e aguarde — não saia procurando pelo disco.
 
-O alias da org é escolhido por quem autenticou: não segue padrão, não precisa citar o projeto e não indica o ambiente. \`solven\` pode ser produção, \`teste2\` pode ser o desenvolvimento deste projeto. Deduzir pelo nome é adivinhar, e o custo do erro é mexer em homologação ou produção. Se o usuário não responder, não prossiga.
+Antes de analisar, veja há quanto tempo esse retrieve não é atualizado: \`git log -1 --format=%cr -- <caminho do pacote>\`. Informe a idade em uma linha e siga. Só pare e pergunte se o usuário quer rodar \`sf project retrieve start\` quando passar de trinta dias — aí sim vale confirmar a org antes, com \`sf org list\`, porque um retrieve da org errada estraga o parecer.
 
-Não comece a análise antes de ter localizado o retrieve que o usuário indicou. Não invente metadados e não deduza a estrutura da org a partir do texto do card.
+Não comece a análise antes de ter localizado o retrieve. Não invente metadados e não deduza a estrutura da org a partir do texto do card.
 
-Depois de localizar, leia de \`force-app/main/default/**\` (ou do caminho que o usuário indicar) apenas o que for relevante para cada card — objetos, campos, flows, classes, validation rules, permission sets. Não leia a árvore inteira.
+Leia do caminho do pacote (normalmente \`force-app/main/default/**\`) apenas o que for relevante para cada card — objetos, campos, flows, classes, validation rules, permission sets. Não leia a árvore inteira.
 
 ## Como analisar
 
@@ -162,7 +162,15 @@ O alias da org é escolhido por quem autenticou: não segue padrão, não precis
 
 Não comece a revisão antes de ter localizado o retrieve. Uma revisão feita sem ler o metadado real não vale nada — ela aprovaria uma entrega inexistente.
 
-Se possível, atualize o retrieve antes de revisar (\`sf project retrieve start\`): um retrieve antigo não mostra o que o dev acabou de configurar, e você reprovaria uma entrega correta.
+Aqui, ao contrário do arquiteto, o retrieve em disco não basta: ele não mostra o que o dev acabou de configurar, e você reprovaria uma entrega correta. Atualize antes de revisar — mas de forma dirigida, não puxando a org inteira.
+
+Monte a lista a partir da especificação de cada card: os objetos, campos, flows, classes, validation rules e permission sets citados nela são exatamente o que você precisa conferir. Puxe só eles:
+
+\`\`\`bash
+sf project retrieve start -o <a org confirmada> -m CustomObject:Conta -m Flow:Atualiza_Margem -m PermissionSet:PS_Vendedor
+\`\`\`
+
+Um retrieve completo leva minutos e traz milhares de arquivos que você não vai abrir. Se algum metadado citado não vier no retrieve dirigido, isso já é um achado: ele não existe na org, e entra em \`missing\`.
 
 ## Como revisar
 
