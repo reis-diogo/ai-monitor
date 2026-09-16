@@ -5,7 +5,7 @@ import {
   revokeSkillToken,
 } from "@/lib/skill-tokens-store";
 import { getCurrentUserEmail, isAllowedUser } from "@/lib/require-allowed-user";
-import { buildSkillInstallPrompt, skillName, type SkillKind } from "@/lib/ai/skill-prompt";
+import { buildSkillInstallPrompt, skillName, type ApiSkillKind } from "@/lib/ai/skill-prompt";
 import { ARCHITECT_QUEUE_STATUS } from "@/lib/architect-apply";
 import { REVIEW_QUEUE_STATUS } from "@/lib/review-apply";
 
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json().catch(() => null);
-  const skill: SkillKind = body?.skill === "review" ? "review" : "architect";
+  const skill: ApiSkillKind = body?.skill === "review" ? "review" : "architect";
   const label =
     typeof body?.label === "string" && body.label.trim()
       ? body.label.trim()
