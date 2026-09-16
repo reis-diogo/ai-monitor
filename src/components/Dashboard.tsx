@@ -36,6 +36,7 @@ import { getPresetRange, isWithinRange, type DatePreset } from "@/lib/date-range
 import { truncate } from "@/lib/truncate";
 
 const RELATIVE_TIME_TICK_MS = 30_000;
+const STATUS_SYNC_INTERVAL_MS = 60_000;
 const PROVIDER_STORAGE_KEY = "getnow:ai-provider";
 const AUTO_ANALYZE_INTERVAL_MS = 30_000;
 const AUTO_ANALYZE_STATUS = "para desenvolver";
@@ -281,6 +282,25 @@ export function Dashboard() {
     fetchProjects,
     fetchPendingPullRequests,
   ]);
+
+  // O ClickUp muda por fora e a ingestao local nasce fora do navegador: sem um ciclo
+  // proprio a tela envelhece sem ninguem perceber. A trava e local ao intervalo para
+  // uma rodada lenta nao empilhar a seguinte em cima dela.
+  useEffect(() => {
+    let running = false;
+
+    const interval = setInterval(async () => {
+      if (running) return;
+      running = true;
+      try {
+        await syncClickupStatuses();
+      } finally {
+        running = false;
+      }
+    }, STATUS_SYNC_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [syncClickupStatuses]);
 
   const allCommits = (authors ?? []).flatMap((author) => author.commits);
 

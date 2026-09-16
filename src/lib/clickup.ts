@@ -204,11 +204,14 @@ export async function createTaskChecklist(
     throw new Error("O ClickUp não retornou o id do checklist criado.");
   }
 
-  for (const item of items) {
+  // O orderindex nao esta documentado no POST do item, mas e respeitado. Sem ele o
+  // ClickUp numera os itens por conta propria e a ordem chega embaralhada no card,
+  // mesmo criando um de cada vez e esperando cada resposta.
+  for (const [index, item] of items.entries()) {
     await clickupFetch(`/checklist/${checklistId}/checklist_item`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: item }),
+      body: JSON.stringify({ name: item, orderindex: index }),
     });
   }
 }
