@@ -50,7 +50,7 @@ export function PendingTasksModal({
               exit={{ opacity: 0, scale: 0.95, y: 12 }}
               transition={{ type: "spring", stiffness: 340, damping: 30 }}
               onClick={(e) => e.stopPropagation()}
-              className="flex w-full max-w-lg max-h-[80vh] flex-col overflow-hidden rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-950 p-6"
+              className="flex w-full max-w-xl max-h-[80vh] flex-col overflow-hidden rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-950 p-6"
             >
               <div className="flex shrink-0 items-center justify-between gap-4">
                 <p className="text-sm text-black/70 dark:text-white/70">
@@ -72,6 +72,11 @@ export function PendingTasksModal({
                     whileHover={{ backgroundColor: "var(--accent)" }}
                     className="flex cursor-pointer items-center gap-2 rounded-lg border border-black/5 dark:border-white/5 p-2.5 text-xs"
                   >
+                    {item.customId && (
+                      <span className="shrink-0 font-mono text-[11px] text-black/40 dark:text-white/40">
+                        {item.customId}
+                      </span>
+                    )}
                     <span className="min-w-0 flex-1 truncate text-black/70 dark:text-white/70">
                       {truncate(item.title, 50)}
                     </span>
