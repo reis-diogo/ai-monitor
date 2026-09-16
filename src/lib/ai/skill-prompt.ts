@@ -1,4 +1,6 @@
-export type SkillKind = "architect" | "review";
+export type SkillKind = "architect" | "review" | "pr";
+
+export type ApiSkillKind = Exclude<SkillKind, "pr">;
 
 type SkillSpec = {
   name: string;
@@ -12,7 +14,7 @@ type SkillSpec = {
   executionNotes: string;
 };
 
-const SKILLS: Record<SkillKind, SkillSpec> = {
+const SKILLS: Record<ApiSkillKind, SkillSpec> = {
   architect: {
     name: "refinar-arquiteto",
     title: "Refinar arquiteto",
@@ -45,17 +47,51 @@ const SKILLS: Record<SkillKind, SkillSpec> = {
 };
 
 export function skillName(skill: SkillKind): string {
-  return SKILLS[skill].name;
+  return skill === "pr" ? "pr" : SKILLS[skill].name;
 }
 
-type SkillFileParams = {
+type ApiSkillFileParams = {
   apiBase: string;
   token: string;
-  skill: SkillKind;
+  skill: ApiSkillKind;
   queueStatus: string;
 };
 
+type SkillFileParams = ApiSkillFileParams | { skill: "pr" };
+
+const PR_FRONTMATTER = `---
+name: pr
+description: Empacota o trabalho pendente numa branch do dia, commita e abre o PR sem merge. Use quando o usuário pedir para abrir o PR, subir o trabalho ou fechar a atividade.
+---`;
+
+// Nao fala com o monitor: e o fluxo de git do time, igual para todo mundo. Por
+// isso nao leva token e o nome de quem roda vem do proprio git.
+const PR_PROCEDURE = `# Abrir o PR
+
+Empacote o trabalho pendente em uma branch nova e abra o PR.
+
+Argumento opcional (\`$ARGUMENTS\`): o nome curto da atividade, para a branch. Sem ele, deduza do conteúdo do diff.
+
+Faça nesta ordem:
+
+1. \`git status --short\` e \`git diff\` para saber o que está pendente. Se não houver nada, diga isso e pare.
+2. Confirme que o typecheck do projeto passa. Se não passar, pare e mostre o erro — não commite código quebrado.
+3. Atualize a base: se a branch atual já foi mergeada, volte para a \`main\` e faça \`git pull\` antes de ramificar. Se o trabalho depende de um PR ainda aberto, empilhe sobre a branch dele e diga isso no corpo do PR.
+4. Crie a branch no padrão \`AAAAMMDD_nome_atividade_curta\`: a data de hoje, o primeiro nome de \`git config user.name\` em minúsculas e sem acento, e o nome curto da atividade.
+5. Commite tudo. A mensagem descreve **por que** a mudança existe, não o que o diff mostra — o diff já está ali. Português, sem emoji.
+6. \`git push -u origin <branch>\` e \`gh pr create --base main\`.
+7. Devolva o link do PR e pare. **Nunca dê merge** — o merge é feito manualmente no GitHub, nunca pela skill.
+
+Regras que não se quebram:
+
+- **Nada no commit, na branch ou no PR pode mencionar IA, Claude ou assistente.** Sem trailers de co-autoria.
+- **Nenhum segredo entra.** Antes de commitar, confira que \`.env*\` e arquivos de credencial ficaram de fora. Se um arquivo versionado passou a carregar segredo, tire o campo do commit e avise.
+- Se algo do escopo não foi testado em tela, diga isso no corpo do PR em vez de omitir.
+
+O corpo do PR deve responder, nesta ordem: qual era o problema, o que mudou, o que o revisor precisa saber antes de aprovar (variável de ambiente nova, migração, dado apagado), e como testar.`;
+
 function buildFrontmatter(params: SkillFileParams): string {
+  if (params.skill === "pr") return PR_FRONTMATTER;
   const spec = SKILLS[params.skill];
   return `---
 name: ${spec.name}
@@ -64,6 +100,7 @@ description: ${spec.describe(params.queueStatus)}
 }
 
 function buildProcedure(params: SkillFileParams): string {
+  if (params.skill === "pr") return PR_PROCEDURE;
   const spec = SKILLS[params.skill];
 
   return `# ${spec.title}
@@ -119,11 +156,15 @@ export function buildSkillFile(params: SkillFileParams): string {
 // e uma skill instalada. O token vai aqui dentro porque a skill roda na maquina dele,
 // sem sessao — e por isso o texto avisa para nao versionar o arquivo.
 export function buildSkillInstallPrompt(params: SkillFileParams): string {
-  const spec = SKILLS[params.skill];
+  const name = skillName(params.skill);
+  const closing =
+    params.skill === "pr"
+      ? "Ao terminar, confirme o caminho do arquivo criado."
+      : "Ao terminar, confirme o caminho do arquivo criado e avise que o token dentro dele é pessoal: não versionar, não compartilhar. Se vazar, dá para revogar no monitor e gerar outro.";
 
-  return `Crie uma skill do Claude Code chamada \`${spec.name}\`.
+  return `Crie uma skill do Claude Code chamada \`${name}\`.
 
-Escreva o arquivo em \`~/.claude/skills/${spec.name}/SKILL.md\`, com este frontmatter:
+Escreva o arquivo em \`~/.claude/skills/${name}/SKILL.md\`, com este frontmatter:
 
 \`\`\`
 ${buildFrontmatter(params)}
@@ -137,5 +178,5 @@ ${buildProcedure(params)}
 
 ---
 
-Ao terminar, confirme o caminho do arquivo criado e avise que o token dentro dele é pessoal: não versionar, não compartilhar. Se vazar, dá para revogar no monitor e gerar outro.`;
+${closing}`;
 }

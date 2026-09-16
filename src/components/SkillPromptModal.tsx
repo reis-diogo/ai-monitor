@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence, LayoutGroup } from "motion/react";
 import { CheckIcon, CopyIcon } from "@/components/icons";
-import type { SkillKind } from "@/lib/ai/skill-prompt";
+import { buildSkillInstallPrompt, type SkillKind } from "@/lib/ai/skill-prompt";
 
 type SkillTokenRecord = {
   id: string;
@@ -18,6 +18,7 @@ const SKILL_OPTIONS: {
   command: string;
   headline: string;
   blurb: string;
+  needsToken: boolean;
 }[] = [
   {
     value: "architect",
@@ -25,6 +26,7 @@ const SKILL_OPTIONS: {
     command: "/refinar-arquiteto",
     headline: "refinar arquitetura direto do terminal",
     blurb: "lista os projetos com fila, pergunta qual você quer e executa o crivo do arquiteto.",
+    needsToken: true,
   },
   {
     value: "review",
@@ -33,6 +35,16 @@ const SKILL_OPTIONS: {
     headline: "revisar entregas direto do terminal",
     blurb:
       'lista os projetos com cards em "dev finalizado", pergunta qual você quer e confere a entrega contra a especificação do arquiteto.',
+    needsToken: true,
+  },
+  {
+    value: "pr",
+    label: "pr",
+    command: "/pr",
+    headline: "abrir o PR do dia direto do terminal",
+    blurb:
+      "confere o typecheck, cria a branch do dia com o seu nome, commita o pendente e abre o PR sem merge, no padrão do time.",
+    needsToken: false,
   },
 ];
 
@@ -91,9 +103,16 @@ export function SkillPromptModal({ open, onClose }: { open: boolean; onClose: ()
   }
 
   async function generate() {
-    setStatus("loading");
     setError(null);
     setCopied(false);
+
+    if (!option.needsToken) {
+      setPrompt(buildSkillInstallPrompt({ skill: "pr" }));
+      setStatus("ready");
+      return;
+    }
+
+    setStatus("loading");
     try {
       const res = await fetch("/api/skill-tokens", {
         method: "POST",
@@ -200,7 +219,8 @@ export function SkillPromptModal({ open, onClose }: { open: boolean; onClose: ()
             <p className="mt-3 text-[11px] text-black/40 dark:text-white/40">
               Gere o prompt e cole no Claude Code. Ele instala a skill; rodar
               <span className="font-mono"> {option.command} </span>
-              {option.blurb} O token dentro do prompt é seu: não versione e não compartilhe.
+              {option.blurb}
+              {option.needsToken && " O token dentro do prompt é seu: não versione e não compartilhe."}
             </p>
 
             {status !== "ready" && (
