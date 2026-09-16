@@ -80,18 +80,37 @@ function resolveProjectName(task: ClickUpTaskResponse): string | null {
   return option?.name ?? null;
 }
 
+const TASKS_PAGE_LIMIT = 50;
+
+// O ClickUp devolve 100 tarefas por pagina e nao avisa que cortou: sem percorrer
+// ate last_page, tudo o que passa da centesima simplesmente nao existe para o app.
+async function fetchAllListTasks(listId: string): Promise<ClickUpTaskResponse[]> {
+  const tasks: ClickUpTaskResponse[] = [];
+
+  for (let page = 0; page < TASKS_PAGE_LIMIT; page++) {
+    const data = (await clickupFetch(
+      `/list/${listId}/task?include_closed=true&page=${page}`
+    )) as { tasks?: ClickUpTaskResponse[]; last_page?: boolean };
+
+    const batch = data.tasks ?? [];
+    tasks.push(...batch);
+
+    if (data.last_page === true || batch.length === 0) break;
+  }
+
+  return tasks;
+}
+
 export async function fetchListTasks(listId: string): Promise<ClickUpTaskActivity[]> {
-  const [list, taskData] = await Promise.all([
+  const [list, tasks] = await Promise.all([
     clickupFetch(`/list/${listId}`) as Promise<ClickUpListResponse>,
-    clickupFetch(`/list/${listId}/task?include_closed=true`) as Promise<{
-      tasks: ClickUpTaskResponse[];
-    }>,
+    fetchAllListTasks(listId),
   ]);
 
   const fallbackLocation =
     [list.space?.name, list.folder?.name].filter(Boolean).join("/") || list.name;
 
-  return taskData.tasks.map((task) => ({
+  return tasks.map((task) => ({
     id: task.id,
     customId: task.custom_id ?? null,
     name: task.name,
