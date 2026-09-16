@@ -1,13 +1,15 @@
 "use client";
 
 import { FilterPicklist } from "@/components/FilterPicklist";
-import { STATUS_OPTIONS } from "@/lib/status-options";
+import type { StatusOption } from "@/lib/status-options";
 
 export function StatusFilter({
+  options,
   value,
   counts,
   onChange,
 }: {
+  options: StatusOption[];
   value: string[];
   counts: Map<string, number>;
   onChange: (statuses: string[]) => void;
@@ -15,7 +17,7 @@ export function StatusFilter({
   return (
     <FilterPicklist
       label="status"
-      options={STATUS_OPTIONS.flatMap((option) => {
+      options={options.flatMap((option) => {
         const count = counts.get(option.value) ?? 0;
         if (count === 0 && !value.includes(option.value)) return [];
         return [

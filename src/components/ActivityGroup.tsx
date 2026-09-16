@@ -21,6 +21,7 @@ import { LocalArchitectModal } from "@/components/LocalArchitectModal";
 import { ActivityProgressBadge } from "@/components/ActivityProgressBadge";
 import { PendingTasksModal } from "@/components/PendingTasksModal";
 import { PendingPullRequestsModal } from "@/components/PendingPullRequestsModal";
+import { buildStatusOptions } from "@/lib/status-options";
 
 type ScopeStatus = "idle" | "loading" | "error";
 
@@ -68,11 +69,7 @@ export function ActivityGroup({
   onTaskStatusUpdate?: (taskId: string, status: string) => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const [showPendingTasks, setShowPendingTasks] = useState(false);
-  const [showRefiningTasks, setShowRefiningTasks] = useState(false);
-  const [showArchitectTasks, setShowArchitectTasks] = useState(false);
-  const [showDevReleasedTasks, setShowDevReleasedTasks] = useState(false);
-  const [showQaTasks, setShowQaTasks] = useState(false);
+  const [openStatus, setOpenStatus] = useState<string | null>(null);
   const [showPendingPrs, setShowPendingPrs] = useState(false);
   const pendingPrCount = pendingPullRequests.length;
   const [scopeStatus, setScopeStatus] = useState<ScopeStatus>("idle");
@@ -85,38 +82,30 @@ export function ActivityGroup({
     [items]
   );
 
-  const [showDevDoneTasks, setShowDevDoneTasks] = useState(false);
-  const [showReviewTasks, setShowReviewTasks] = useState(false);
-
   const commitCount = items.filter((item) => item.source === "commit").length;
-  const pendingTaskItems = items.filter(
-    (item) => item.source === "clickup" && item.status?.toLowerCase() === "para desenvolver"
-  );
-  const pendingTaskCount = pendingTaskItems.length;
-  const refiningTaskItems = items.filter(
-    (item) => item.source === "clickup" && item.status?.toLowerCase() === "refinar po"
-  );
-  const refiningTaskCount = refiningTaskItems.length;
-  const architectTaskItems = items.filter(
-    (item) => item.source === "clickup" && item.status?.toLowerCase() === "refinar arquiteto"
-  );
-  const architectTaskCount = architectTaskItems.length;
-  const devDoneTaskItems = items.filter(
-    (item) => item.source === "clickup" && item.status?.toLowerCase() === "dev finalizado"
-  );
-  const devDoneTaskCount = devDoneTaskItems.length;
-  const reviewTaskItems = items.filter(
-    (item) => item.source === "clickup" && item.status?.toLowerCase() === "revisar dev"
-  );
-  const reviewTaskCount = reviewTaskItems.length;
-  const devReleasedTaskItems = items.filter(
-    (item) => item.source === "clickup" && item.status?.toLowerCase() === "dev liberado"
-  );
-  const devReleasedTaskCount = devReleasedTaskItems.length;
-  const qaTaskItems = items.filter(
-    (item) => item.source === "clickup" && item.status?.toLowerCase() === "em qa"
-  );
-  const qaTaskCount = qaTaskItems.length;
+  // Um chip por status presente no grupo, na ordem da lista do ClickUp: status
+  // novo na lista aparece aqui sem ninguem precisar mexer na tela.
+  const statusGroups = useMemo(() => {
+    const byStatus = new Map<string, { items: ActivityItem[]; color: string | null }>();
+    for (const item of items) {
+      if (item.source !== "clickup" || !item.status) continue;
+      const value = item.status.toLowerCase();
+      const group = byStatus.get(value) ?? { items: [], color: item.statusColor };
+      group.items.push(item);
+      byStatus.set(value, group);
+    }
+
+    return buildStatusOptions(
+      clickupStatuses ?? [],
+      Array.from(byStatus, ([value, group]) => ({ value, color: group.color }))
+    ).flatMap((option) => {
+      const group = byStatus.get(option.value);
+      return group ? [{ ...option, items: group.items }] : [];
+    });
+  }, [items, clickupStatuses]);
+
+  const openStatusItems =
+    statusGroups.find((group) => group.value === openStatus)?.items ?? null;
 
   // Com o grupo fechado a linha do card nao existe, e e justamente quando alguem
   // esta rodando uma etapa que a pessoa precisa saber sem ter que abrir tudo.
@@ -190,103 +179,31 @@ export function ActivityGroup({
             />
           ))}
 
-          {pendingTaskCount > 0 && (
-            <button
+          {statusGroups.map((group) => (
+            <motion.button
+              key={group.value}
               onClick={(e) => {
                 e.stopPropagation();
-                setShowPendingTasks(true);
+                setOpenStatus(group.value);
               }}
-              className="flex items-center gap-1 rounded-full border border-violet-400/30 bg-violet-400/10 px-2 py-0.5 font-medium text-violet-700 dark:text-violet-300 hover:bg-violet-400/20"
-              title={`${pendingTaskCount} tarefa${pendingTaskCount > 1 ? "s" : ""} ainda com status "para desenvolver"`}
-            >
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" />
-              {pendingTaskCount} para desenvolver
-            </button>
-          )}
-
-          {refiningTaskCount > 0 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowRefiningTasks(true);
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 500, damping: 34 }}
+              className="flex items-center gap-1 rounded-full border px-2 py-0.5 font-medium"
+              style={{
+                borderColor: `${group.color}4d`,
+                backgroundColor: `${group.color}1a`,
+                color: group.color,
               }}
-              className="flex items-center gap-1 rounded-full border border-rose-400/30 bg-rose-400/10 px-2 py-0.5 font-medium text-rose-700 dark:text-rose-300 hover:bg-rose-400/20"
-              title={`${refiningTaskCount} tarefa${refiningTaskCount > 1 ? "s" : ""} com status "refinar po"`}
+              title={`${group.items.length} tarefa${group.items.length > 1 ? "s" : ""} com status "${group.label}"`}
             >
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-400" />
-              {refiningTaskCount} refinar po
-            </button>
-          )}
-
-          {architectTaskCount > 0 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowArchitectTasks(true);
-              }}
-              className="flex items-center gap-1 rounded-full border border-sky-400/30 bg-sky-400/10 px-2 py-0.5 font-medium text-sky-700 dark:text-sky-300 hover:bg-sky-400/20"
-              title={`${architectTaskCount} tarefa${architectTaskCount > 1 ? "s" : ""} com status "refinar arquiteto"`}
-            >
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" />
-              {architectTaskCount} refinar arquiteto
-            </button>
-          )}
-
-          {reviewTaskCount > 0 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowReviewTasks(true);
-              }}
-              className="flex items-center gap-1 rounded-full border border-orange-400/30 bg-orange-400/10 px-2 py-0.5 font-medium text-orange-700 dark:text-orange-300 hover:bg-orange-400/20"
-              title={`${reviewTaskCount} tarefa${reviewTaskCount > 1 ? "s" : ""} com status "revisar dev"`}
-            >
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400" />
-              {reviewTaskCount} revisar dev
-            </button>
-          )}
-
-          {devDoneTaskCount > 0 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowDevDoneTasks(true);
-              }}
-              className="flex items-center gap-1 rounded-full border border-teal-400/30 bg-teal-400/10 px-2 py-0.5 font-medium text-teal-700 dark:text-teal-300 hover:bg-teal-400/20"
-              title={`${devDoneTaskCount} tarefa${devDoneTaskCount > 1 ? "s" : ""} com status "dev finalizado"`}
-            >
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-teal-400" />
-              {devDoneTaskCount} dev finalizado
-            </button>
-          )}
-
-          {devReleasedTaskCount > 0 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowDevReleasedTasks(true);
-              }}
-              className="flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-400/20"
-              title={`${devReleasedTaskCount} tarefa${devReleasedTaskCount > 1 ? "s" : ""} com status "dev liberado"`}
-            >
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
-              {devReleasedTaskCount} dev liberado
-            </button>
-          )}
-
-          {qaTaskCount > 0 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowQaTasks(true);
-              }}
-              className="flex items-center gap-1 rounded-full border border-orange-400/30 bg-orange-400/10 px-2 py-0.5 font-medium text-orange-700 dark:text-orange-300 hover:bg-orange-400/20"
-              title={`${qaTaskCount} tarefa${qaTaskCount > 1 ? "s" : ""} com status "em qa"`}
-            >
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400" />
-              {qaTaskCount} em qa
-            </button>
-          )}
+              <span
+                className="h-1.5 w-1.5 shrink-0 rounded-full"
+                style={{ backgroundColor: group.color }}
+              />
+              {group.items.length} {group.label}
+            </motion.button>
+          ))}
 
           {pendingPrCount > 0 && (
             <button
@@ -439,44 +356,9 @@ export function ActivityGroup({
       </AnimatePresence>
 
       <PendingTasksModal
-        items={showPendingTasks ? pendingTaskItems : null}
-        onClose={() => setShowPendingTasks(false)}
-      />
-
-      <PendingTasksModal
-        items={showRefiningTasks ? refiningTaskItems : null}
-        onClose={() => setShowRefiningTasks(false)}
-        label="refinar po"
-      />
-
-      <PendingTasksModal
-        items={showArchitectTasks ? architectTaskItems : null}
-        onClose={() => setShowArchitectTasks(false)}
-        label="refinar arquiteto"
-      />
-
-      <PendingTasksModal
-        items={showDevReleasedTasks ? devReleasedTaskItems : null}
-        onClose={() => setShowDevReleasedTasks(false)}
-        label="dev liberado"
-      />
-
-      <PendingTasksModal
-        items={showDevDoneTasks ? devDoneTaskItems : null}
-        onClose={() => setShowDevDoneTasks(false)}
-        label="dev finalizado"
-      />
-
-      <PendingTasksModal
-        items={showReviewTasks ? reviewTaskItems : null}
-        onClose={() => setShowReviewTasks(false)}
-        label="revisar dev"
-      />
-
-      <PendingTasksModal
-        items={showQaTasks ? qaTaskItems : null}
-        onClose={() => setShowQaTasks(false)}
-        label="em qa"
+        items={openStatusItems}
+        onClose={() => setOpenStatus(null)}
+        label={openStatus ?? undefined}
       />
 
       <LocalArchitectModal
