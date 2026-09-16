@@ -23,6 +23,7 @@ import { AuthorFilter, type AuthorFilterOption } from "@/components/AuthorFilter
 import { ActivityRoleFilter } from "@/components/ActivityRoleFilter";
 import { ProjectFilter } from "@/components/ProjectFilter";
 import { StatusFilter } from "@/components/StatusFilter";
+import { buildStatusOptions, PR_PENDING_STATUS } from "@/lib/status-options";
 import { ExternalLinkIcon, FilterOffIcon, RefreshIcon, TerminalIcon } from "@/components/icons";
 import { AiIcon } from "@/components/AiIcon";
 import { timeAgo } from "@/lib/time-ago";
@@ -172,17 +173,33 @@ export function ActivityTable({
         counts.set(key, (counts.get(key) ?? 0) + 1);
       }
       if ((pendingPrsByProject.get(item.location)?.length ?? 0) > 0) {
-        counts.set("pr_pendente", (counts.get("pr_pendente") ?? 0) + 1);
+        counts.set(PR_PENDING_STATUS, (counts.get(PR_PENDING_STATUS) ?? 0) + 1);
       }
     }
     return counts;
   }, [authorFilteredItems, pendingPrsByProject]);
 
+  const statusOptions = useMemo(
+    () =>
+      buildStatusOptions(
+        clickupStatuses,
+        Array.from(
+          new Map(
+            items.flatMap((item) =>
+              item.status ? [[item.status.toLowerCase(), item.statusColor] as [string, string | null]] : []
+            )
+          ),
+          ([value, color]) => ({ value, color })
+        )
+      ),
+    [clickupStatuses, items]
+  );
+
   const filteredItems = authorFilteredItems.filter((item) => {
     if (statusFilter.length === 0) return true;
     const matchesStatus = !!item.status && statusFilter.includes(item.status.toLowerCase());
     const matchesPendingPr =
-      statusFilter.includes("pr_pendente") && (pendingPrsByProject.get(item.location)?.length ?? 0) > 0;
+      statusFilter.includes(PR_PENDING_STATUS) && (pendingPrsByProject.get(item.location)?.length ?? 0) > 0;
     return matchesStatus || matchesPendingPr;
   });
 
@@ -266,7 +283,12 @@ export function ActivityTable({
             onChange={setAuthorFilter}
           />
         )}
-        <StatusFilter value={statusFilter} counts={statusCounts} onChange={setStatusFilter} />
+        <StatusFilter
+          options={statusOptions}
+          value={statusFilter}
+          counts={statusCounts}
+          onChange={setStatusFilter}
+        />
       </div>
 
       <div className="mt-4 flex flex-col gap-2">
