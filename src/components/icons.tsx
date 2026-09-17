@@ -227,3 +227,22 @@ export function TerminalIcon({ size = 11, className = "" }: { size?: number; cla
     </svg>
   );
 }
+
+export function PencilIcon({ size = 11, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      className={`shrink-0 ${className}`}
+    >
+      <path
+        d="M11.2 2.4a1.4 1.4 0 0 1 2 2L6 11.6l-2.7.7.7-2.7 7.2-7.2Z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

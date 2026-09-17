@@ -3,10 +3,16 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { Project } from "@/lib/types";
-import { ChevronIcon, CloseIcon } from "@/components/icons";
+import { CheckIcon, ChevronIcon, CloseIcon, PencilIcon } from "@/components/icons";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
-export function ProjectsManager({ onChange }: { onChange: () => void }) {
+export function ProjectsManager({
+  onChange,
+  knownLocations = [],
+}: {
+  onChange: () => void;
+  knownLocations?: string[];
+}) {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -14,6 +20,8 @@ export function ProjectsManager({ onChange }: { onChange: () => void }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [scopeDrafts, setScopeDrafts] = useState<Record<string, string>>({});
   const [removingProject, setRemovingProject] = useState<Project | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [nameDraft, setNameDraft] = useState("");
 
   useEffect(() => {
     fetch("/api/projects")
@@ -47,6 +55,55 @@ export function ProjectsManager({ onChange }: { onChange: () => void }) {
       .catch((err) => {
         setProjects((prev) => (prev ?? []).filter((p) => p.id !== tempId));
         setError(err instanceof Error ? err.message : "Erro ao cadastrar projeto.");
+      });
+  }
+
+  // Mesma regra do normalizeLocation: o nome casa por substring dentro do valor cru
+  // que veio do ClickUp ou do caminho do repo. Se nao casar com nada, o projeto
+  // renomeado deixa de aparecer na tabela.
+  function matchesSomeCard(candidate: string): boolean {
+    const trimmed = candidate.trim().toLowerCase();
+    if (!trimmed) return true;
+    return knownLocations.some((location) => location.toLowerCase().includes(trimmed));
+  }
+
+  function startEditing(project: Project) {
+    setEditingId(project.id);
+    setNameDraft(project.name);
+    setError(null);
+  }
+
+  function cancelEditing() {
+    setEditingId(null);
+    setNameDraft("");
+  }
+
+  function handleSaveName(project: Project) {
+    const trimmed = nameDraft.trim();
+    if (!trimmed || trimmed === project.name) {
+      cancelEditing();
+      return;
+    }
+
+    const previous = projects;
+    setProjects((prev) => (prev ?? []).map((p) => (p.id === project.id ? { ...p, name: trimmed } : p)));
+    cancelEditing();
+    setError(null);
+
+    fetch(`/api/projects/${project.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmed }),
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Erro ao renomear projeto.");
+        setProjects((prev) => (prev ?? []).map((p) => (p.id === project.id ? data.project : p)));
+        onChange();
+      })
+      .catch((err) => {
+        setProjects(previous);
+        setError(err instanceof Error ? err.message : "Erro ao renomear projeto.");
       });
   }
 
@@ -174,17 +231,47 @@ export function ProjectsManager({ onChange }: { onChange: () => void }) {
                         exit={{ opacity: 0, y: -6 }}
                         className="rounded-lg border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02]"
                       >
-                        <div className="flex items-center gap-2 px-3 py-2">
-                          <button
-                            onClick={() => toggleExpand(project)}
-                            className="flex min-w-0 flex-1 items-center gap-2 text-left text-xs"
-                          >
-                            <span className="min-w-0 truncate text-black/80 dark:text-white/80">{project.name}</span>
-                            {project.scope && (
-                              <span className="shrink-0 text-black/30 dark:text-white/30">escopo definido</span>
-                            )}
-                          </button>
+                        <div className="flex items-start gap-2 px-3 py-2">
+                          {editingId === project.id ? (
+                            <div className="flex min-w-0 flex-1 flex-col gap-1">
+                              <input
+                                autoFocus
+                                value={nameDraft}
+                                onChange={(e) => setNameDraft(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleSaveName(project);
+                                  if (e.key === "Escape") cancelEditing();
+                                }}
+                                className="w-full rounded-md border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 px-2 py-1 text-xs outline-none focus:border-black/30 dark:focus:border-white/30"
+                              />
+                              {!matchesSomeCard(nameDraft) && (
+                                <span className="text-[11px] leading-4 text-amber-500 dark:text-amber-400">
+                                  Nenhum card carregado tem &quot;{nameDraft.trim()}&quot; no campo projeto. Com
+                                  esse nome o projeto sai da tabela de atividades — renomeie também no ClickUp.
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => toggleExpand(project)}
+                              className="flex min-w-0 flex-1 items-center gap-2 text-left text-xs"
+                            >
+                              <span className="min-w-0 truncate text-black/80 dark:text-white/80">{project.name}</span>
+                              {project.scope && (
+                                <span className="shrink-0 text-black/30 dark:text-white/30">escopo definido</span>
+                              )}
+                            </button>
+                          )}
                           <div className="flex shrink-0 items-center gap-1">
+                            <button
+                              onClick={() =>
+                                editingId === project.id ? handleSaveName(project) : startEditing(project)
+                              }
+                              title={editingId === project.id ? "Salvar o nome" : "Renomear o projeto"}
+                              className="flex h-4 w-4 items-center justify-center text-black/30 dark:text-white/30 hover:text-black/60 dark:hover:text-white/60"
+                            >
+                              {editingId === project.id ? <CheckIcon /> : <PencilIcon />}
+                            </button>
                             <button
                               onClick={() => toggleExpand(project)}
                               className="flex h-4 w-4 items-center justify-center text-black/30 dark:text-white/30 hover:text-black/60 dark:hover:text-white/60"

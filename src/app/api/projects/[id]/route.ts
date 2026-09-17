@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { removeProject, setProjectScope } from "@/lib/projects-store";
+import { removeProject, setProjectName, setProjectScope } from "@/lib/projects-store";
 import { removeProjectAnalyses } from "@/lib/project-analysis-cache";
 import { isAllowedUser } from "@/lib/require-allowed-user";
 
@@ -27,17 +27,19 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json().catch(() => null);
-  const scope = body?.scope;
-
-  if (typeof scope !== "string") {
-    return NextResponse.json({ error: "Informe o escopo." }, { status: 400 });
-  }
 
   try {
-    const project = await setProjectScope(id, scope);
-    return NextResponse.json({ project });
+    if (typeof body?.name === "string") {
+      return NextResponse.json({ project: await setProjectName(id, body.name) });
+    }
+
+    if (typeof body?.scope === "string") {
+      return NextResponse.json({ project: await setProjectScope(id, body.scope) });
+    }
+
+    return NextResponse.json({ error: "Informe o nome ou o escopo." }, { status: 400 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Erro ao salvar escopo.";
+    const message = error instanceof Error ? error.message : "Erro ao salvar o projeto.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

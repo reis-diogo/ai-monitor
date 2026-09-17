@@ -304,6 +304,22 @@ export function Dashboard() {
 
   const allCommits = (authors ?? []).flatMap((author) => author.commits);
 
+  // O valor cru do campo "projeto" do ClickUp e do caminho do repo, antes de
+  // normalizeLocation. E contra ele que o nome do projeto e casado (por substring),
+  // entao e o que diz se um nome novo ainda encontra card algum.
+  const knownLocations = useMemo(() => {
+    const locations = new Set<string>();
+    for (const task of clickupTasks) {
+      if (task.location) locations.add(task.location);
+    }
+    for (const author of authors ?? []) {
+      for (const commit of author.commits) {
+        locations.add(`${commit.repoOwner}/${commit.repoName}`);
+      }
+    }
+    return Array.from(locations);
+  }, [clickupTasks, authors]);
+
   const activityItems: ActivityItem[] = useMemo(() => {
     const projectNames = projects.map((p) => p.name);
 
@@ -1127,7 +1143,7 @@ export function Dashboard() {
 
       <ProfessionalsManager commits={allCommits} onChange={fetchProfessionals} />
 
-      <ProjectsManager onChange={fetchProjects} />
+      <ProjectsManager onChange={fetchProjects} knownLocations={knownLocations} />
 
       <RepoManager onRepoChange={fetchActivity} />
     </div>

@@ -44,6 +44,35 @@ export async function removeProject(id: string): Promise<void> {
   if (error) throw new Error(`Erro ao remover projeto: ${error.message}`);
 }
 
+// O nome e a chave que liga o projeto aos cards: o dropdown "projeto" do ClickUp
+// chega como texto e e casado com este campo por igualdade. Renomear aqui sem
+// renomear la desliga o projeto dos cards dele — quem chama avisa o usuario.
+export async function setProjectName(id: string, name: string): Promise<Project> {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    throw new Error("Informe o nome do projeto.");
+  }
+
+  const projects = await getProjects();
+  const duplicated = projects.some(
+    (project) => project.id !== id && project.name.toLowerCase() === trimmed.toLowerCase()
+  );
+  if (duplicated) {
+    throw new Error("Já existe um projeto com esse nome.");
+  }
+
+  const { data, error } = await getSupabase()
+    .from("projects")
+    .update({ name: trimmed })
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
+
+  if (error) throw new Error(`Erro ao renomear projeto: ${error.message}`);
+  if (!data) throw new Error("Projeto não encontrado.");
+  return rowToProject(data as ProjectRow);
+}
+
 export async function setProjectScope(id: string, scope: string): Promise<Project> {
   const { data, error } = await getSupabase()
     .from("projects")
