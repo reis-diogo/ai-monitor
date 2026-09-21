@@ -164,6 +164,7 @@ export async function POST(request: NextRequest) {
     customJustification:
       typeof body?.customJustification === "string" ? body.customJustification : "",
     ambiguities: strings(body?.ambiguities),
+    assumptions: strings(body?.assumptions),
     metadataFindings: strings(body?.metadataFindings),
     docReferences: docRefs(body?.docReferences),
     devPrompt: typeof body?.devPrompt === "string" ? body.devPrompt : "",

@@ -19,24 +19,22 @@ export type ArchitectResultInput = {
   usesCustom: boolean;
   customJustification: string;
   ambiguities: string[];
+  assumptions: string[];
   metadataFindings: string[];
   docReferences: { title: string; url: string }[];
   devPrompt: string;
   research?: string;
 };
 
+// So chega aqui card reprovado: com nota alta o arquiteto resolve os pontos sozinho.
 function buildRefineComment(score: number, ambiguityCount: number): string {
   if (!ambiguityCount) {
     return `Revisão de arquitetura: ${score}/10. A atividade não tem definição suficiente para ser arquitetada. Detalhe o escopo antes de devolver para "${ARCHITECT_QUEUE_STATUS}".`;
   }
 
   const points = `${ambiguityCount} ${ambiguityCount === 1 ? "ponto" : "pontos"}`;
-  const lead =
-    score >= APPROVAL_THRESHOLD
-      ? `A solução está desenhada, mas depende de ${points} que só o PO pode responder.`
-      : `Há ${points} que precisam ser esclarecidos antes de arquitetar.`;
 
-  return `Revisão de arquitetura: ${score}/10. ${lead} Abri o checklist "${CHECKLIST_NAME}" neste card com esses itens. Resolva e marque todos antes de devolver o card para "${ARCHITECT_QUEUE_STATUS}".`;
+  return `Revisão de arquitetura: ${score}/10. Há ${points} que precisam ser esclarecidos antes de arquitetar. Abri o checklist "${CHECKLIST_NAME}" neste card com esses itens. Resolva e marque todos antes de devolver o card para "${ARCHITECT_QUEUE_STATUS}".`;
 }
 
 export async function applyArchitectResult(params: {
@@ -47,7 +45,7 @@ export async function applyArchitectResult(params: {
   existing: AnalyzedActivityRecord;
 }): Promise<{ record: AnalyzedActivityRecord; appliedStatus: string | null; statusError: string | null }> {
   const { result } = params;
-  const approved = architectureApproves(result.architecture, result.ambiguities);
+  const approved = architectureApproves(result.architecture);
   const targetStatus = approved ? APPROVED_STATUS : REFINE_STATUS;
 
   let appliedStatus: string | null = null;
@@ -82,6 +80,7 @@ export async function applyArchitectResult(params: {
     usesCustom: result.usesCustom,
     customJustification: result.customJustification,
     ambiguities: result.ambiguities,
+    assumptions: result.assumptions,
     metadataFindings: result.metadataFindings,
     docReferences: result.docReferences,
     devPrompt: result.devPrompt,

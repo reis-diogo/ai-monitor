@@ -95,6 +95,7 @@ curl -sS -X POST '${params.ingestUrl}' \\
   "usesCustom": false,
   "customJustification": "",
   "ambiguities": [],
+  "assumptions": [],
   "metadataFindings": [],
   "docReferences": [{ "title": "", "url": "" }],
   "devPrompt": ""
@@ -108,14 +109,18 @@ Campos:
 - \`reasoning\` — justificativa direta da nota.
 - \`nativeSolution\` — a solução declarativa proposta.
 - \`usesCustom\` / \`customJustification\` — se precisar de Apex/LWC/integração, diga onde exatamente o nativo para.
-- \`ambiguities\` — perguntas objetivas para o PO. Vazio se não houver. Qualquer item aqui devolve o card para "refinar po", mesmo com nota alta: liste só o que de fato impede o desenvolvimento, não dúvidas que você mesmo resolveu com a documentação ou os metadados. Cada item vira um item de checklist no card, lido pelo PO: escreva em linguagem de negócio, descrevendo a situação e a decisão que falta (quem faz, quando, o que deve acontecer, qual a exceção), como uma pergunta que o PO responde sem conhecer Salesforce. Não use nome de API de objeto ou campo nem termos de plataforma (Flow, trigger, validation rule, permission set, FLS, Apex, LWC) — a tradução técnica fica em \`reasoning\`, \`metadataFindings\` e \`devPrompt\`. Em vez de "Qual o valor default de Lead.Origem__c quando o Flow de conversão roda?", escreva "Quando um lead vira oportunidade sem origem informada, qual origem deve ficar registrada?".
+- \`ambiguities\` / \`assumptions\` — o que fazer com os pontos em aberto depende da nota, e só disso.
+
+  **Nota 7 ou mais:** deixe \`ambiguities\` vazio. Resolva cada ponto você mesmo, com a documentação oficial e o que os metadados da org mostram, e registre em \`assumptions\` a decisão tomada e a razão dela. Cada decisão precisa aparecer também dentro do \`devPrompt\` como instrução — quem implementa não pode receber "depende do PO". Na escolha, siga o caminho que o resto da org já usa: consistência com o que existe erra menos que preferência sua.
+
+  **Nota menor que 7:** deixe \`assumptions\` vazio e escreva em \`ambiguities\` APENAS perguntas de negócio. Cada item vira item de checklist lido pelo PO: descreva a situação e a decisão que falta em termos da operação (quem faz, quando, o que deve acontecer, qual a exceção), como pergunta que se responde sem conhecer Salesforce. Nada de nome de API de objeto ou campo, nada de Flow, trigger, validation rule, permission set, FLS, Apex ou LWC — o PO decide regra de negócio, não implementação. Em vez de "Qual o valor default de Lead.Origem__c quando o Flow de conversão roda?", escreva "Quando um lead vira oportunidade sem origem informada, qual origem deve ficar registrada?".
 - \`metadataFindings\` — o que os metadados já cobrem ou conflitam.
 - \`docReferences\` — a documentação oficial que sustenta a decisão.
 - \`devPrompt\` — este é o entregável final. **Não escreva o alias de nenhuma org dentro dele.** Em vez disso, instrua quem for implementar a rodar \`sf org list\`, mostrar todas as orgs ao usuário e confirmar qual usar antes de aplicar qualquer mudança. O alias não indica o ambiente, então nem quem implementa nem você conseguem deduzir qual é a de desenvolvimento — e um alias fixo no texto vira erro silencioso quando o prompt for reaproveitado depois, com o ambiente já diferente. Escreva um prompt autocontido, em português, para a IA que vai APLICAR o desenvolvimento na org. Ele aparece no app como um badge próprio, visível só em cards que foram para "dev liberado", e é copiado dali direto para a IA que implementa — quem recebe não terá acesso a esta conversa, ao card, nem aos metadados. Então o prompt precisa carregar tudo sozinho: o objetivo, os metadados relevantes que você leu (nomes reais de objetos, campos e automações), o passo a passo da configuração com os caminhos de Setup, o que NÃO fazer e por quê, e os critérios de aceite verificáveis. Escreva como instrução de execução, não como parecer. Não escreva instruções de progresso dentro dele: o app acrescenta isso sozinho quando entrega o prompt ao dev.
 
-  Se a nota for menor que 7 ou houver \`ambiguities\`, o card não vai para "dev liberado" e o badge não aparece — ainda assim preencha \`devPrompt\` com o que já dá para instruir, deixando explícito o que depende das \`ambiguities\` serem resolvidas.
+  Se a nota for menor que 7, o card não vai para "dev liberado" e o badge não aparece — ainda assim preencha \`devPrompt\` com o que já dá para instruir, deixando explícito o que depende das \`ambiguities\` serem respondidas.
 
-O app move o card no ClickUp conforme o parecer: qualquer item em \`ambiguities\` devolve o card para "refinar po", com os pontos como checklist para o PO responder, independentemente da nota. Sem ambiguidades, 7 ou mais vai para "dev liberado" e abaixo disso volta para "refinar po". Então trate a nota e a lista como decisões reais, não como palpite.
+O app move o card no ClickUp olhando só a nota: 7 ou mais vai para "dev liberado", abaixo disso volta para "refinar po" com as \`ambiguities\` como checklist para o PO responder. Então trate a nota como decisão real, não como palpite — é ela, sozinha, que decide se alguém começa a construir.
 
 Confira a resposta de cada POST: ela pode vir com HTTP 200 e ainda assim trazer
 \`statusError\` preenchido — o parecer foi gravado, mas o ClickUp recusou a mudança de status
