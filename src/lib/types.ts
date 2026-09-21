@@ -133,6 +133,10 @@ export type ArchitectPayload = {
   usesCustom: boolean;
   customJustification: string;
   ambiguities: string[];
+  // Pontos que o arquiteto resolveu no lugar do PO quando a nota liberou o card.
+  // Ficam registrados porque decidem o que o dev vai construir sem ninguem do
+  // negocio ter confirmado.
+  assumptions: string[];
   metadataFindings: string[];
   docReferences: ArchitectDocReference[];
   devPrompt: string;

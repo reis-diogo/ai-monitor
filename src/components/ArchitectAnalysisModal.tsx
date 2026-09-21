@@ -177,6 +177,29 @@ export function ArchitectAnalysisModal({
               </div>
             )}
 
+            {!!payload?.assumptions?.length && (
+              <div className="mt-4 rounded-lg border border-sky-500/30 bg-sky-500/5 p-3">
+                <p className="font-mono text-[11px] uppercase tracking-wide text-sky-600 dark:text-sky-400">
+                  decidido sem o PO · {payload.assumptions.length}{" "}
+                  {payload.assumptions.length === 1 ? "ponto" : "pontos"}
+                </p>
+                <ul className="mt-2 space-y-2">
+                  {payload.assumptions.map((item, index) => (
+                    <li key={item} className="flex gap-2 text-sm text-black/80 dark:text-white/80">
+                      <span className="shrink-0 font-mono text-[11px] text-sky-600/70 dark:text-sky-400/70">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <span className="min-w-0 break-words [overflow-wrap:anywhere]">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-[11px] text-black/40 dark:text-white/40">
+                  A nota liberou o card, então estes pontos foram resolvidos pela leitura da org e
+                  da documentação, e já estão no prompt do dev. Ninguém do negócio confirmou.
+                </p>
+              </div>
+            )}
+
             {!!payload?.metadataFindings?.length && (
               <Section title="metadados da org">
                 <ul className="list-disc space-y-1 pl-4">

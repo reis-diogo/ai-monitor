@@ -163,7 +163,12 @@ export const ArchitectAnalysisSchema = z.object({
   ambiguities: z
     .array(z.string())
     .describe(
-      "Pontos de negócio que o PO precisa esclarecer antes do desenvolvimento, escritos em linguagem de negócio, sem nome de API nem termos de plataforma. Qualquer item aqui devolve o card ao PO, mesmo com nota alta: liste só o que de fato impede o desenvolvimento. Vazio se não houver."
+      "SÓ quando a nota for menor que 7: perguntas de negócio para o PO, em linguagem de negócio, sem nome de API nem termo de plataforma. Com nota 7 ou mais, deixe vazio e resolva os pontos em assumptions."
+    ),
+  assumptions: z
+    .array(z.string())
+    .describe(
+      "SÓ quando a nota for 7 ou mais: os pontos que estavam em aberto e a decisão que você tomou para cada um, com a razão. Vazio se o escopo não deixou nada em aberto."
     ),
   metadataFindings: z
     .array(z.string())
@@ -205,9 +210,15 @@ Regras para a nota de arquitetura (0 a 10), que mede o quanto a atividade está 
 - 4 a 6 = a solução depende de decisões de negócio que o PO ainda não tomou.
 - 0 a 3 = a atividade é vaga ou contraditória demais para ser arquitetada.
 
-Toda ambiguidade real de negócio DEVE aparecer em ambiguities, escrita como pergunta objetiva para o PO. Qualquer item em ambiguities devolve o card ao PO para esclarecer, mesmo com nota alta — então só entra ali o que de fato impede o desenvolvimento; dúvida menor que não trava vai no reasoning. Se a solução exigir customização, customJustification precisa dizer onde exatamente o nativo não atende.
+O que fazer com os pontos em aberto depende da nota, e só disso:
 
-Cada item de ambiguities vira um item de checklist no card, lido pelo PO. Escreva em linguagem de negócio: descreva a situação e a decisão que falta em termos da operação (quem faz, quando, o que deve acontecer, qual a exceção), como uma pergunta que o PO responde sem conhecer Salesforce. Não use nome de API de objeto ou campo nem termos de plataforma (Flow, trigger, validation rule, permission set, FLS, Apex, LWC) — a tradução técnica fica em reasoning, metadataFindings e devPrompt. Em vez de "Qual o valor default de Lead.Origem__c quando o Flow de conversão roda?", escreva "Quando um lead vira oportunidade sem origem informada, qual origem deve ficar registrada?".
+NOTA 7 OU MAIS — não devolva o card. Resolva cada ponto em aberto você mesmo, com base na documentação oficial e no que os metadados da org mostram, e registre em assumptions a decisão tomada e a razão dela. Deixe ambiguities vazio. Cada decisão precisa aparecer também no devPrompt como instrução: quem implementa não pode receber "depende do PO". Decida pelo caminho que o resto da org já usa — consistência com o que existe erra menos que preferência sua.
+
+NOTA MENOR QUE 7 — devolva ao PO. Deixe assumptions vazio e escreva em ambiguities APENAS perguntas de negócio. Cada item vira item de checklist lido pelo PO: descreva a situação e a decisão que falta em termos da operação (quem faz, quando, o que deve acontecer, qual a exceção), como pergunta que se responde sem conhecer Salesforce. Nada de nome de API de objeto ou campo, nada de Flow, trigger, validation rule, permission set, FLS, Apex ou LWC — o PO não decide implementação, decide regra de negócio. A leitura técnica fica em reasoning, metadataFindings e devPrompt.
+
+Se a solução exigir customização, customJustification precisa dizer onde exatamente o nativo não atende.
+
+Em vez de "Qual o valor default de Lead.Origem__c quando o Flow de conversão roda?", escreva "Quando um lead vira oportunidade sem origem informada, qual origem deve ficar registrada?". Vale para ambiguities e para assumptions: a decisão registrada também é lida por quem não é técnico.
 
 devPrompt é o entregável mais importante: um prompt autocontido, em português, para a IA que vai aplicar o desenvolvimento na org. Ele NÃO deve conter o alias de nenhuma org: mande quem for implementar rodar \`sf org list\`, mostrar todas as orgs ao usuário e confirmar qual usar antes de aplicar qualquer mudança. O alias é escolhido por quem autenticou e não indica o ambiente, então não há como deduzir — um alias fixo no texto leva a aplicar em homologação ou produção o que era para ir em desenvolvimento. Ele deve conter o objetivo, os metadados relevantes, o passo a passo da configuração nativa (com os caminhos de Setup), o que NÃO fazer, e os critérios de aceite. Quem receber esse prompt não terá acesso a esta conversa.
 
