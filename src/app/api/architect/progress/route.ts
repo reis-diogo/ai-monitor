@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveLocalJob } from "@/lib/local-jobs-store";
 import { clearProgress, fetchProgress, recordProgress } from "@/lib/progress-store";
 import { isAllowedUser } from "@/lib/require-allowed-user";
+import { readJsonBody } from "@/lib/read-json-body";
 import { updateTaskStatus } from "@/lib/clickup";
 import { REVIEW_QUEUE_STATUS } from "@/lib/review-apply";
 
@@ -11,7 +12,7 @@ const MAX_IDS_PER_READ = 200;
 // pelo mesmo token do lote que gerou o prompt. A leitura e da tela, e continua
 // exigindo usuario autorizado — por isso a checagem e por metodo, e nao no proxy.
 export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => null);
+  const body = (await readJsonBody(request)) as Record<string, unknown> | null;
   const token = typeof body?.token === "string" ? body.token : "";
   const activityId = typeof body?.activityId === "string" ? body.activityId : "";
 

@@ -3,6 +3,7 @@ import { applyArchitectResult, loadExistingAnalysis } from "@/lib/architect-appl
 import { applyReviewResult, type ReviewResultInput } from "@/lib/review-apply";
 import { markLocalJobReceived, resolveLocalJob } from "@/lib/local-jobs-store";
 import { clearProgress } from "@/lib/progress-store";
+import { readJsonBody } from "@/lib/read-json-body";
 import { fetchListTasks, fetchTeamMemberIdsByEmail } from "@/lib/clickup";
 import type { ArchitectResultInput } from "@/lib/architect-apply";
 
@@ -30,7 +31,7 @@ function docRefs(value: unknown): { title: string; url: string }[] {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => null);
+  const body = (await readJsonBody(request)) as Record<string, unknown> | null;
   const token = typeof body?.token === "string" ? body.token : "";
   const activityId = typeof body?.activityId === "string" ? body.activityId : "";
 
