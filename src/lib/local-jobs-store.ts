@@ -33,6 +33,14 @@ function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
+// Lote vencido nao serve para nada: o token ja nao resolve e o registro so ocupa
+// espaco. Sem isto a tabela cresce para sempre — chegou a 1150 linhas mortas contra 9
+// vivas. Roda junto da criacao, que e raro o suficiente para nao pesar, e em
+// fire-and-forget: falhar a limpeza nao pode impedir alguem de gerar um prompt.
+async function purgeExpiredJobs(): Promise<void> {
+  await getSupabase().from("local_jobs").delete().lt("expires_at", new Date().toISOString());
+}
+
 export async function createLocalJob(params: {
   provider: AiProvider;
   project: string;
@@ -47,6 +55,8 @@ export async function createLocalJob(params: {
 
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + JOB_TTL_MS).toISOString();
+
+  await purgeExpiredJobs().catch(() => {});
 
   const { data, error } = await getSupabase()
     .from("local_jobs")
