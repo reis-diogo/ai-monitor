@@ -9,6 +9,7 @@ import type {
   AnalyzedActivityRecord,
   AnalyzedProjectRecord,
   ClickUpStatusOption,
+  StatusDwell,
   Project,
   PullRequestInfo,
 } from "@/lib/types";
@@ -31,6 +32,8 @@ export function ActivityGroup({
   provider,
   analyzedMap,
   progressMap,
+  dwellMap,
+  now,
   defaultOpen = true,
   onActivityAnalyzed,
   onSelect,
@@ -52,6 +55,8 @@ export function ActivityGroup({
   provider: AiProvider;
   analyzedMap: Map<string, AnalyzedActivityRecord>;
   progressMap: Map<string, ActivityProgress>;
+  dwellMap: Map<string, StatusDwell>;
+  now: number;
   defaultOpen?: boolean;
   onActivityAnalyzed: () => void;
   onSelect: (record: AnalyzedActivityRecord) => void;
@@ -334,6 +339,8 @@ export function ActivityGroup({
                         provider={provider}
                         cachedAnalysis={analyzedMap.get(`${provider}:${item.id}`) ?? null}
                         progress={progressMap.get(item.id) ?? null}
+                        dwell={dwellMap.get(item.id) ?? null}
+                        now={now}
                         showLocation={false}
                         clickupStatuses={clickupStatuses}
                         onAnalyzed={onActivityAnalyzed}

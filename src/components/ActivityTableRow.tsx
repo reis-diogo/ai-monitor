@@ -8,6 +8,7 @@ import type {
   AiProvider,
   AnalyzedActivityRecord,
   ClickUpStatusOption,
+  StatusDwell,
 } from "@/lib/types";
 import { scoreColor } from "@/lib/score-color";
 import { truncate } from "@/lib/truncate";
@@ -17,6 +18,7 @@ import { ExternalLinkIcon, RefreshIcon } from "@/components/icons";
 import { StatusMenu } from "@/components/StatusMenu";
 import { ActivityItemDetailModal } from "@/components/ActivityItemDetailModal";
 import { ActivityProgressBadge } from "@/components/ActivityProgressBadge";
+import { DWELL_BUCKETS, dwellBucket, formatDwell } from "@/lib/dwell";
 
 const ARCHITECT_QUEUE_STATUS = "refinar arquiteto";
 const DEV_RELEASED_STATUS = "dev liberado";
@@ -29,6 +31,8 @@ export function ActivityTableRow({
   provider,
   cachedAnalysis,
   progress = null,
+  dwell = null,
+  now = 0,
   showLocation = true,
   clickupStatuses = [],
   onAnalyzed,
@@ -45,6 +49,8 @@ export function ActivityTableRow({
   provider: AiProvider;
   cachedAnalysis: AnalyzedActivityRecord | null;
   progress?: ActivityProgress | null;
+  dwell?: StatusDwell | null;
+  now?: number;
   showLocation?: boolean;
   clickupStatuses?: ClickUpStatusOption[];
   onAnalyzed: () => void;
@@ -158,13 +164,28 @@ export function ActivityTableRow({
         {showLocation && <td className="py-2 pr-3 text-muted-foreground">{item.location}</td>}
         <td className="py-2 pr-3">
           {item.source === "clickup" && item.status && item.statusColor ? (
-            <StatusMenu
-              taskId={item.id}
-              status={item.status}
-              statusColor={item.statusColor}
-              statuses={clickupStatuses}
-              onOptimisticChange={(next) => onStatusUpdate?.(item.id, next)}
-            />
+            <div className="flex items-center gap-2">
+              <StatusMenu
+                taskId={item.id}
+                status={item.status}
+                statusColor={item.statusColor}
+                statuses={clickupStatuses}
+                onOptimisticChange={(next) => onStatusUpdate?.(item.id, next)}
+              />
+              {dwell?.since && (
+                <span
+                  title={`Parado neste status desde ${new Date(dwell.since).toLocaleString("pt-BR")}`}
+                  className="shrink-0 tabular-nums"
+                  style={{
+                    color: DWELL_BUCKETS.find(
+                      (bucket) => bucket.key === dwellBucket(now - new Date(dwell.since!).getTime())
+                    )?.color,
+                  }}
+                >
+                  {formatDwell(dwell.since, now)}
+                </span>
+              )}
+            </div>
           ) : (
             <span className="text-muted-foreground/50">—</span>
           )}

@@ -10,6 +10,7 @@ import type {
   AnalyzedProjectRecord,
   AuthorActivity,
   ClickUpStatusOption,
+  StatusDwell,
   ClickUpTaskActivity,
   Professional,
   Project,
@@ -28,6 +29,7 @@ import { ProviderToggle } from "@/components/ProviderToggle";
 import { ActivityTable } from "@/components/ActivityTable";
 import { ProfessionalsManager } from "@/components/ProfessionalsManager";
 import { ProjectsManager } from "@/components/ProjectsManager";
+import { StatusDwellChart } from "@/components/StatusDwellChart";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { projectColor } from "@/lib/project-color";
 import { normalizeLocation } from "@/lib/normalize-location";
@@ -108,6 +110,30 @@ export function Dashboard() {
     setProfessionals(data.professionals ?? []);
   }, []);
 
+  const [statusDwell, setStatusDwell] = useState<StatusDwell[]>([]);
+  const [seedingDwell, setSeedingDwell] = useState(false);
+
+  const fetchStatusDwell = useCallback(async () => {
+    try {
+      const res = await fetch("/api/clickup/dwell");
+      if (!res.ok) return;
+      const data = await res.json();
+      setStatusDwell(data.dwell ?? []);
+    } catch {
+      // Acessorio: sem isto o grafico mostra os cards como nao apurados.
+    }
+  }, []);
+
+  const seedStatusDwell = useCallback(async () => {
+    setSeedingDwell(true);
+    try {
+      await fetch("/api/clickup/dwell/seed", { method: "POST" });
+      await fetchStatusDwell();
+    } finally {
+      setSeedingDwell(false);
+    }
+  }, [fetchStatusDwell]);
+
   const fetchClickupTasks = useCallback(async () => {
     const res = await fetch("/api/clickup/tasks");
     const data = await res.json();
@@ -184,6 +210,7 @@ export function Dashboard() {
     fetchProjectAnalyses();
     fetchProfessionals();
     fetchClickupTasks();
+    fetchStatusDwell();
     fetchClickupStatuses();
     fetchProjects();
     fetchPendingPullRequests();
@@ -192,6 +219,7 @@ export function Dashboard() {
     fetchProjectAnalyses,
     fetchProfessionals,
     fetchClickupTasks,
+    fetchStatusDwell,
     fetchClickupStatuses,
     fetchProjects,
     fetchPendingPullRequests,
@@ -265,6 +293,7 @@ export function Dashboard() {
         fetchProjectAnalyses(),
         fetchProfessionals(),
         fetchClickupTasks(),
+        fetchStatusDwell(),
         fetchClickupStatuses(),
         fetchProjects(),
         fetchPendingPullRequests(),
@@ -278,6 +307,7 @@ export function Dashboard() {
     fetchProjectAnalyses,
     fetchProfessionals,
     fetchClickupTasks,
+    fetchStatusDwell,
     fetchClickupStatuses,
     fetchProjects,
     fetchPendingPullRequests,
@@ -301,6 +331,11 @@ export function Dashboard() {
 
     return () => clearInterval(interval);
   }, [syncClickupStatuses]);
+
+  const dwellMap = useMemo(
+    () => new Map(statusDwell.map((row) => [row.taskId, row])),
+    [statusDwell]
+  );
 
   const allCommits = (authors ?? []).flatMap((author) => author.commits);
 
@@ -1122,6 +1157,8 @@ export function Dashboard() {
               projectAnalyses={projectAnalyses}
               pendingPrsByProject={pendingPrsByProject}
               clickupStatuses={clickupStatuses}
+              dwellMap={dwellMap}
+              now={nowTick}
               onActivityAnalyzed={fetchAnalyzed}
               onProjectAnalyzed={fetchProjectAnalyses}
               onTaskStatusUpdate={updateClickupTaskStatus}
@@ -1134,6 +1171,14 @@ export function Dashboard() {
               onProjectFilterChange={setProjectFilter}
               canEditPrompts={canEditPrompts}
               onOpenPrompts={() => setPromptEditorOpen(true)}
+            />
+
+            <StatusDwellChart
+              items={filteredActivityItems}
+              dwellMap={dwellMap}
+              onSeed={seedStatusDwell}
+              seeding={seedingDwell}
+              now={nowTick}
             />
 
             <CardsOpenedChart data={activityByDay.data} config={activityByDay.config} />

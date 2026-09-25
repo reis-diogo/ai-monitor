@@ -10,6 +10,7 @@ import type {
   AnalyzedActivityRecord,
   AnalyzedProjectRecord,
   ClickUpStatusOption,
+  StatusDwell,
   Project,
   PullRequestInfo,
 } from "@/lib/types";
@@ -40,6 +41,8 @@ export function ActivityTable({
   projectAnalyses,
   pendingPrsByProject,
   clickupStatuses,
+  dwellMap,
+  now,
   onActivityAnalyzed,
   onProjectAnalyzed,
   onTaskStatusUpdate,
@@ -61,6 +64,8 @@ export function ActivityTable({
   projectAnalyses: AnalyzedProjectRecord[];
   pendingPrsByProject: Map<string, PullRequestInfo[]>;
   clickupStatuses: ClickUpStatusOption[];
+  dwellMap: Map<string, StatusDwell>;
+  now: number;
   onActivityAnalyzed: () => void;
   onProjectAnalyzed: () => void;
   onTaskStatusUpdate: (taskId: string, status: string) => void;
@@ -300,6 +305,8 @@ export function ActivityTable({
             provider={provider}
             analyzedMap={analyzedMap}
             progressMap={progressMap}
+            dwellMap={dwellMap}
+            now={now}
             defaultOpen={false}
             onActivityAnalyzed={onActivityAnalyzed}
             onSelect={setSelected}

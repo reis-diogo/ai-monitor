@@ -256,3 +256,18 @@ export async function fetchTeamMemberIdsByEmail(): Promise<Map<string, number>> 
   }
   return map;
 }
+
+type ClickUpTimeInStatus = {
+  current_status?: { status: string; total_time?: { since?: string } };
+};
+
+// Uma chamada por card: so vale para semear o que ja estava parado antes de comecarmos
+// a observar. O sync normal deduz a transicao sozinho, sem custo de API.
+export async function fetchTaskStatusSince(taskId: string): Promise<string | null> {
+  const data = (await clickupFetch(`/task/${taskId}/time_in_status`)) as ClickUpTimeInStatus;
+  const since = data.current_status?.total_time?.since;
+  if (!since) return null;
+
+  const epoch = Number(since);
+  return Number.isFinite(epoch) ? new Date(epoch).toISOString() : null;
+}
