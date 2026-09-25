@@ -187,3 +187,9 @@ export type ActivityProgress = {
   state: "running" | "failed";
   updatedAt: string;
 };
+
+export type StatusDwell = {
+  taskId: string;
+  status: string;
+  since: string | null;
+};
