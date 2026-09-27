@@ -162,11 +162,11 @@ export function SkillPromptModal({ open, onClose }: { open: boolean; onClose: ()
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
             onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-950 p-6"
+            className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-2xl border border-border bg-popover p-6"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="font-mono text-xs text-black/40 dark:text-white/40">
+                <p className="font-mono text-xs text-muted-foreground">
                   skills do claude code
                 </p>
                 <AnimatePresence mode="wait" initial={false}>
@@ -176,7 +176,7 @@ export function SkillPromptModal({ open, onClose }: { open: boolean; onClose: ()
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -4 }}
                     transition={{ duration: 0.15 }}
-                    className="mt-1 text-sm text-black/80 dark:text-white/80"
+                    className="mt-1 text-sm text-foreground"
                   >
                     {option.headline}
                   </motion.p>
@@ -184,14 +184,14 @@ export function SkillPromptModal({ open, onClose }: { open: boolean; onClose: ()
               </div>
               <button
                 onClick={close}
-                className="shrink-0 rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
               >
                 fechar
               </button>
             </div>
 
             <LayoutGroup id="skill-kind">
-              <div className="mt-4 inline-flex self-start rounded-full border border-black/10 bg-black/5 p-0.5 font-mono text-[11px] dark:border-white/10 dark:bg-white/5">
+              <div className="mt-4 inline-flex self-start rounded-full border border-border bg-muted p-0.5 font-mono text-[11px]">
                 {SKILL_OPTIONS.map((item) => {
                   const active = item.value === skill;
                   return (
@@ -199,13 +199,13 @@ export function SkillPromptModal({ open, onClose }: { open: boolean; onClose: ()
                       key={item.value}
                       onClick={() => selectSkill(item.value)}
                       className={`relative rounded-full px-3 py-1 transition-colors ${
-                        active ? "text-background" : "text-foreground/50 hover:text-foreground/80"
+                        active ? "text-primary-foreground" : "text-foreground/50 hover:text-foreground/80"
                       }`}
                     >
                       {active && (
                         <motion.span
                           layoutId="skill-kind-pill"
-                          className="absolute inset-0 rounded-full bg-foreground"
+                          className="absolute inset-0 rounded-full bg-primary"
                           transition={{ type: "spring", stiffness: 500, damping: 34 }}
                         />
                       )}
@@ -216,7 +216,7 @@ export function SkillPromptModal({ open, onClose }: { open: boolean; onClose: ()
               </div>
             </LayoutGroup>
 
-            <p className="mt-3 text-[11px] text-black/40 dark:text-white/40">
+            <p className="mt-3 text-[11px] text-muted-foreground">
               Gere o prompt e cole no Claude Code. Ele instala a skill; rodar
               <span className="font-mono"> {option.command} </span>
               {option.blurb}
@@ -230,7 +230,7 @@ export function SkillPromptModal({ open, onClose }: { open: boolean; onClose: ()
                   disabled={status === "loading"}
                   whileHover={{ scale: status === "loading" ? 1 : 1.03 }}
                   whileTap={{ scale: status === "loading" ? 1 : 0.97 }}
-                  className="rounded-md bg-foreground px-3 py-1.5 font-mono text-[11px] font-medium text-background disabled:opacity-50"
+                  className="rounded-md bg-primary px-3 py-1.5 font-mono text-[11px] font-medium text-primary-foreground disabled:opacity-50"
                 >
                   {status === "loading" ? "gerando..." : `gerar prompt da skill ${option.command}`}
                 </motion.button>
@@ -242,7 +242,7 @@ export function SkillPromptModal({ open, onClose }: { open: boolean; onClose: ()
 
             {status === "ready" && (
               <>
-                <pre className="mt-3 flex-1 overflow-auto rounded-lg border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 p-3 font-mono text-[11px] leading-5 whitespace-pre-wrap text-black/70 dark:text-white/70">
+                <pre className="mt-3 flex-1 overflow-auto rounded-lg border border-border bg-muted p-3 font-mono text-[11px] leading-5 whitespace-pre-wrap text-foreground">
                   {prompt}
                 </pre>
 
@@ -251,7 +251,7 @@ export function SkillPromptModal({ open, onClose }: { open: boolean; onClose: ()
                     onClick={copyPrompt}
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
-                    className="flex items-center gap-1.5 rounded-md bg-foreground px-3 py-1.5 font-mono text-[11px] font-medium text-background"
+                    className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 font-mono text-[11px] font-medium text-primary-foreground"
                   >
                     {copied ? <CheckIcon size={11} /> : <CopyIcon size={11} />}
                     {copied ? "copiado" : "copiar prompt"}
@@ -261,19 +261,19 @@ export function SkillPromptModal({ open, onClose }: { open: boolean; onClose: ()
             )}
 
             {tokens.length > 0 && (
-              <div className="mt-4 border-t border-black/10 dark:border-white/10 pt-3">
-                <p className="font-mono text-[11px] text-black/40 dark:text-white/40">
+              <div className="mt-4 border-t border-border pt-3">
+                <p className="font-mono text-[11px] text-muted-foreground">
                   seus tokens ativos
                 </p>
                 <div className="mt-2 flex flex-col gap-1">
                   {tokens.map((token) => (
                     <div
                       key={token.id}
-                      className="flex items-center justify-between gap-3 font-mono text-[11px] text-black/50 dark:text-white/50"
+                      className="flex items-center justify-between gap-3 font-mono text-[11px] text-muted-foreground"
                     >
                       <span className="truncate">
                         {token.label && (
-                          <span className="text-black/70 dark:text-white/70">
+                          <span className="text-foreground">
                             {token.label.replace(/^skill\s+/, "")} ·{" "}
                           </span>
                         )}

@@ -48,11 +48,11 @@ function TrendBar({
       className="flex shrink-0 flex-col items-center gap-1 disabled:cursor-default"
       title={hasData ? `${point.count} atividade${point.count > 1 ? "s" : ""}` : undefined}
     >
-      <span className="font-mono text-[9px] text-black/40 dark:text-white/40">
+      <span className="font-mono text-[9px] text-muted-foreground">
         {hasData ? point.averageScore!.toFixed(1) : "—"}
       </span>
       <div
-        className="flex h-10 shrink-0 items-end justify-center overflow-hidden rounded bg-black/5 dark:bg-white/5"
+        className="flex h-10 shrink-0 items-end justify-center overflow-hidden rounded bg-muted"
         style={{ width: MAX_WIDTH }}
       >
         <motion.div
@@ -63,8 +63,8 @@ function TrendBar({
           style={{ backgroundColor: color }}
         />
       </div>
-      <span className="whitespace-nowrap text-[9px] text-black/30 dark:text-white/30">{point.label}</span>
-      <span className="text-[8px] text-black/20 dark:text-white/20">{hasData ? `${point.count}x` : ""}</span>
+      <span className="whitespace-nowrap text-[9px] text-muted-foreground/60">{point.label}</span>
+      <span className="text-[8px] text-muted-foreground/50">{hasData ? `${point.count}x` : ""}</span>
     </motion.button>
   );
 }

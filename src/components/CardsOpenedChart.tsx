@@ -111,10 +111,10 @@ export function CardsOpenedChart({
   const reduceMotion = useReducedMotion();
 
   return (
-    <div className="rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] p-5">
-      <p className="mb-4 text-sm text-black/60 dark:text-white/60">Atividade por projeto e por dia</p>
+    <div className="rounded-xl border border-border bg-muted/50 p-5">
+      <p className="mb-4 text-sm text-muted-foreground">Atividade por projeto e por dia</p>
       {data.length === 0 ? (
-        <p className="text-sm text-black/30 dark:text-white/30">Nenhuma atividade no período selecionado.</p>
+        <p className="text-sm text-muted-foreground/60">Nenhuma atividade no período selecionado.</p>
       ) : (
         <ChartContainer config={config} className="h-[260px] w-full">
           {/* top: a curva "natural" ultrapassa o maior valor dos dados; sem folga

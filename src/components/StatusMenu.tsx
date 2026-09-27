@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import type { ClickUpStatusOption } from "@/lib/types";
+import { dataAlpha, dataSurface } from "@/lib/data-color";
 
 export function StatusMenu({
   taskId,
@@ -77,8 +78,8 @@ export function StatusMenu({
         whileTap={!updating ? { scale: 0.96 } : undefined}
         className="flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium disabled:opacity-50"
         style={{
-          borderColor: `${statusColor}55`,
-          backgroundColor: `${statusColor}1a`,
+          borderColor: dataAlpha(statusColor, 33),
+          backgroundColor: dataSurface(statusColor, 10),
           color: statusColor,
         }}
       >

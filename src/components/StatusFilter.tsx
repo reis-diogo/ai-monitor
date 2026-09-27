@@ -2,6 +2,7 @@
 
 import { FilterPicklist } from "@/components/FilterPicklist";
 import type { StatusOption } from "@/lib/status-options";
+import { dataColor } from "@/lib/data-color";
 
 export function StatusFilter({
   options,
@@ -24,7 +25,7 @@ export function StatusFilter({
           {
             value: option.value,
             label: option.label.toLowerCase(),
-            color: option.color,
+            color: dataColor(option.color),
             count,
             title: `${count} em "${option.label.toLowerCase()}"`,
           },

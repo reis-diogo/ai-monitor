@@ -7,6 +7,7 @@ import type { ActivityItem, AiProvider, AnalyzedActivityRecord } from "@/lib/typ
 import { truncate } from "@/lib/truncate";
 import { scoreColor } from "@/lib/score-color";
 import { AiIcon } from "@/components/AiIcon";
+import { dataColor } from "@/lib/data-color";
 
 type RowStatus = "idle" | "loading" | "error";
 
@@ -64,21 +65,21 @@ function PendingAnalysisRow({
   }
 
   return (
-    <li className="flex flex-col gap-1.5 rounded-lg border border-black/5 dark:border-white/5 p-2.5 text-xs">
+    <li className="flex flex-col gap-1.5 rounded-lg border border-border/50 p-2.5 text-xs">
       <div className="flex items-center gap-2">
-        <span className="min-w-0 flex-1 truncate text-black/70 dark:text-white/70">
+        <span className="min-w-0 flex-1 truncate text-foreground">
           {item.source === "commit" && (
-            <span className="font-mono text-black/40 dark:text-white/40">{item.id.slice(0, 7)} · </span>
+            <span className="font-mono text-muted-foreground">{item.id.slice(0, 7)} · </span>
           )}
           {truncate(item.title, 50)}
         </span>
-        <span className="shrink-0 text-black/30 dark:text-white/30">{item.authorName}</span>
+        <span className="shrink-0 text-muted-foreground/60">{item.authorName}</span>
 
         {analysis ? (
           <span
             className="flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-mono font-medium"
             style={{
-              color: scoreColor(analysis.score).color,
+              color: dataColor(scoreColor(analysis.score).color),
               backgroundColor: scoreColor(analysis.score).bg,
             }}
           >
@@ -90,7 +91,7 @@ function PendingAnalysisRow({
             disabled={status === "loading"}
             whileHover={status !== "loading" ? { scale: 1.04 } : undefined}
             whileTap={status !== "loading" ? { scale: 0.96 } : undefined}
-            className="flex shrink-0 items-center gap-1.5 rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-black/60 dark:text-white/60 hover:border-black/30 dark:hover:border-white/30 disabled:opacity-40"
+            className="flex shrink-0 items-center gap-1.5 rounded-md border border-border px-2 py-1 text-muted-foreground hover:border-ring disabled:opacity-40"
           >
             <AiIcon size={11} />
             {status === "loading"
@@ -158,15 +159,15 @@ export function PendingAnalysisModal({
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
             onClick={(e) => e.stopPropagation()}
-            className="flex w-full max-w-lg max-h-[80vh] flex-col overflow-hidden rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-950 p-6"
+            className="flex w-full max-w-lg max-h-[80vh] flex-col overflow-hidden rounded-2xl border border-border bg-popover p-6"
           >
             <div className="flex shrink-0 items-center justify-between gap-4">
-              <p className="text-sm text-black/70 dark:text-white/70">
+              <p className="text-sm text-foreground">
                 {items.length} pendente{items.length > 1 ? "s" : ""} de análise
               </p>
               <button
                 onClick={onClose}
-                className="shrink-0 rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
               >
                 fechar
               </button>

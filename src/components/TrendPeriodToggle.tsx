@@ -20,7 +20,7 @@ export function TrendPeriodToggle({
 }) {
   return (
     <LayoutGroup id={groupId}>
-      <div className="inline-flex rounded-full border border-black/10 bg-black/5 p-0.5 text-[10px] dark:border-white/10 dark:bg-white/5">
+      <div className="inline-flex rounded-full border border-border bg-muted p-0.5 text-[10px]">
         {OPTIONS.map((option) => (
           <button
             key={option.value}
@@ -29,13 +29,13 @@ export function TrendPeriodToggle({
               onChange(option.value);
             }}
             className={`relative rounded-full px-2 py-1 font-medium transition-colors ${
-              value === option.value ? "text-background" : "text-foreground/50"
+              value === option.value ? "text-primary-foreground" : "text-foreground/50"
             }`}
           >
             {value === option.value && (
               <motion.span
                 layoutId="trend-period-pill"
-                className="absolute inset-0 rounded-full bg-foreground"
+                className="absolute inset-0 rounded-full bg-primary"
                 transition={{ type: "spring", stiffness: 500, damping: 34 }}
               />
             )}

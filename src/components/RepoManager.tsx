@@ -73,16 +73,16 @@ export function RepoManager({ onRepoChange }: { onRepoChange: () => void }) {
   }
 
   return (
-    <div className="rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02]">
+    <div className="rounded-xl border border-border bg-muted/50">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-5 py-4 text-sm text-black/60 dark:text-white/60"
+        className="flex w-full items-center justify-between px-5 py-4 text-sm text-muted-foreground"
       >
         <span>Repositórios monitorados {repos ? `(${repos.length})` : ""}</span>
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          className="flex h-4 w-4 shrink-0 items-center justify-center text-black/30 dark:text-white/30"
+          className="flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground/60"
         >
           <ChevronIcon />
         </motion.span>
@@ -97,7 +97,7 @@ export function RepoManager({ onRepoChange }: { onRepoChange: () => void }) {
             transition={{ duration: 0.25 }}
             className="overflow-hidden"
           >
-            <div className="flex flex-col gap-4 border-t border-black/10 dark:border-white/10 px-5 py-4">
+            <div className="flex flex-col gap-4 border-t border-border px-5 py-4">
               <AddRepoForm onAdd={handleAdd} />
               <AnimatePresence>
                 {error && (

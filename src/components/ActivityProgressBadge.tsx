@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import type { ActivityProgress } from "@/lib/types";
+import { dataAlpha } from "@/lib/data-color";
 
 // Mesma cor do badge que cada etapa produz, para o indicador ao vivo e o resultado
 // dela lerem como a mesma coisa em dois momentos.
@@ -48,16 +49,16 @@ export function ActivityProgressBadge({
           ? {}
           : {
               boxShadow: [
-                `0 0 0 0 ${color}00`,
-                `0 0 12px 1px ${color}59`,
-                `0 0 0 0 ${color}00`,
+                "0 0 0 0 transparent",
+                `0 0 12px 1px ${dataAlpha(color, 35)}`,
+                "0 0 0 0 transparent",
               ],
             }
       }
       transition={failed ? undefined : { repeat: Infinity, duration: 2, ease: "easeInOut" }}
       className="relative flex items-center gap-1.5 overflow-hidden rounded-full border px-2 py-0.5 font-mono text-[10px] whitespace-nowrap"
       style={{
-        borderColor: `${color}59`,
+        borderColor: dataAlpha(color, 35),
         backgroundColor: `color-mix(in srgb, ${color} 12%, var(--card))`,
         color,
       }}
@@ -84,7 +85,7 @@ export function ActivityProgressBadge({
           transition={{ repeat: Infinity, duration: 1.9, ease: "linear" }}
           className="pointer-events-none absolute inset-y-0 w-1/4"
           style={{
-            background: `linear-gradient(90deg, transparent, ${color}2e, transparent)`,
+            background: `linear-gradient(90deg, transparent, ${dataAlpha(color, 18)}, transparent)`,
           }}
         />
       )}

@@ -104,20 +104,20 @@ export function PromptEditorModal({ open, onClose }: { open: boolean; onClose: (
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
             onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-950 p-6"
+            className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-2xl border border-border bg-popover p-6"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="font-mono text-xs text-black/40 dark:text-white/40">
+                <p className="font-mono text-xs text-muted-foreground">
                   prompts do arquiteto
                 </p>
-                <p className="mt-1 text-sm text-black/80 dark:text-white/80">
+                <p className="mt-1 text-sm text-foreground">
                   Editar altera o comportamento das próximas análises.
                 </p>
               </div>
               <button
                 onClick={close}
-                className="shrink-0 rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
               >
                 fechar
               </button>
@@ -129,13 +129,13 @@ export function PromptEditorModal({ open, onClose }: { open: boolean; onClose: (
                   key={prompt.key}
                   onClick={() => selectPrompt(prompt.key)}
                   className={`relative rounded-full px-3 py-1.5 font-mono text-[11px] transition-colors ${
-                    prompt.key === activeKey ? "text-background" : "text-foreground/50"
+                    prompt.key === activeKey ? "text-primary-foreground" : "text-foreground/50"
                   }`}
                 >
                   {prompt.key === activeKey && (
                     <motion.span
                       layoutId="prompt-editor-pill"
-                      className="absolute inset-0 rounded-full bg-foreground"
+                      className="absolute inset-0 rounded-full bg-primary"
                       transition={{ type: "spring", stiffness: 500, damping: 34 }}
                     />
                   )}
@@ -145,7 +145,7 @@ export function PromptEditorModal({ open, onClose }: { open: boolean; onClose: (
             </div>
 
             {status === "loading" ? (
-              <p className="mt-6 text-center font-mono text-xs text-black/40 dark:text-white/40">
+              <p className="mt-6 text-center font-mono text-xs text-muted-foreground">
                 carregando...
               </p>
             ) : (
@@ -153,7 +153,7 @@ export function PromptEditorModal({ open, onClose }: { open: boolean; onClose: (
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 spellCheck={false}
-                className="mt-3 min-h-[320px] flex-1 resize-none rounded-lg border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 p-3 font-mono text-[12px] leading-5 text-black/80 dark:text-white/80 outline-none focus:border-primary/40"
+                className="mt-3 min-h-[320px] flex-1 resize-none rounded-lg border border-border bg-muted p-3 font-mono text-[12px] leading-5 text-foreground outline-none focus:border-primary/40"
               />
             )}
 
@@ -167,7 +167,7 @@ export function PromptEditorModal({ open, onClose }: { open: boolean; onClose: (
               <button
                 onClick={() => persist(true)}
                 disabled={status === "saving"}
-                className="rounded-md border border-black/10 dark:border-white/10 px-2 py-1 font-mono text-[11px] text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white disabled:opacity-40"
+                className="rounded-md border border-border px-2 py-1 font-mono text-[11px] text-muted-foreground hover:text-foreground disabled:opacity-40"
               >
                 restaurar padrão
               </button>
@@ -181,7 +181,7 @@ export function PromptEditorModal({ open, onClose }: { open: boolean; onClose: (
                   disabled={status === "saving" || !dirty}
                   whileHover={dirty ? { scale: 1.03 } : undefined}
                   whileTap={dirty ? { scale: 0.97 } : undefined}
-                  className="rounded-md bg-foreground px-3 py-1.5 font-mono text-[11px] font-medium text-background disabled:opacity-40"
+                  className="rounded-md bg-primary px-3 py-1.5 font-mono text-[11px] font-medium text-primary-foreground disabled:opacity-40"
                 >
                   {status === "saving" ? "salvando..." : "salvar"}
                 </motion.button>

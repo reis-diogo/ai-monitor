@@ -35,19 +35,19 @@ export function AvatarPreviewModal({
             <img
               src={avatarUrl}
               alt={name}
-              className="h-72 w-72 rounded-full border border-black/10 dark:border-white/10 object-cover"
+              className="h-72 w-72 rounded-full border border-border object-cover"
             />
-            <p className="text-sm text-black/70 dark:text-white/70">{name}</p>
+            <p className="text-sm text-foreground">{name}</p>
             <div className="flex items-center gap-2">
               <button
                 onClick={onChangePhoto}
-                className="rounded-md border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 px-3 py-1.5 text-xs text-black/60 dark:text-white/60 hover:border-black/30 dark:hover:border-white/30"
+                className="rounded-md border border-border bg-muted px-3 py-1.5 text-xs text-muted-foreground hover:border-ring"
               >
                 trocar foto
               </button>
               <button
                 onClick={onClose}
-                className="rounded-md border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
               >
                 fechar
               </button>

@@ -19,19 +19,19 @@ export function RoleToggle({
 }) {
   return (
     <LayoutGroup id={groupId}>
-      <div className="inline-flex rounded-full border border-black/10 bg-black/5 p-0.5 text-xs dark:border-white/10 dark:bg-white/5">
+      <div className="inline-flex rounded-full border border-border bg-muted p-0.5 text-xs">
         {OPTIONS.map((option) => (
           <button
             key={option.value}
             onClick={() => onChange(option.value)}
             className={`relative rounded-full px-3 py-1 font-medium transition-colors ${
-              value === option.value ? "text-background" : "text-foreground/50"
+              value === option.value ? "text-primary-foreground" : "text-foreground/50"
             }`}
           >
             {value === option.value && (
               <motion.span
                 layoutId="role-pill"
-                className="absolute inset-0 rounded-full bg-foreground"
+                className="absolute inset-0 rounded-full bg-primary"
                 transition={{ type: "spring", stiffness: 500, damping: 34 }}
               />
             )}

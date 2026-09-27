@@ -104,14 +104,14 @@ export function LocalArchitectModal({
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
             onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-950 p-6"
+            className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-2xl border border-border bg-popover p-6"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="font-mono text-xs text-black/40 dark:text-white/40">
+                <p className="font-mono text-xs text-muted-foreground">
                   {kind === "review" ? "revisão da entrega" : "arquitetura local"} · {project}
                 </p>
-                <p className="mt-1 text-sm text-black/80 dark:text-white/80">
+                <p className="mt-1 text-sm text-foreground">
                   Cole na sua IA local, apontando para o retrieve da org.{" "}
                   {kind === "review"
                     ? `Ela confere ${cards.length} entrega(s) contra a especificação e devolve o parecer.`
@@ -120,14 +120,14 @@ export function LocalArchitectModal({
               </div>
               <button
                 onClick={close}
-                className="shrink-0 rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
               >
                 fechar
               </button>
             </div>
 
             {status === "loading" && (
-              <p className="mt-6 text-center font-mono text-xs text-black/40 dark:text-white/40">
+              <p className="mt-6 text-center font-mono text-xs text-muted-foreground">
                 gerando prompt...
               </p>
             )}
@@ -140,12 +140,12 @@ export function LocalArchitectModal({
 
             {status === "ready" && (
               <>
-                <pre className="mt-4 flex-1 overflow-auto rounded-lg border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 p-3 font-mono text-[11px] leading-5 whitespace-pre-wrap text-black/70 dark:text-white/70">
+                <pre className="mt-4 flex-1 overflow-auto rounded-lg border border-border bg-muted p-3 font-mono text-[11px] leading-5 whitespace-pre-wrap text-foreground">
                   {prompt}
                 </pre>
 
                 <div className="mt-3 flex items-center justify-between gap-3">
-                  <p className="font-mono text-[11px] text-black/35 dark:text-white/35">
+                  <p className="font-mono text-[11px] text-muted-foreground/70">
                     o token expira em{" "}
                     {expiresAt ? new Date(expiresAt).toLocaleString("pt-BR") : "12h"}
                   </p>
@@ -153,7 +153,7 @@ export function LocalArchitectModal({
                     onClick={copyPrompt}
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
-                    className="flex items-center gap-1.5 rounded-md bg-foreground px-3 py-1.5 font-mono text-[11px] font-medium text-background"
+                    className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 font-mono text-[11px] font-medium text-primary-foreground"
                   >
                     {copied ? <CheckIcon size={11} /> : <CopyIcon size={11} />}
                     {copied ? "copiado" : "copiar prompt"}

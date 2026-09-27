@@ -77,9 +77,9 @@ export function AvatarCropModal({
           exit={{ opacity: 0, scale: 0.95, y: 12 }}
           transition={{ type: "spring", stiffness: 340, damping: 30 }}
           onClick={(e) => e.stopPropagation()}
-          className="flex w-full max-w-xs flex-col items-center gap-4 rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-950 p-6"
+          className="flex w-full max-w-xs flex-col items-center gap-4 rounded-2xl border border-border bg-popover p-6"
         >
-          <p className="text-sm text-black/70 dark:text-white/70">Ajuste a foto</p>
+          <p className="text-sm text-foreground">Ajuste a foto</p>
 
           <div
             className="relative overflow-hidden rounded-full bg-black"
@@ -125,7 +125,7 @@ export function AvatarCropModal({
           <div className="flex w-full items-center justify-end gap-2">
             <button
               onClick={onCancel}
-              className="rounded-md border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs text-black/60 dark:text-white/60 hover:border-black/30 dark:hover:border-white/30"
+              className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:border-ring"
             >
               cancelar
             </button>
@@ -134,7 +134,7 @@ export function AvatarCropModal({
               disabled={!naturalSize}
               whileHover={naturalSize ? { scale: 1.04 } : undefined}
               whileTap={naturalSize ? { scale: 0.96 } : undefined}
-              className="rounded-md bg-foreground px-3 py-1.5 text-xs font-medium text-background disabled:opacity-40"
+              className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-40"
             >
               usar foto
             </motion.button>

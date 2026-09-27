@@ -12,10 +12,10 @@ const DAY_MS = 24 * HOUR_MS;
 // Faixas de atraso. O corte nao e linear de proposito: a diferenca entre 2h e 6h
 // parado nao interessa, a diferenca entre 2 e 10 dias interessa muito.
 export const DWELL_BUCKETS = [
-  { key: "novo", label: "< 1d", maxMs: DAY_MS, color: "#34d399" },
-  { key: "atencao", label: "1-3d", maxMs: 3 * DAY_MS, color: "#fbbf24" },
-  { key: "atraso", label: "3-7d", maxMs: 7 * DAY_MS, color: "#fb923c" },
-  { key: "critico", label: "> 7d", maxMs: Infinity, color: "#f87171" },
+  { key: "novo", label: "< 1d", maxMs: DAY_MS, color: "oklch(0.72 0.13 155)" },
+  { key: "atencao", label: "1-3d", maxMs: 3 * DAY_MS, color: "oklch(0.72 0.13 85)" },
+  { key: "atraso", label: "3-7d", maxMs: 7 * DAY_MS, color: "oklch(0.72 0.13 55)" },
+  { key: "critico", label: "> 7d", maxMs: Infinity, color: "oklch(0.72 0.17 25)" },
 ] as const;
 
 export type DwellBucketKey = (typeof DWELL_BUCKETS)[number]["key"];

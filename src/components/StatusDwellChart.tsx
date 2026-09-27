@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { motion } from "motion/react";
 import type { ActivityItem, StatusDwell } from "@/lib/types";
 import { DWELL_BUCKETS, DWELL_STATUSES, dwellBucket } from "@/lib/dwell";
+import { dataSurface } from "@/lib/data-color";
 import { StatusDwellModal, type DwellSelection } from "@/components/StatusDwellModal";
 
 type Slots = Record<string, number>;
@@ -59,9 +60,11 @@ function Bar({
             animate={{ flexGrow: count }}
             transition={{ type: "spring", stiffness: 160, damping: 24 }}
             className="flex items-center justify-center overflow-hidden"
-            style={{ backgroundColor: bucket.color }}
+            // 78% sobre a superficie do card em vez da cor cheia: a barra continua
+            // legivel de longe sem transformar a linha inteira num alerta.
+            style={{ backgroundColor: dataSurface(bucket.color, 78) }}
           >
-            <span className="px-1 text-[10px] font-medium tabular-nums text-black/70">
+            <span className="px-1 text-[10px] font-medium tabular-nums text-[oklch(0.2_0_0)]">
               {count}
             </span>
           </motion.span>
@@ -143,7 +146,7 @@ export function StatusDwellChart({
         className="rounded-xl border border-border bg-card p-5 font-mono dark:shadow-lg dark:shadow-black/40"
       >
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="text-sm text-muted-foreground dark:text-[#ffd9e8]/70">
+          <p className="text-sm text-muted-foreground">
             Tempo parado no status
           </p>
           <div className="flex items-center gap-3">
