@@ -2,6 +2,7 @@
 
 import { FilterPicklist } from "@/components/FilterPicklist";
 import type { ActivitySource } from "@/lib/types";
+import { dataColor } from "@/lib/data-color";
 
 const OPTIONS: { value: ActivitySource; label: string; color: string }[] = [
   { value: "commit", label: "devs", color: "#22c55e" },
@@ -25,7 +26,7 @@ export function ActivityRoleFilter({
         return {
           value: option.value,
           label: option.label,
-          color: option.color,
+          color: dataColor(option.color),
           count,
           title: `${count} ${option.label}`,
         };

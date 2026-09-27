@@ -56,19 +56,19 @@ export function ActivityItemDetailModal({
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
             onClick={(e) => e.stopPropagation()}
-            className="flex w-full max-w-lg max-h-[80vh] flex-col overflow-hidden rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-950 p-6"
+            className="flex w-full max-w-lg max-h-[80vh] flex-col overflow-hidden rounded-2xl border border-border bg-popover p-6"
           >
             <div className="flex shrink-0 items-start justify-between gap-4">
               <div className="min-w-0">
                 {onBack && (
                   <button
                     onClick={onBack}
-                    className="mb-1 text-[11px] text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70"
+                    className="mb-1 text-[11px] text-muted-foreground hover:text-foreground"
                   >
                     ← voltar
                   </button>
                 )}
-                <p className="text-sm text-black/70 dark:text-white/70">{item.title}</p>
+                <p className="text-sm text-foreground">{item.title}</p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {item.url && (
@@ -76,14 +76,14 @@ export function ActivityItemDetailModal({
                     href={item.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                    className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
                   >
                     {item.source === "commit" ? "ver no GitHub" : "ver no ClickUp"}
                   </a>
                 )}
                 <button
                   onClick={onClose}
-                  className="rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                  className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
                 >
                   fechar
                 </button>
@@ -92,7 +92,7 @@ export function ActivityItemDetailModal({
 
             <div className="mt-4 flex flex-col gap-3 overflow-y-auto pr-1">
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-[11px] text-black/30 dark:text-white/30">
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground/60">
                   <span>{item.authorName}</span>
                   <span>·</span>
                   <span>{item.location}</span>
@@ -100,13 +100,13 @@ export function ActivityItemDetailModal({
                 {item.content && (
                   <button
                     onClick={handleCopy}
-                    className="shrink-0 rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-[11px] text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                    className="shrink-0 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground"
                   >
                     {copied ? "copiado!" : "copiar"}
                   </button>
                 )}
               </div>
-              <p className="whitespace-pre-wrap text-sm text-black/70 dark:text-white/70">
+              <p className="whitespace-pre-wrap text-sm text-foreground">
                 {item.content || "(sem descrição)"}
               </p>
             </div>

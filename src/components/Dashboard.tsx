@@ -1055,17 +1055,17 @@ export function Dashboard() {
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="dark relative flex flex-col gap-3 overflow-hidden rounded-2xl bg-gradient-to-br from-[#2A1430] via-[#180C1E] to-[#0F0713] px-6 py-8 sm:flex-row sm:items-start sm:justify-between sm:px-8"
+        className="relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-border bg-card px-6 py-8 sm:flex-row sm:items-start sm:justify-between sm:px-8"
       >
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -left-24 -top-32 h-96 w-96 rounded-full bg-[#FE2B77] opacity-20 blur-3xl" />
-          <div className="absolute left-1/3 top-1/2 h-72 w-72 -translate-y-1/2 rounded-full bg-[#FE2B77] opacity-10 blur-3xl" />
-          <div className="absolute -bottom-32 right-0 h-96 w-96 rounded-full bg-[#52193C] opacity-50 blur-3xl" />
+          <div className="absolute -left-24 -top-32 h-96 w-96 rounded-full bg-primary opacity-20 blur-3xl" />
+          <div className="absolute left-1/3 top-1/2 h-72 w-72 -translate-y-1/2 rounded-full bg-primary opacity-10 blur-3xl" />
+          <div className="absolute -bottom-32 right-0 h-96 w-96 rounded-full bg-primary opacity-10 blur-3xl" />
         </div>
 
         <div className="relative flex flex-col gap-2">
           <h1 className="text-2xl font-semibold text-foreground">Weenow 360</h1>
-          <div className="flex items-center gap-2 text-xs text-black/40 dark:text-white/40">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <StatusDot status={status} />
             <AnimatePresence mode="wait" initial={false}>
               <motion.span
@@ -1130,7 +1130,7 @@ export function Dashboard() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="text-sm text-black/30 dark:text-white/30"
+            className="text-sm text-muted-foreground/60"
           >
             carregando atividade...
           </motion.p>
@@ -1140,7 +1140,7 @@ export function Dashboard() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="text-sm text-black/30 dark:text-white/30"
+            className="text-sm text-muted-foreground/60"
           >
             {activityItems.length === 0
               ? "Nenhuma atividade encontrada. Cadastre um repositório abaixo."

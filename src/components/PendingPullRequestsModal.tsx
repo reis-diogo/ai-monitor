@@ -46,16 +46,16 @@ export function PendingPullRequestsModal({
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
             onClick={(e) => e.stopPropagation()}
-            className="flex w-full max-w-lg max-h-[80vh] flex-col overflow-hidden rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-950 p-6"
+            className="flex w-full max-w-lg max-h-[80vh] flex-col overflow-hidden rounded-2xl border border-border bg-popover p-6"
           >
             <div className="flex shrink-0 items-center justify-between gap-4">
-              <p className="text-sm text-black/70 dark:text-white/70">
+              <p className="text-sm text-foreground">
                 {pullRequests.length} pull request{pullRequests.length > 1 ? "s" : ""} aberto
                 {pullRequests.length > 1 ? "s" : ""}
               </p>
               <button
                 onClick={onClose}
-                className="shrink-0 rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
               >
                 fechar
               </button>
@@ -68,13 +68,13 @@ export function PendingPullRequestsModal({
                     href={pr.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-2 rounded-lg border border-black/5 dark:border-white/5 p-2.5 text-xs hover:bg-black/[0.04] dark:hover:bg-white/[0.04]"
+                    className="flex items-center gap-2 rounded-lg border border-border/50 p-2.5 text-xs hover:bg-muted"
                   >
-                    <span className="min-w-0 flex-1 truncate text-black/70 dark:text-white/70">
+                    <span className="min-w-0 flex-1 truncate text-foreground">
                       #{pr.number} {pr.title}
                     </span>
                     {pr.authorName && (
-                      <span className="shrink-0 text-black/30 dark:text-white/30">{pr.authorName}</span>
+                      <span className="shrink-0 text-muted-foreground/60">{pr.authorName}</span>
                     )}
                   </a>
                 </li>

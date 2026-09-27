@@ -52,14 +52,14 @@ export function DifficultyAnalysisModal({
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-950 p-6"
+            className="w-full max-w-lg rounded-2xl border border-border bg-popover p-6"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="font-mono text-xs text-black/40 dark:text-white/40">
+                <p className="font-mono text-xs text-muted-foreground">
                   {record.location} · dificuldade técnica
                 </p>
-                <p className="mt-1 text-sm text-black/80 dark:text-white/80">{record.title}</p>
+                <p className="mt-1 text-sm text-foreground">{record.title}</p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {record.url && (
@@ -67,14 +67,14 @@ export function DifficultyAnalysisModal({
                     href={record.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                    className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
                   >
                     {record.source === "commit" ? "ver no GitHub" : "ver no ClickUp"}
                   </a>
                 )}
                 <button
                   onClick={onClose}
-                  className="rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                  className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
                 >
                   fechar
                 </button>
@@ -85,7 +85,7 @@ export function DifficultyAnalysisModal({
               <span className="flex items-center gap-1 rounded-full bg-[#8B5CF6]/10 px-2 py-0.5 font-mono text-[11px] font-medium text-[#8B5CF6]">
                 dif {difficulty}/10
               </span>
-              <span className="text-[11px] text-black/30 dark:text-white/30">
+              <span className="text-[11px] text-muted-foreground/60">
                 {DIFFICULTY_LABEL(difficulty)} · estimada via {PROVIDER_LABEL[record.provider]}
               </span>
             </div>
@@ -99,7 +99,7 @@ export function DifficultyAnalysisModal({
               />
             </div>
 
-            <p className="mt-4 whitespace-pre-line text-sm text-black/80 dark:text-white/80">
+            <p className="mt-4 whitespace-pre-line text-sm text-foreground">
               {record.difficultyReasoning ?? "Sem justificativa registrada."}
             </p>
 

@@ -27,7 +27,7 @@ function List({
         {items.map((item) => (
           <li
             key={item}
-            className="break-words [overflow-wrap:anywhere] text-sm text-black/80 dark:text-white/80"
+            className="break-words [overflow-wrap:anywhere] text-sm text-foreground"
           >
             {item}
           </li>
@@ -82,14 +82,14 @@ export function ReviewAnalysisModal({
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
             onClick={(e) => e.stopPropagation()}
-            className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-950 p-6"
+            className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-popover p-6"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="font-mono text-xs text-black/40 dark:text-white/40">
+                <p className="font-mono text-xs text-muted-foreground">
                   {record.location} · revisão da entrega
                 </p>
-                <p className="mt-1 text-sm break-words text-black/80 dark:text-white/80">
+                <p className="mt-1 text-sm break-words text-foreground">
                   {record.title}
                 </p>
               </div>
@@ -99,14 +99,14 @@ export function ReviewAnalysisModal({
                     href={record.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                    className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
                   >
                     {"ver no ClickUp"}
                   </a>
                 )}
                 <button
                   onClick={onClose}
-                  className="rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                  className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
                 >
                   fechar
                 </button>
@@ -137,7 +137,7 @@ export function ReviewAnalysisModal({
               />
             </div>
 
-            <p className="mt-4 whitespace-pre-line break-words text-sm text-black/80 dark:text-white/80">
+            <p className="mt-4 whitespace-pre-line break-words text-sm text-foreground">
               {record.reviewReasoning ?? "Sem parecer registrado."}
             </p>
 
@@ -147,18 +147,18 @@ export function ReviewAnalysisModal({
 
             {!approved && payload?.fixPrompt && (
               <div className="mt-4">
-                <p className="font-mono text-[11px] uppercase tracking-wide text-black/35 dark:text-white/35">
+                <p className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground/70">
                   prompt de correção
                 </p>
-                <div className="mt-1.5 rounded-lg border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 p-3">
-                  <pre className="max-h-64 overflow-y-auto whitespace-pre-wrap font-mono text-[11px] leading-5 text-black/70 dark:text-white/70">
+                <div className="mt-1.5 rounded-lg border border-border bg-muted p-3">
+                  <pre className="max-h-64 overflow-y-auto whitespace-pre-wrap font-mono text-[11px] leading-5 text-foreground">
                     {payload.fixPrompt}
                   </pre>
                   <motion.button
                     onClick={copyFixPrompt}
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
-                    className="mt-2 flex items-center gap-1.5 rounded-md border border-black/10 dark:border-white/10 px-2 py-1 font-mono text-[11px] text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white"
+                    className="mt-2 flex items-center gap-1.5 rounded-md border border-border px-2 py-1 font-mono text-[11px] text-muted-foreground hover:text-foreground"
                   >
                     {copied ? <CheckIcon size={11} /> : <CopyIcon size={11} />}
                     {copied ? "copiado" : "copiar prompt"}

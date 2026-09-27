@@ -45,15 +45,15 @@ export function ConfirmDialog({
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-950 p-5"
+            className="w-full max-w-sm rounded-2xl border border-border bg-popover p-5"
           >
-            <p className="text-sm text-black/80 dark:text-white/80">{title}</p>
-            {description && <p className="mt-1.5 text-xs text-black/40 dark:text-white/40">{description}</p>}
+            <p className="text-sm text-foreground">{title}</p>
+            {description && <p className="mt-1.5 text-xs text-muted-foreground">{description}</p>}
 
             <div className="mt-5 flex justify-end gap-2">
               <button
                 onClick={onCancel}
-                className="rounded-md border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs text-black/60 dark:text-white/60 hover:border-black/30 dark:hover:border-white/30 hover:text-black dark:hover:text-white"
+                className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:border-ring hover:text-foreground"
               >
                 {cancelLabel}
               </button>

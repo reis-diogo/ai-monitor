@@ -23,6 +23,7 @@ import { ActivityProgressBadge } from "@/components/ActivityProgressBadge";
 import { PendingTasksModal } from "@/components/PendingTasksModal";
 import { PendingPullRequestsModal } from "@/components/PendingPullRequestsModal";
 import { buildStatusOptions } from "@/lib/status-options";
+import { dataAlpha, dataColor, dataSurface, statusEmphasis } from "@/lib/data-color";
 
 type ScopeStatus = "idle" | "loading" | "error";
 
@@ -195,11 +196,19 @@ export function ActivityGroup({
               whileTap={{ scale: 0.98 }}
               transition={{ type: "spring", stiffness: 500, damping: 34 }}
               className="flex items-center gap-1 rounded-full border px-2 py-0.5 font-medium"
-              style={{
-                borderColor: `${group.color}4d`,
-                backgroundColor: `${group.color}1a`,
-                color: group.color,
-              }}
+              style={
+                statusEmphasis(group.value) === "action"
+                  ? {
+                      borderColor: dataAlpha(group.color, 45),
+                      backgroundColor: dataSurface(group.color, 18),
+                      color: dataColor(group.color),
+                    }
+                  : {
+                      borderColor: dataAlpha(group.color, 18),
+                      backgroundColor: dataSurface(group.color, 8),
+                      color: dataColor(group.color),
+                    }
+              }
               title={`${group.items.length} tarefa${group.items.length > 1 ? "s" : ""} com status "${group.label}"`}
             >
               <span
@@ -255,7 +264,7 @@ export function ActivityGroup({
                       onClick={() => onSelectProjectAnalysis?.(projectAnalysis)}
                       className="flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[11px] font-medium hover:opacity-80"
                       style={{
-                        color: scoreColor(projectAnalysis.score).color,
+                        color: dataColor(scoreColor(projectAnalysis.score).color),
                         backgroundColor: scoreColor(projectAnalysis.score).bg,
                       }}
                     >

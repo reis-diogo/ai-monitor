@@ -50,15 +50,15 @@ export function PendingTasksModal({
               exit={{ opacity: 0, scale: 0.95, y: 12 }}
               transition={{ type: "spring", stiffness: 340, damping: 30 }}
               onClick={(e) => e.stopPropagation()}
-              className="flex w-full max-w-xl max-h-[80vh] flex-col overflow-hidden rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-950 p-6"
+              className="flex w-full max-w-xl max-h-[80vh] flex-col overflow-hidden rounded-2xl border border-border bg-popover p-6"
             >
               <div className="flex shrink-0 items-center justify-between gap-4">
-                <p className="text-sm text-black/70 dark:text-white/70">
+                <p className="text-sm text-foreground">
                   {items.length} tarefa{items.length > 1 ? "s" : ""} {label}
                 </p>
                 <button
                   onClick={handleClose}
-                  className="shrink-0 rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                  className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
                 >
                   fechar
                 </button>
@@ -70,24 +70,24 @@ export function PendingTasksModal({
                     key={item.id}
                     onClick={() => setSelected(item)}
                     whileHover={{ backgroundColor: "var(--accent)" }}
-                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-black/5 dark:border-white/5 p-2.5 text-xs"
+                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-border/50 p-2.5 text-xs"
                   >
                     {item.customId && (
-                      <span className="shrink-0 font-mono text-[11px] text-black/40 dark:text-white/40">
+                      <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
                         {item.customId}
                       </span>
                     )}
-                    <span className="min-w-0 flex-1 truncate text-black/70 dark:text-white/70">
+                    <span className="min-w-0 flex-1 truncate text-foreground">
                       {truncate(item.title, 50)}
                     </span>
-                    <span className="shrink-0 text-black/30 dark:text-white/30">{item.authorName}</span>
+                    <span className="shrink-0 text-muted-foreground/60">{item.authorName}</span>
                     <a
                       href={item.url}
                       target="_blank"
                       rel="noreferrer"
                       onClick={(e) => e.stopPropagation()}
                       title="Abrir no ClickUp"
-                      className="shrink-0 text-black/30 dark:text-white/30 hover:text-black dark:hover:text-white"
+                      className="shrink-0 text-muted-foreground/60 hover:text-foreground"
                     >
                       <ExternalLinkIcon size={12} />
                     </a>

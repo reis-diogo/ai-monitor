@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, stagger } from "motion/react";
 import { CheckIcon, ChevronIcon } from "@/components/icons";
+import { dataColor } from "@/lib/data-color";
 
 export type PicklistOption = {
   value: string;
@@ -39,7 +40,7 @@ function OptionMark({ option, size }: { option: PicklistOption; size: number }) 
   }
   return (
     <span
-      className="flex shrink-0 items-center justify-center rounded-full bg-white/10 text-[8px]"
+      className="flex shrink-0 items-center justify-center rounded-full bg-muted text-[8px]"
       style={{ width: size, height: size }}
     >
       {option.label.slice(0, 2).toUpperCase()}
@@ -227,7 +228,7 @@ export function FilterPicklist({
                                 exit={{ scale: 0, opacity: 0 }}
                                 transition={{ type: "spring", stiffness: 600, damping: 30 }}
                                 className="flex"
-                                style={{ color: option.color ?? "var(--primary)" }}
+                                style={{ color: option.color ? dataColor(option.color) : "var(--primary)" }}
                               >
                                 <CheckIcon size={10} />
                               </motion.span>

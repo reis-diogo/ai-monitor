@@ -6,6 +6,7 @@ import type { ActivityItem, StatusDwell } from "@/lib/types";
 import { DWELL_BUCKETS, dwellBucket, formatDwell } from "@/lib/dwell";
 import { ExternalLinkIcon } from "@/components/icons";
 import { truncate } from "@/lib/truncate";
+import { dataColor } from "@/lib/data-color";
 
 // Nestes dois status quem destrava o card e uma pessoa, nao o time: agrupar por ela
 // transforma a lista num pedido de acao com destinatario.
@@ -18,7 +19,7 @@ export type DwellSelection = {
 
 function bucketColor(elapsedMs: number): string {
   const key = dwellBucket(elapsedMs);
-  return DWELL_BUCKETS.find((bucket) => bucket.key === key)?.color ?? "#a1a1aa";
+  return dataColor(DWELL_BUCKETS.find((bucket) => bucket.key === key)?.color ?? "#a1a1aa");
 }
 
 export function StatusDwellModal({
@@ -97,21 +98,21 @@ export function StatusDwellModal({
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
             onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-950 p-6 font-mono"
+            className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl border border-border bg-popover p-6 font-mono"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-xs text-black/40 dark:text-white/40">
+                <p className="text-xs text-muted-foreground">
                   parado em &quot;{selection.status}&quot;
                   {selection.project && ` · ${selection.project}`}
                 </p>
-                <p className="mt-1 text-sm text-black/80 dark:text-white/80">
+                <p className="mt-1 text-sm text-foreground">
                   {cards.length} card{cards.length === 1 ? "" : "s"}
                 </p>
               </div>
               <button
                 onClick={onClose}
-                className="shrink-0 rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
               >
                 fechar
               </button>
@@ -121,7 +122,7 @@ export function StatusDwellModal({
               {groups.map((group) => (
                 <div key={group.owner ?? "todos"}>
                   {group.owner && (
-                    <p className="mb-1.5 text-[11px] text-black/40 dark:text-white/40">
+                    <p className="mb-1.5 text-[11px] text-muted-foreground">
                       {group.owner} · {group.cards.length} card
                       {group.cards.length === 1 ? "" : "s"}
                     </p>
@@ -145,18 +146,18 @@ export function StatusDwellModal({
                           href={item.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex shrink-0 items-center gap-1 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white"
+                          className="flex shrink-0 items-center gap-1 text-muted-foreground hover:text-foreground"
                         >
                           {item.customId ?? item.id}
                           <ExternalLinkIcon size={9} />
                         </a>
 
-                        <span className="min-w-0 flex-1 truncate text-black/50 dark:text-white/50">
+                        <span className="min-w-0 flex-1 truncate text-muted-foreground">
                           {truncate(item.title, 60)}
                         </span>
 
                         {!selection.project && (
-                          <span className="shrink-0 text-black/30 dark:text-white/30">
+                          <span className="shrink-0 text-muted-foreground/60">
                             {item.location}
                           </span>
                         )}

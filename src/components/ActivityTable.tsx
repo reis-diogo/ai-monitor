@@ -257,7 +257,7 @@ export function ActivityTable({
       animate={{ opacity: 1, y: 0 }}
       className="rounded-xl border border-border bg-card p-5 font-mono dark:shadow-lg dark:shadow-black/40"
     >
-      <p className="text-sm text-muted-foreground dark:text-[#ffd9e8]/70">
+      <p className="text-sm text-muted-foreground">
         Atividades ({filteredItems.length})
       </p>
 

@@ -19,6 +19,7 @@ import { StatusMenu } from "@/components/StatusMenu";
 import { ActivityItemDetailModal } from "@/components/ActivityItemDetailModal";
 import { ActivityProgressBadge } from "@/components/ActivityProgressBadge";
 import { DWELL_BUCKETS, dwellBucket, formatDwell } from "@/lib/dwell";
+import { dataColor } from "@/lib/data-color";
 
 const ARCHITECT_QUEUE_STATUS = "refinar arquiteto";
 const DEV_RELEASED_STATUS = "dev liberado";
@@ -177,9 +178,12 @@ export function ActivityTableRow({
                   title={`Parado neste status desde ${new Date(dwell.since).toLocaleString("pt-BR")}`}
                   className="shrink-0 tabular-nums"
                   style={{
-                    color: DWELL_BUCKETS.find(
-                      (bucket) => bucket.key === dwellBucket(now - new Date(dwell.since!).getTime())
-                    )?.color,
+                    color: dataColor(
+                      DWELL_BUCKETS.find(
+                        (bucket) =>
+                          bucket.key === dwellBucket(now - new Date(dwell.since!).getTime())
+                      )?.color ?? "currentColor"
+                    ),
                   }}
                 >
                   {formatDwell(dwell.since, now)}
@@ -208,7 +212,7 @@ export function ActivityTableRow({
                 title="Ver detalhamento da análise"
                 className="flex items-center gap-1 rounded-full px-2 py-0.5 font-mono font-medium hover:underline"
                 style={{
-                  color: scoreColor(analysis.score).color,
+                  color: dataColor(scoreColor(analysis.score).color),
                   backgroundColor: scoreColor(analysis.score).bg,
                 }}
               >

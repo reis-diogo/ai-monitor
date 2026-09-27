@@ -271,10 +271,10 @@ export function ProfessionalsManager({
   const previewName = previewTarget === "new" ? "Nova pessoa" : previewTarget;
 
   return (
-    <div className="rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02]">
+    <div className="rounded-xl border border-border bg-muted/50">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-5 py-4 text-sm text-black/60 dark:text-white/60"
+        className="flex w-full items-center justify-between px-5 py-4 text-sm text-muted-foreground"
       >
         <span>
           Profissionais {professionals ? `(${classifiedCount}/${people.length} classificados)` : ""}
@@ -282,7 +282,7 @@ export function ProfessionalsManager({
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          className="flex h-4 w-4 shrink-0 items-center justify-center text-black/30 dark:text-white/30"
+          className="flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground/60"
         >
           <ChevronIcon />
         </motion.span>
@@ -297,22 +297,22 @@ export function ProfessionalsManager({
             transition={{ duration: 0.25 }}
             className="overflow-hidden"
           >
-            <div className="flex flex-col gap-4 border-t border-black/10 dark:border-white/10 px-5 py-4">
-              <div className="flex flex-col gap-2 rounded-lg border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] p-3">
-                <p className="text-[11px] text-black/40 dark:text-white/40">Adicionar pessoa manualmente</p>
+            <div className="flex flex-col gap-4 border-t border-border px-5 py-4">
+              <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/50 p-3">
+                <p className="text-[11px] text-muted-foreground">Adicionar pessoa manualmente</p>
                 <div className="flex flex-wrap items-center gap-2">
                   <input
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder="Nome"
-                    className="min-w-0 flex-1 rounded-md border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 px-2.5 py-1.5 text-sm outline-none placeholder:text-black/30 dark:text-white/30 focus:border-black/30 dark:focus:border-white/30"
+                    className="min-w-0 flex-1 rounded-md border border-border bg-muted px-2.5 py-1.5 text-sm outline-none placeholder:text-muted-foreground/60 focus:border-ring"
                   />
                   {newRole === "po" && (
                     <input
                       value={newEmail}
                       onChange={(e) => setNewEmail(e.target.value)}
                       placeholder="E-mail do ClickUp"
-                      className="min-w-0 flex-1 rounded-md border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 px-2.5 py-1.5 text-sm outline-none placeholder:text-black/30 dark:text-white/30 focus:border-black/30 dark:focus:border-white/30"
+                      className="min-w-0 flex-1 rounded-md border border-border bg-muted px-2.5 py-1.5 text-sm outline-none placeholder:text-muted-foreground/60 focus:border-ring"
                     />
                   )}
 
@@ -327,7 +327,7 @@ export function ProfessionalsManager({
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={newAvatarUrl} alt="preview" className="h-8 w-8 rounded-full" />
                     ) : (
-                      <span className="rounded-md border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 px-2.5 py-1.5 text-xs text-black/60 dark:text-white/60 hover:border-black/30 dark:hover:border-white/30">
+                      <span className="rounded-md border border-border bg-muted px-2.5 py-1.5 text-xs text-muted-foreground hover:border-ring">
                         {uploading === "new" ? "enviando..." : "foto (opcional)"}
                       </span>
                     )}
@@ -339,7 +339,7 @@ export function ProfessionalsManager({
                     disabled={!newName.trim()}
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.96 }}
-                    className="rounded-md bg-foreground px-3 py-1.5 text-sm font-medium text-background disabled:opacity-40"
+                    className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-40"
                   >
                     adicionar
                   </motion.button>
@@ -386,15 +386,15 @@ export function ProfessionalsManager({
                               className="h-6 w-6 rounded-full hover:opacity-70"
                             />
                           ) : (
-                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-black/10 dark:bg-white/10 text-[9px] font-medium hover:bg-black/20 dark:hover:bg-white/20">
+                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[9px] font-medium hover:bg-accent">
                               {isUploadingAvatar ? "..." : person.name.slice(0, 2).toUpperCase()}
                             </div>
                           )}
                         </button>
                         <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate">
-                          <span className="truncate text-sm text-black/70 dark:text-white/70">{person.name}</span>
+                          <span className="truncate text-sm text-foreground">{person.name}</span>
                           {professional?.aliases && professional.aliases.length > 0 && (
-                            <span className="shrink-0 truncate rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 px-1.5 py-0.5 text-[10px] text-black/40 dark:text-white/40">
+                            <span className="shrink-0 truncate rounded-full border border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
                               {professional.aliases.join(", ")}
                             </span>
                           )}
@@ -411,11 +411,11 @@ export function ProfessionalsManager({
                                   if (e.key === "Escape") setEmailEditingFor(null);
                                 }}
                                 placeholder="e-mail do ClickUp"
-                                className="min-w-0 max-w-[180px] rounded-md border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 px-2 py-1 text-[11px] outline-none placeholder:text-black/30 dark:text-white/30 focus:border-black/30 dark:focus:border-white/30"
+                                className="min-w-0 max-w-[180px] rounded-md border border-border bg-muted px-2 py-1 text-[11px] outline-none placeholder:text-muted-foreground/60 focus:border-ring"
                               />
                               <button
                                 onClick={() => handleSaveEmail(person.name)}
-                                className="text-[11px] text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                                className="text-[11px] text-muted-foreground hover:text-foreground"
                               >
                                 salvar
                               </button>
@@ -426,7 +426,7 @@ export function ProfessionalsManager({
                                 setEmailEditingFor(person.name);
                                 setEmailDraft(professional.clickupEmail ?? "");
                               }}
-                              className="truncate text-[11px] text-black/30 dark:text-white/30 hover:text-black/60 dark:hover:text-white/60"
+                              className="truncate text-[11px] text-muted-foreground/60 hover:text-muted-foreground"
                             >
                               {professional.clickupEmail ?? "sem e-mail do ClickUp"}
                             </button>
@@ -436,7 +436,7 @@ export function ProfessionalsManager({
                             setAliasEditingFor(isEditingAlias ? null : person.name);
                             setAliasError(null);
                           }}
-                          className="text-[11px] text-black/30 dark:text-white/30 hover:text-black/60 dark:hover:text-white/60"
+                          className="text-[11px] text-muted-foreground/60 hover:text-muted-foreground"
                         >
                           apelidos{professional?.aliases?.length ? ` (${professional.aliases.length})` : ""}
                         </button>
@@ -462,7 +462,7 @@ export function ProfessionalsManager({
                             </button>
                             <button
                               onClick={() => setRemovingName(null)}
-                              className="rounded-md border border-black/10 dark:border-white/10 px-1.5 py-0.5 text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                              className="rounded-md border border-border px-1.5 py-0.5 text-muted-foreground hover:text-foreground"
                             >
                               não
                             </button>
@@ -474,7 +474,7 @@ export function ProfessionalsManager({
                               setRemoveError(null);
                             }}
                             title={`Remover ${person.name} do cadastro`}
-                            className="text-[11px] text-black/25 dark:text-white/25 hover:text-red-500"
+                            className="text-[11px] text-muted-foreground/50 hover:text-red-500"
                           >
                             {removeError?.includes(person.name) ? "falhou, tentar de novo" : "remover"}
                           </button>
@@ -491,7 +491,7 @@ export function ProfessionalsManager({
                             className="overflow-hidden pl-9"
                           >
                             <div className="flex flex-col gap-2 pb-1">
-                              <p className="text-[10px] text-black/30 dark:text-white/30">
+                              <p className="text-[10px] text-muted-foreground/60">
                                 outros usernames/nomes que são essa mesma pessoa (ex: outra conta
                                 do GitHub)
                               </p>
@@ -500,12 +500,12 @@ export function ProfessionalsManager({
                                   {professional.aliases.map((alias) => (
                                     <span
                                       key={alias}
-                                      className="flex items-center gap-1 rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 px-2 py-1 text-[11px] text-black/60 dark:text-white/60"
+                                      className="flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-1 text-[11px] text-muted-foreground"
                                     >
                                       {alias}
                                       <button
                                         onClick={() => handleRemoveAlias(person.name, alias)}
-                                        className="flex h-3.5 w-3.5 items-center justify-center text-black/30 dark:text-white/30 hover:text-red-400"
+                                        className="flex h-3.5 w-3.5 items-center justify-center text-muted-foreground/60 hover:text-red-400"
                                       >
                                         <CloseIcon size={9} />
                                       </button>
@@ -518,14 +518,14 @@ export function ProfessionalsManager({
                                   value={aliasDraft}
                                   onChange={(e) => setAliasDraft(e.target.value)}
                                   placeholder="username"
-                                  className="min-w-0 flex-1 rounded-md border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 px-2.5 py-1.5 text-xs outline-none placeholder:text-black/30 dark:text-white/30 focus:border-black/30 dark:focus:border-white/30"
+                                  className="min-w-0 flex-1 rounded-md border border-border bg-muted px-2.5 py-1.5 text-xs outline-none placeholder:text-muted-foreground/60 focus:border-ring"
                                 />
                                 <motion.button
                                   onClick={() => handleAddAlias(person.name)}
                                   disabled={!aliasDraft.trim()}
                                   whileHover={aliasDraft.trim() ? { scale: 1.04 } : undefined}
                                   whileTap={aliasDraft.trim() ? { scale: 0.96 } : undefined}
-                                  className="rounded-md bg-foreground px-2.5 py-1.5 text-xs font-medium text-background disabled:opacity-40"
+                                  className="rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-40"
                                 >
                                   adicionar
                                 </motion.button>

@@ -14,10 +14,10 @@ const PROVIDER_LABEL: Record<AnalyzedActivityRecord["provider"], string> = {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mt-4">
-      <p className="font-mono text-[11px] uppercase tracking-wide text-black/35 dark:text-white/35">
+      <p className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground/70">
         {title}
       </p>
-      <div className="mt-1.5 text-sm break-words [overflow-wrap:anywhere] text-black/80 dark:text-white/80">
+      <div className="mt-1.5 text-sm break-words [overflow-wrap:anywhere] text-foreground">
         {children}
       </div>
     </div>
@@ -70,14 +70,14 @@ export function ArchitectAnalysisModal({
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
             onClick={(e) => e.stopPropagation()}
-            className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-950 p-6"
+            className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-popover p-6"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="font-mono text-xs text-black/40 dark:text-white/40">
+                <p className="font-mono text-xs text-muted-foreground">
                   {record.location} · arquitetura Salesforce
                 </p>
-                <p className="mt-1 text-sm break-words text-black/80 dark:text-white/80">
+                <p className="mt-1 text-sm break-words text-foreground">
                   {record.title}
                 </p>
               </div>
@@ -87,14 +87,14 @@ export function ArchitectAnalysisModal({
                     href={record.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                    className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
                   >
                     {"ver no ClickUp"}
                   </a>
                 )}
                 <button
                   onClick={onClose}
-                  className="rounded-md border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                  className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
                 >
                   fechar
                 </button>
@@ -123,7 +123,7 @@ export function ArchitectAnalysisModal({
                   → {payload.appliedStatus}
                 </span>
               )}
-              <span className="text-[11px] text-black/30 dark:text-white/30">
+              <span className="text-[11px] text-muted-foreground/60">
                 via {PROVIDER_LABEL[record.provider]}
               </span>
             </div>
@@ -163,7 +163,7 @@ export function ArchitectAnalysisModal({
                 </p>
                 <ul className="mt-2 space-y-2">
                   {payload.ambiguities.map((item, index) => (
-                    <li key={item} className="flex gap-2 text-sm text-black/80 dark:text-white/80">
+                    <li key={item} className="flex gap-2 text-sm text-foreground">
                       <span className="shrink-0 font-mono text-[11px] text-amber-600/70 dark:text-amber-400/70">
                         {String(index + 1).padStart(2, "0")}
                       </span>
@@ -171,7 +171,7 @@ export function ArchitectAnalysisModal({
                     </li>
                   ))}
                 </ul>
-                <p className="mt-3 text-[11px] text-black/40 dark:text-white/40">
+                <p className="mt-3 text-[11px] text-muted-foreground">
                   Cada ponto virou um item de checklist no card do ClickUp.
                 </p>
               </div>
@@ -185,7 +185,7 @@ export function ArchitectAnalysisModal({
                 </p>
                 <ul className="mt-2 space-y-2">
                   {payload.assumptions.map((item, index) => (
-                    <li key={item} className="flex gap-2 text-sm text-black/80 dark:text-white/80">
+                    <li key={item} className="flex gap-2 text-sm text-foreground">
                       <span className="shrink-0 font-mono text-[11px] text-sky-600/70 dark:text-sky-400/70">
                         {String(index + 1).padStart(2, "0")}
                       </span>
@@ -193,7 +193,7 @@ export function ArchitectAnalysisModal({
                     </li>
                   ))}
                 </ul>
-                <p className="mt-3 text-[11px] text-black/40 dark:text-white/40">
+                <p className="mt-3 text-[11px] text-muted-foreground">
                   A nota liberou o card, então estes pontos foram resolvidos pela leitura da org e
                   da documentação, e já estão no prompt do dev. Ninguém do negócio confirmou.
                 </p>
@@ -240,15 +240,15 @@ export function ArchitectAnalysisModal({
 
             {approved && payload?.devPrompt && (
               <Section title="prompt para o desenvolvimento">
-                <div className="rounded-lg border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 p-3">
-                  <pre className="max-h-64 overflow-y-auto whitespace-pre-wrap font-mono text-[11px] leading-5 text-black/70 dark:text-white/70">
+                <div className="rounded-lg border border-border bg-muted p-3">
+                  <pre className="max-h-64 overflow-y-auto whitespace-pre-wrap font-mono text-[11px] leading-5 text-foreground">
                     {payload.devPrompt}
                   </pre>
                   <motion.button
                     onClick={copyDevPrompt}
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
-                    className="mt-2 rounded-md border border-black/10 dark:border-white/10 px-2 py-1 font-mono text-[11px] text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white"
+                    className="mt-2 rounded-md border border-border px-2 py-1 font-mono text-[11px] text-muted-foreground hover:text-foreground"
                   >
                     {copied ? "copiado" : "copiar prompt"}
                   </motion.button>

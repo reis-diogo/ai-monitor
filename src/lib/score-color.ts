@@ -1,5 +1,12 @@
+// Mesma escala dos status: luminosidade e croma fixos, so a matiz muda. O fundo sai
+// da propria cor via color-mix, entao nao existe um rgba desalinhado do texto.
+function tone(hue: number, chroma = 0.13): { color: string; bg: string } {
+  const color = `oklch(0.72 ${chroma} ${hue})`;
+  return { color, bg: `color-mix(in srgb, ${color} 12%, transparent)` };
+}
+
 export function scoreColor(score: number): { color: string; bg: string } {
-  if (score >= 7) return { color: "#22c55e", bg: "rgba(34,197,94,0.12)" };
-  if (score >= 4) return { color: "#eab308", bg: "rgba(234,179,8,0.12)" };
-  return { color: "#ef4444", bg: "rgba(239,68,68,0.12)" };
+  if (score >= 7) return tone(155);
+  if (score >= 4) return tone(85);
+  return tone(25, 0.17);
 }
