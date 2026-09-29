@@ -77,3 +77,17 @@ export async function setCachedCommits(
 
   if (error) throw new Error(`Erro ao salvar cache de commits: ${error.message}`);
 }
+
+// O diff so e lido pelo servidor, na hora de analisar. Mandar ele para o navegador
+// dentro de /api/activity custava ~2,5 MB por sincronizacao, por aba aberta — a cada
+// minuto. Foi o que estourou a cota de egress do Supabase.
+export async function getCommitDiff(sha: string): Promise<string> {
+  const { data, error } = await getSupabase()
+    .from("commit_cache")
+    .select("diff")
+    .eq("sha", sha)
+    .maybeSingle();
+
+  if (error || !data) return "";
+  return (data as { diff: string | null }).diff ?? "";
+}

@@ -250,7 +250,7 @@ export function ActivityTableRow({
               {item.source === "clickup" &&
                 item.status?.toLowerCase() === REVIEW_QUEUE_STATUS &&
                 architectureReleased(analysis.architecture, analysis.architecturePayload) &&
-                !!analysis.architecturePayload?.devPrompt && (
+                !!(analysis.architecturePayload?.hasDevPrompt ?? analysis.architecturePayload?.devPrompt) && (
                   <button
                     onClick={() => onReviewLocal(item)}
                     title="Gerar prompt para revisar esta entrega na sua IA local"
@@ -270,7 +270,7 @@ export function ActivityTableRow({
               )}
               {item.status?.toLowerCase() === DEV_RELEASED_STATUS &&
                 architectureReleased(analysis.architecture, analysis.architecturePayload) &&
-                !!analysis.architecturePayload?.devPrompt && (
+                !!(analysis.architecturePayload?.hasDevPrompt ?? analysis.architecturePayload?.devPrompt) && (
                   <button
                     onClick={() => onSelectDevPrompt(analysis)}
                     title="Prompt para desenvolver este card"

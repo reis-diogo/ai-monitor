@@ -38,7 +38,7 @@ import { getPresetRange, isWithinRange, type DatePreset } from "@/lib/date-range
 import { truncate } from "@/lib/truncate";
 
 const RELATIVE_TIME_TICK_MS = 30_000;
-const STATUS_SYNC_INTERVAL_MS = 60_000;
+const STATUS_SYNC_INTERVAL_MS = 120_000;
 const PROVIDER_STORAGE_KEY = "getnow:ai-provider";
 const AUTO_ANALYZE_INTERVAL_MS = 30_000;
 const AUTO_ANALYZE_STATUS = "para desenvolver";
@@ -320,7 +320,9 @@ export function Dashboard() {
     let running = false;
 
     const interval = setInterval(async () => {
-      if (running) return;
+      // Aba escondida nao precisa de dado fresco, e cada ciclo custa banda no
+      // Supabase. Quem volta para a aba dispara o ciclo seguinte de qualquer forma.
+      if (running || document.hidden) return;
       running = true;
       try {
         await syncClickupStatuses();
@@ -1186,9 +1188,17 @@ export function Dashboard() {
         )}
       </AnimatePresence>
 
-      <ProfessionalsManager commits={allCommits} onChange={fetchProfessionals} />
+      <ProfessionalsManager
+        commits={allCommits}
+        professionals={professionals}
+        onChange={fetchProfessionals}
+      />
 
-      <ProjectsManager onChange={fetchProjects} knownLocations={knownLocations} />
+      <ProjectsManager
+        projects={projects}
+        onChange={fetchProjects}
+        knownLocations={knownLocations}
+      />
 
       <RepoManager onRepoChange={fetchActivity} />
     </div>

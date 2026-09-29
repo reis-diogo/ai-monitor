@@ -8,7 +8,13 @@ export async function GET() {
     return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
   }
 
-  const repos = await getRepos();
+  let repos: Awaited<ReturnType<typeof getRepos>>;
+  try {
+    repos = await getRepos();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erro ao listar repositórios.";
+    return NextResponse.json({ repoPullRequests: [], error: message }, { status: 502 });
+  }
 
   const results = await Promise.allSettled(
     repos.map((repo) => fetchOpenPullRequests(repo.owner, repo.name))

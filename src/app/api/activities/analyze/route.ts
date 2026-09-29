@@ -4,6 +4,7 @@ import { getCachedAnalysis, setCachedAnalysis } from "@/lib/analysis-cache";
 import { getCurrentUserEmail, isAllowedUser } from "@/lib/require-allowed-user";
 import { createTaskComment, updateTaskStatus } from "@/lib/clickup";
 import type { ActivitySource, AiProvider, AnalyzedActivityRecord } from "@/lib/types";
+import { getCommitDiff } from "@/lib/commit-cache";
 
 const LOW_SCORE_THRESHOLD = 7;
 const PENDING_DEV_STATUS = "para desenvolver";
@@ -67,9 +68,14 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // O diff nao vem mais no corpo: /api/activity para de envia-lo ao navegador, entao
+    // buscamos do cache aqui. Card do ClickUp continua mandando a descricao no corpo.
+    const resolvedContent =
+      source === "commit" ? await getCommitDiff(id) : typeof content === "string" ? content : "";
+
     const analysis = await analyzeActivity(provider, source, {
       title,
-      content: typeof content === "string" ? content : "",
+      content: resolvedContent,
     });
 
     const record: AnalyzedActivityRecord = {

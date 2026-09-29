@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { AnalyzedActivityRecord } from "@/lib/types";
 import { APPROVAL_THRESHOLD, architectureReleased } from "@/lib/architect-gate";
+import { useFullAnalysis } from "@/lib/use-full-analysis";
 
 const PROVIDER_LABEL: Record<AnalyzedActivityRecord["provider"], string> = {
   anthropic: "Claude",
@@ -25,12 +26,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export function ArchitectAnalysisModal({
-  record,
+  record: listRecord,
   onClose,
 }: {
   record: AnalyzedActivityRecord | null;
   onClose: () => void;
 }) {
+  // A listagem chega sem os campos longos; o parecer inteiro vem aqui, ao abrir.
+  const record = useFullAnalysis(listRecord);
+
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {

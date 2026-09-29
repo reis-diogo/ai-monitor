@@ -7,8 +7,12 @@ export async function GET() {
     return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
   }
 
-  const projects = await getProjects();
-  return NextResponse.json({ projects });
+  try {
+    return NextResponse.json({ projects: await getProjects() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erro ao listar projetos.";
+    return NextResponse.json({ projects: [], error: message }, { status: 502 });
+  }
 }
 
 export async function POST(request: NextRequest) {

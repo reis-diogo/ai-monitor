@@ -142,6 +142,9 @@ export type ArchitectPayload = {
   devPrompt: string;
   research: string;
   appliedStatus?: string | null;
+  // A listagem devolve o parecer sem os campos longos; este marcador diz que existe
+  // devPrompt gravado sem carregar os ~640 KB dele para dentro da tela.
+  hasDevPrompt?: boolean;
 };
 
 export type AiPrompt = {

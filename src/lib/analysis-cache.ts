@@ -113,6 +113,43 @@ export async function setCachedAnalysis(
   if (error) throw new Error(`Erro ao salvar cache de análise: ${error.message}`);
 }
 
+// A tabela so precisa das notas e de saber se existe prompt de dev. Os pareceres
+// inteiros — devPrompt, ambiguidades, achados de metadado, prompt de correcao —
+// so aparecem quando alguem abre o modal, e eram 2,2 MB trafegados a cada minuto,
+// por aba aberta. Ver getAnalyzedActivity para o registro completo.
+function toListItem(record: AnalyzedActivityRecord): AnalyzedActivityRecord {
+  return {
+    ...record,
+    architectureReasoning: null,
+    reviewReasoning: null,
+    architecturePayload: record.architecturePayload
+      ? {
+          nativeSolution: "",
+          usesCustom: record.architecturePayload.usesCustom,
+          customJustification: "",
+          ambiguities: [],
+          assumptions: [],
+          metadataFindings: [],
+          docReferences: [],
+          devPrompt: "",
+          research: "",
+          appliedStatus: record.architecturePayload.appliedStatus ?? null,
+          hasDevPrompt: !!record.architecturePayload.devPrompt?.trim(),
+        }
+      : null,
+    reviewPayload: record.reviewPayload
+      ? {
+          delivered: [],
+          missing: [],
+          deviations: [],
+          fixPrompt: "",
+          appliedStatus: record.reviewPayload.appliedStatus ?? null,
+          statusError: record.reviewPayload.statusError ?? null,
+        }
+      : null,
+  };
+}
+
 export async function listAnalyzedActivities(): Promise<AnalyzedActivityRecord[]> {
   const { data, error } = await getSupabase()
     .from("analysis_cache")
@@ -120,5 +157,12 @@ export async function listAnalyzedActivities(): Promise<AnalyzedActivityRecord[]
     .order("analyzed_at", { ascending: false });
 
   if (error) throw new Error(`Erro ao listar análises: ${error.message}`);
-  return (data ?? []).map((row) => rowToRecord(row as AnalysisCacheRow));
+  return (data ?? []).map((row) => toListItem(rowToRecord(row as AnalysisCacheRow)));
+}
+
+export async function getAnalyzedActivity(
+  provider: AiProvider,
+  id: string
+): Promise<AnalyzedActivityRecord | null> {
+  return getCachedAnalysis(provider, id);
 }

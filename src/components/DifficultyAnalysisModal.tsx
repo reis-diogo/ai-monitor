@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { AnalyzedActivityRecord } from "@/lib/types";
+import { useFullAnalysis } from "@/lib/use-full-analysis";
 
 const PROVIDER_LABEL: Record<AnalyzedActivityRecord["provider"], string> = {
   anthropic: "Claude",
@@ -19,12 +20,15 @@ const DIFFICULTY_LABEL = (value: number) => {
 };
 
 export function DifficultyAnalysisModal({
-  record,
+  record: listRecord,
   onClose,
 }: {
   record: AnalyzedActivityRecord | null;
   onClose: () => void;
 }) {
+  // A listagem chega sem os campos longos; o parecer inteiro vem aqui, ao abrir.
+  const record = useFullAnalysis(listRecord);
+
   useEffect(() => {
     if (!record) return;
     function handleKeyDown(e: KeyboardEvent) {
