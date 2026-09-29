@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { CheckIcon, CopyIcon } from "@/components/icons";
 import type { AnalyzedActivityRecord } from "@/lib/types";
+import { useFullAnalysis } from "@/lib/use-full-analysis";
 
 const APPROVAL_THRESHOLD = 7;
 
@@ -38,12 +39,15 @@ function List({
 }
 
 export function ReviewAnalysisModal({
-  record,
+  record: listRecord,
   onClose,
 }: {
   record: AnalyzedActivityRecord | null;
   onClose: () => void;
 }) {
+  // A listagem chega sem os campos longos; o parecer inteiro vem aqui, ao abrir.
+  const record = useFullAnalysis(listRecord);
+
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {

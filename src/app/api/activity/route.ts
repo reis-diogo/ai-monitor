@@ -17,7 +17,13 @@ export async function GET() {
     return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
   }
 
-  const repos = await getRepos();
+  let repos: Awaited<ReturnType<typeof getRepos>>;
+  try {
+    repos = await getRepos();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erro ao listar repositórios.";
+    return NextResponse.json({ authors: [], errors: [message] }, { status: 502 });
+  }
 
   const results = await Promise.allSettled(
     repos.map((repo) => fetchRepoCommits(repo.owner, repo.name))
@@ -28,7 +34,9 @@ export async function GET() {
 
   results.forEach((result, i) => {
     if (result.status === "fulfilled") {
-      commits.push(...result.value);
+      // Sem o diff: quem analisa e o servidor, que le do cache por sha. Ver
+      // getCommitDiff em lib/commit-cache.
+      commits.push(...result.value.map((commit) => ({ ...commit, diff: "" })));
     } else {
       const repo = repos[i];
       const reason =

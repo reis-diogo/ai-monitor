@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { CommitActivity, Professional, ProfessionalRole } from "@/lib/types";
 import { RoleToggle } from "@/components/RoleToggle";
@@ -23,12 +23,25 @@ async function uploadAvatarBlob(blob: Blob): Promise<{ url: string | null; error
 
 export function ProfessionalsManager({
   commits,
+  professionals: fromDashboard,
   onChange,
 }: {
   commits: CommitActivity[];
+  professionals: Professional[];
   onChange: () => void;
 }) {
-  const [professionals, setProfessionals] = useState<Professional[] | null>(null);
+  // Mesma razao do ProjectsManager: o Dashboard ja carrega a lista. O estado local so
+  // segura a edicao otimista ate o onChange devolver a lista atualizada.
+  const [optimistic, setOptimistic] = useState<Professional[] | null>(null);
+  const [lastFromDashboard, setLastFromDashboard] = useState(fromDashboard);
+
+  if (lastFromDashboard !== fromDashboard) {
+    setLastFromDashboard(fromDashboard);
+    setOptimistic(null);
+  }
+
+  const professionals = optimistic ?? fromDashboard;
+  const setProfessionals = setOptimistic;
   const [open, setOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newRole, setNewRole] = useState<ProfessionalRole>("po");
@@ -46,12 +59,6 @@ export function ProfessionalsManager({
   const [aliasError, setAliasError] = useState<string | null>(null);
   const [emailEditingFor, setEmailEditingFor] = useState<string | null>(null);
   const [emailDraft, setEmailDraft] = useState("");
-
-  useEffect(() => {
-    fetch("/api/professionals")
-      .then((res) => res.json())
-      .then((data) => setProfessionals(data.professionals));
-  }, []);
 
   function handleSetRole(
     authorName: string,

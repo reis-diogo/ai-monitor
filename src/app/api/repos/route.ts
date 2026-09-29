@@ -7,8 +7,12 @@ export async function GET() {
     return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
   }
 
-  const repos = await getRepos();
-  return NextResponse.json({ repos });
+  try {
+    return NextResponse.json({ repos: await getRepos() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erro ao listar repositórios.";
+    return NextResponse.json({ repos: [], error: message }, { status: 502 });
+  }
 }
 
 export async function POST(request: NextRequest) {

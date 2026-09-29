@@ -1,19 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { Project } from "@/lib/types";
 import { CheckIcon, ChevronIcon, CloseIcon, PencilIcon } from "@/components/icons";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export function ProjectsManager({
+  projects: fromDashboard,
   onChange,
   knownLocations = [],
 }: {
+  projects: Project[];
   onChange: () => void;
   knownLocations?: string[];
 }) {
-  const [projects, setProjects] = useState<Project[] | null>(null);
+  // O Dashboard ja carrega os projetos; buscar de novo aqui dobrava a chamada a cada
+  // ciclo. O estado local existe so para a edicao otimista sobreviver ate o onChange
+  // trazer a lista nova — quando ela chega, o local e descartado.
+  const [optimistic, setOptimistic] = useState<Project[] | null>(null);
+  const [lastFromDashboard, setLastFromDashboard] = useState(fromDashboard);
+
+  if (lastFromDashboard !== fromDashboard) {
+    setLastFromDashboard(fromDashboard);
+    setOptimistic(null);
+  }
+
+  const projects = optimistic ?? fromDashboard;
+  const setProjects = setOptimistic;
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -22,12 +36,6 @@ export function ProjectsManager({
   const [removingProject, setRemovingProject] = useState<Project | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [nameDraft, setNameDraft] = useState("");
-
-  useEffect(() => {
-    fetch("/api/projects")
-      .then((res) => res.json())
-      .then((data) => setProjects(data.projects));
-  }, []);
 
   function handleAdd(e: React.FormEvent) {
     e.preventDefault();

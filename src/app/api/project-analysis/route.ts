@@ -7,6 +7,10 @@ export async function GET() {
     return NextResponse.json({ error: "Não autorizado." }, { status: 403 });
   }
 
-  const analyses = await listProjectAnalyses();
-  return NextResponse.json({ analyses });
+  try {
+    return NextResponse.json({ analyses: await listProjectAnalyses() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erro ao listar análises de escopo.";
+    return NextResponse.json({ analyses: [], error: message }, { status: 502 });
+  }
 }
