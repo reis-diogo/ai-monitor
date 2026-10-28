@@ -13,6 +13,7 @@ const isPublicRoute = createRouteMatcher([
   // handler resolve o token e, na ausencia dele, ainda exige isAllowedUser.
   "/api/architect/queue",
   "/api/architect/jobs",
+  "/api/ai-activity/events",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
