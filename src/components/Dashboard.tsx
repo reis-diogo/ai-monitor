@@ -413,6 +413,7 @@ function useMonitorState() {
         status: task.status,
         statusColor: task.statusColor,
         assignees: task.assignees,
+        assigneeAvatars: task.assigneeAvatars,
       }));
 
     return [...commitItems, ...taskItems];

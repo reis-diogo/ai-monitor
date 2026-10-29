@@ -62,7 +62,7 @@ type ClickUpTaskResponse = {
   date_closed?: string | null;
   date_done?: string | null;
   creator: ClickUpUser;
-  assignees?: { username: string | null; email: string }[];
+  assignees?: { username: string | null; email: string; profilePicture?: string | null }[];
   folder?: { name: string };
   space?: { name: string };
   custom_fields?: ClickUpDropdownField[];
@@ -141,6 +141,11 @@ export async function fetchListTasks(listId: string): Promise<ClickUpTaskActivit
     status: task.status.status,
     statusColor: task.status.color,
     assignees: (task.assignees ?? []).map((user) => user.username ?? user.email),
+    assigneeAvatars: Object.fromEntries(
+      (task.assignees ?? []).flatMap((user) =>
+        user.profilePicture ? [[user.username ?? user.email, user.profilePicture]] : []
+      )
+    ),
   }));
 }
 
@@ -157,6 +162,10 @@ export async function uploadTaskAttachment(taskId: string, file: Blob, filename:
   const form = new FormData();
   form.append("attachment", file, filename);
   await clickupFetch(`/task/${taskId}/attachment`, { method: "POST", body: form });
+}
+
+export async function deleteTask(taskId: string): Promise<void> {
+  await clickupFetch(`/task/${taskId}`, { method: "DELETE" });
 }
 
 export async function updateTaskStatus(taskId: string, status: string): Promise<void> {
@@ -258,6 +267,13 @@ export async function fetchTaskContent(
   }
 }
 
+
+export async function fetchListWebUrl(listId: string): Promise<string> {
+  const data = (await clickupFetch("/team")) as { teams?: { id: string }[] };
+  const teamId = data.teams?.[0]?.id;
+  if (!teamId) throw new Error("Workspace do ClickUp não encontrado.");
+  return `https://app.clickup.com/${teamId}/v/li/${listId}`;
+}
 
 type ClickUpTeamMember = { user: { id: number; email?: string | null } };
 

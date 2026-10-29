@@ -36,12 +36,17 @@ export function CardDetailModal({
   description,
   onClose,
   onDecided,
+  onDeleted,
 }: {
   card: MonitorCard | null;
   description: string;
   onClose: () => void;
   onDecided: (id: string, status: string) => void;
+  onDeleted: (id: string) => void;
 }) {
+  const [deleteStep, setDeleteStep] = useState<
+    "idle" | "confirm" | "deleting" | "error"
+  >("idle");
   const [decided, setDecided] = useState<string | null>(null);
   const [choice, setChoice] = useState<"approve" | "reject" | "revise" | null>(
     null,
@@ -265,6 +270,22 @@ export function CardDetailModal({
     setQaResultState("idle");
   }
 
+  async function deleteCard() {
+    if (!card || deleteStep === "deleting") return;
+    setDeleteStep("deleting");
+    try {
+      const res = await fetch(
+        `/api/clickup/tasks/${encodeURIComponent(card.id)}`,
+        { method: "DELETE" },
+      );
+      if (!res.ok) throw new Error("erro");
+      onDeleted(card.id);
+      onClose();
+    } catch {
+      setDeleteStep("error");
+    }
+  }
+
   async function advanceToQa() {
     if (!card || qaState === "saving") return;
     setQaState("saving");
@@ -288,9 +309,24 @@ export function CardDetailModal({
     if (!card || devState === "loading") return;
     setDevState("loading");
     try {
-      const res = await fetch(`/api/analysis/${encodeURIComponent(card.id)}`);
+      const res = await fetch("/api/architect/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "dev",
+          project: card.project,
+          cards: [
+            {
+              id: card.id,
+              customId: card.customId,
+              title: card.title,
+              content: description,
+            },
+          ],
+        }),
+      });
       const data = await res.json();
-      const prompt = data?.analysis?.architecturePayload?.devPrompt;
+      const prompt = data?.prompt;
       if (!res.ok || typeof prompt !== "string" || !prompt.trim())
         throw new Error("sem prompt");
       await navigator.clipboard.writeText(prompt);
@@ -818,6 +854,38 @@ export function CardDetailModal({
               <Icon name="open_in_new" size={16} />
               Abrir no ClickUp
             </a>
+            <button
+              type="button"
+              onClick={() =>
+                deleteStep === "confirm"
+                  ? deleteCard()
+                  : setDeleteStep("confirm")
+              }
+              onBlur={() =>
+                setDeleteStep((step) => (step === "confirm" ? "idle" : step))
+              }
+              disabled={deleteStep === "deleting"}
+              className={`flex h-10 shrink-0 items-center justify-center gap-2 rounded-[10px] border text-sm font-semibold transition-colors disabled:opacity-60 ${
+                deleteStep === "confirm" || deleteStep === "error"
+                  ? "border-destructive bg-destructive/15 text-destructive"
+                  : "border-line-input text-muted-foreground hover:border-destructive hover:text-destructive"
+              }`}
+            >
+              <Icon
+                name={
+                  deleteStep === "deleting" ? "progress_activity" : "delete"
+                }
+                size={16}
+                className={
+                  deleteStep === "deleting" ? "animate-spin" : undefined
+                }
+              />
+              {deleteStep === "confirm"
+                ? "Clique de novo para apagar no ClickUp"
+                : deleteStep === "error"
+                  ? "Não foi possível apagar (só o admin apaga)"
+                  : "Apagar card"}
+            </button>
           </motion.div>
         </motion.div>
       )}
