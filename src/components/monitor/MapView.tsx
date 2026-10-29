@@ -154,6 +154,7 @@ export function MapView() {
   const [cam, setCam] = useState<Cam>({ tx: 40, ty: 80, z: 0.3 });
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [anim, setAnim] = useState(false);
+  const [refreshingProject, setRefreshingProject] = useState<string | null>(null);
   const [detailCard, setDetailCard] = useState<MonitorCard | null>(null);
   const [dragging, setDragging] = useState(false);
   const [query, setQuery] = useState("");
@@ -585,6 +586,16 @@ export function MapView() {
     };
   }
 
+  async function refreshCards(projectName: string) {
+    if (refreshingProject) return;
+    setRefreshingProject(projectName);
+    try {
+      await fetchClickupTasks();
+    } finally {
+      setRefreshingProject(null);
+    }
+  }
+
   function runSearch() {
     const q = query.trim().toLowerCase();
     if (!q) return;
@@ -790,14 +801,7 @@ export function MapView() {
                         <span className="text-sm font-semibold" style={{ color: health.color }}>
                           {health.label}
                         </span>
-                        {percent !== null && (
-                          <span className="ml-auto whitespace-nowrap text-[64px] font-bold leading-none tracking-[-0.03em]">
-                            {percent}%
-                          </span>
-                        )}
-                        <span
-                          className={`whitespace-nowrap text-[15px] text-muted-foreground ${percent === null ? "ml-auto" : "ml-4"}`}
-                        >
+                        <span className="ml-auto whitespace-nowrap text-[15px] text-muted-foreground">
                           <span className="font-bold text-foreground">{project.pending}</span> pendentes
                         </span>
                         {delivery.get(project.name) && (
@@ -811,6 +815,23 @@ export function MapView() {
                             entrega média ({delivery.get(project.name)!.count})
                           </span>
                         )}
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            refreshCards(project.name);
+                          }}
+                          disabled={refreshingProject === project.name}
+                          aria-label={`Atualizar os cards de ${project.name}`}
+                          title="Atualizar os cards deste projeto"
+                          className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-line-input text-muted-foreground transition-colors hover:border-primary hover:text-foreground disabled:opacity-60"
+                        >
+                          <Icon
+                            name="refresh"
+                            size={16}
+                            className={refreshingProject === project.name ? "animate-spin" : undefined}
+                          />
+                        </button>
                       </div>
                       <div className="flex flex-wrap gap-2.5">
                         {STAGES.map((label, stage) => (
