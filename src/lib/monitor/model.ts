@@ -48,6 +48,8 @@ export type MonitorCard = {
   title: string;
   owner: string;
   assignees: string[];
+  assigneeAvatars: Record<string, string>;
+  ownerAvatarUrl: string | null;
   url: string;
   project: string;
   status: string;
@@ -76,6 +78,8 @@ export function buildCards(items: ActivityItem[], dwell: DwellLookup, now: numbe
       title: item.title,
       owner: item.authorName,
       assignees: item.assignees ?? [],
+      assigneeAvatars: item.assigneeAvatars ?? {},
+      ownerAvatarUrl: item.authorAvatarUrl,
       url: item.url,
       project: item.location,
       status: item.status.toLowerCase(),

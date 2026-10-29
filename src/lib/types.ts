@@ -58,6 +58,7 @@ export type ClickUpTaskActivity = {
   status: string;
   statusColor: string;
   assignees: string[];
+  assigneeAvatars: Record<string, string>;
 };
 
 export type ProjectStatusCount = {
@@ -104,6 +105,7 @@ export type ActivityItem = {
   status: string | null;
   statusColor: string | null;
   assignees?: string[];
+  assigneeAvatars?: Record<string, string>;
 };
 
 export type CommitAnalysis = {
