@@ -55,6 +55,8 @@ export function ActivityTable({
   onProjectFilterChange,
   canEditPrompts,
   onOpenPrompts,
+  initialRoleFilter = [],
+  initialStatusFilter = [],
 }: {
   items: ActivityItem[];
   allItems: ActivityItem[];
@@ -78,6 +80,8 @@ export function ActivityTable({
   onProjectFilterChange: (projects: string[]) => void;
   canEditPrompts: boolean;
   onOpenPrompts: () => void;
+  initialRoleFilter?: ActivitySource[];
+  initialStatusFilter?: string[];
 }) {
   const [selected, setSelected] = useState<AnalyzedActivityRecord | null>(null);
   const [selectedDifficulty, setSelectedDifficulty] = useState<AnalyzedActivityRecord | null>(null);
@@ -90,8 +94,8 @@ export function ActivityTable({
     null
   );
   const [authorFilter, setAuthorFilter] = useState<string[]>([]);
-  const [roleFilter, setRoleFilter] = useState<ActivitySource[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [roleFilter, setRoleFilter] = useState<ActivitySource[]>(initialRoleFilter);
+  const [statusFilter, setStatusFilter] = useState<string[]>(initialStatusFilter);
 
   const analyzedMap = useMemo(() => {
     const map = new Map<string, AnalyzedActivityRecord>();

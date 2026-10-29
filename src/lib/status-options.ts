@@ -19,7 +19,7 @@ const STATUS_COLORS: Record<string, string> = {
   "refinar arquiteto": "oklch(0.72 0.13 235)",
   "dev liberado": "oklch(0.72 0.13 155)",
   "dev finalizado": "oklch(0.72 0.13 185)",
-  "revisar dev": "oklch(0.72 0.13 55)",
+  "validar solução": "oklch(0.72 0.13 120)",
   "em qa": "oklch(0.72 0.13 85)",
   bug: "oklch(0.72 0.17 25)",
   [PR_PENDING_STATUS]: "oklch(0.72 0.13 265)",

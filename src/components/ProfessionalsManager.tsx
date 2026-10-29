@@ -70,6 +70,7 @@ export function ProfessionalsManager({
     const optimisticProfessional: Professional = {
       authorName,
       role,
+      isArchitect: existing?.isArchitect,
       aliases: existing?.aliases,
       clickupEmail: extra?.clickupEmail ?? existing?.clickupEmail,
       avatarUrl: extra?.avatarUrl ?? existing?.avatarUrl,
@@ -96,6 +97,32 @@ export function ProfessionalsManager({
       .catch((err) => {
         setProfessionals(previous);
         setAvatarError(err instanceof Error ? err.message : "Erro ao salvar profissional.");
+      });
+  }
+
+  function handleToggleArchitect(authorName: string, isArchitect: boolean) {
+    const previous = professionals;
+    const existing = professionals?.find((p) => p.authorName === authorName);
+    if (!existing) return;
+
+    setProfessionals((list) =>
+      (list ?? []).map((p) => (p.authorName === authorName ? { ...p, isArchitect } : p))
+    );
+
+    fetch("/api/professionals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ authorName, role: existing.role, isArchitect }),
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Erro ao salvar arquiteto.");
+        setProfessionals(data.professionals);
+        onChange();
+      })
+      .catch((err) => {
+        setProfessionals(previous);
+        setAvatarError(err instanceof Error ? err.message : "Erro ao salvar arquiteto.");
       });
   }
 
@@ -406,7 +433,7 @@ export function ProfessionalsManager({
                             </span>
                           )}
                         </span>
-                        {professional?.role === "po" &&
+                        {(professional?.role === "po" || professional?.isArchitect) &&
                           (emailEditingFor === person.name ? (
                             <div className="flex items-center gap-1">
                               <input
@@ -446,6 +473,27 @@ export function ProfessionalsManager({
                           className="text-[11px] text-muted-foreground/60 hover:text-muted-foreground"
                         >
                           apelidos{professional?.aliases?.length ? ` (${professional.aliases.length})` : ""}
+                        </button>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={!!professional?.isArchitect}
+                          disabled={!professional}
+                          onClick={() =>
+                            professional && handleToggleArchitect(person.name, !professional.isArchitect)
+                          }
+                          title={
+                            professional
+                              ? "Arquiteto aprova ou reprova soluções"
+                              : "Classifique como dev ou PO antes"
+                          }
+                          className={`rounded-md border px-1.5 py-0.5 text-[11px] transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                            professional?.isArchitect
+                              ? "border-primary/50 bg-primary/15 text-primary"
+                              : "border-border text-muted-foreground/60 hover:text-muted-foreground"
+                          }`}
+                        >
+                          arquiteto
                         </button>
                         <RoleToggle
                           groupId={person.name}

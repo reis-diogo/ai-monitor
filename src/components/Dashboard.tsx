@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { UserButton, useUser } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
+import type { FlowLogEntry } from "@/components/FlowLog";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type {
   ActivityItem,
   AiProvider,
@@ -11,26 +11,15 @@ import type {
   AuthorActivity,
   ClickUpStatusOption,
   StatusDwell,
+  StatusEvent,
+  ProjectProgress,
   ClickUpTaskActivity,
   Professional,
   Project,
   PullRequestInfo,
 } from "@/lib/types";
-import { RepoManager } from "@/components/RepoManager";
-import { FlowLog, type FlowLogEntry } from "@/components/FlowLog";
-import { PromptEditorModal } from "@/components/PromptEditorModal";
-import {
-  CardsOpenedChart,
-  type ActivityDayDatum,
-  type PersonCount,
-} from "@/components/CardsOpenedChart";
+import type { ActivityDayDatum, PersonCount } from "@/components/CardsOpenedChart";
 import type { ChartConfig } from "@/components/ui/chart";
-import { ProviderToggle } from "@/components/ProviderToggle";
-import { ActivityTable } from "@/components/ActivityTable";
-import { ProfessionalsManager } from "@/components/ProfessionalsManager";
-import { ProjectsManager } from "@/components/ProjectsManager";
-import { StatusDwellChart } from "@/components/StatusDwellChart";
-import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { projectColor } from "@/lib/project-color";
 import { normalizeLocation } from "@/lib/normalize-location";
 import { resolveAuthorName } from "@/lib/normalize-author";
@@ -40,14 +29,13 @@ import { truncate } from "@/lib/truncate";
 const RELATIVE_TIME_TICK_MS = 30_000;
 const STATUS_SYNC_INTERVAL_MS = 120_000;
 const PROVIDER_STORAGE_KEY = "getnow:ai-provider";
-const AUTO_ANALYZE_INTERVAL_MS = 30_000;
 const AUTO_ANALYZE_STATUS = "para desenvolver";
 const PR_MONITOR_INTERVAL_MS = 30_000;
 const CLICKUP_ID_REGEX = /CLICKUP-\d+/i;
 const QA_STATUS = "em qa";
 // Status que o gate do revisor controla: o monitor de PR nao pode arrastar o card
 // para QA por cima deles, senao a entrega chega em QA sem ninguem ter conferido.
-const REVIEW_OWNED_STATUSES = ["dev finalizado", "revisar dev"];
+const REVIEW_OWNED_STATUSES = ["em qa", "validar solução"];
 const DIFFICULTY_INTERVAL_MS = 30_000;
 // Desligada: a arquitetura passou a ser delegada para a IA local do usuario
 // (botao "arquitetar N local" em cada projeto). Volte para true para gastar
@@ -58,7 +46,7 @@ const ARCHITECT_MAX_BACKOFF_MS = 900_000;
 
 type Status = "loading" | "ready" | "error";
 
-export function Dashboard() {
+function useMonitorState() {
   const [authors, setAuthors] = useState<AuthorActivity[] | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [status, setStatus] = useState<Status>("loading");
@@ -112,6 +100,26 @@ export function Dashboard() {
 
   const [statusDwell, setStatusDwell] = useState<StatusDwell[]>([]);
   const [seedingDwell, setSeedingDwell] = useState(false);
+  const [statusEvents, setStatusEvents] = useState<StatusEvent[]>([]);
+  const [projectProgress, setProjectProgress] = useState<ProjectProgress[]>([]);
+
+  const fetchProjectProgress = useCallback(async () => {
+    try {
+      const res = await fetch("/api/clickup/progress");
+      if (!res.ok) return;
+      const data = await res.json();
+      setProjectProgress(data.progress ?? []);
+    } catch {}
+  }, []);
+
+  const fetchStatusEvents = useCallback(async () => {
+    try {
+      const res = await fetch("/api/clickup/feed");
+      if (!res.ok) return;
+      const data = await res.json();
+      setStatusEvents(data.events ?? []);
+    } catch {}
+  }, []);
 
   const fetchStatusDwell = useCallback(async () => {
     try {
@@ -211,6 +219,8 @@ export function Dashboard() {
     fetchProfessionals();
     fetchClickupTasks();
     fetchStatusDwell();
+    fetchStatusEvents();
+    fetchProjectProgress();
     fetchClickupStatuses();
     fetchProjects();
     fetchPendingPullRequests();
@@ -220,6 +230,8 @@ export function Dashboard() {
     fetchProfessionals,
     fetchClickupTasks,
     fetchStatusDwell,
+    fetchStatusEvents,
+    fetchProjectProgress,
     fetchClickupStatuses,
     fetchProjects,
     fetchPendingPullRequests,
@@ -294,6 +306,8 @@ export function Dashboard() {
         fetchProfessionals(),
         fetchClickupTasks(),
         fetchStatusDwell(),
+        fetchStatusEvents(),
+        fetchProjectProgress(),
         fetchClickupStatuses(),
         fetchProjects(),
         fetchPendingPullRequests(),
@@ -308,6 +322,8 @@ export function Dashboard() {
     fetchProfessionals,
     fetchClickupTasks,
     fetchStatusDwell,
+    fetchStatusEvents,
+    fetchProjectProgress,
     fetchClickupStatuses,
     fetchProjects,
     fetchPendingPullRequests,
@@ -396,6 +412,7 @@ export function Dashboard() {
         deletions: null,
         status: task.status,
         statusColor: task.statusColor,
+        assignees: task.assignees,
       }));
 
     return [...commitItems, ...taskItems];
@@ -446,109 +463,6 @@ export function Dashboard() {
           ? parts[0].slice(0, 2).toUpperCase()
           : "··";
   }, [user]);
-
-  useEffect(() => {
-    let cancelled = false;
-    let timeoutId: ReturnType<typeof setTimeout>;
-    const visitedIds = new Set<string>();
-
-    function startEntry(description: string): string {
-      const id = `${Date.now()}-${Math.random()}`;
-      setFlowLog((prev) =>
-        [
-          ...prev,
-          {
-            id,
-            startedAt: Date.now(),
-            agent: "Analisador de IA",
-            description,
-            actorInitials: actorInitialsRef.current,
-            status: "running" as const,
-          },
-        ].slice(-60)
-      );
-      return id;
-    }
-
-    function finishEntry(
-      id: string,
-      patch: { status: "ok" | "error"; description?: string; metric?: string }
-    ) {
-      setFlowLog((prev) =>
-        prev.map((entry) => (entry.id === id ? { ...entry, ...patch, finishedAt: Date.now() } : entry))
-      );
-    }
-
-    async function tick() {
-      if (cancelled) return;
-
-      const activeProvider = providerRef.current;
-      const analyzedIds = new Set(
-        analyzedActivitiesRef.current
-          .filter((record) => record.provider === activeProvider)
-          .map((record) => record.id)
-      );
-      const pendingItems = activityItemsRef.current.filter(
-        (item) =>
-          (item.source === "clickup" && item.status?.toLowerCase() === AUTO_ANALYZE_STATUS) ||
-          !analyzedIds.has(item.id)
-      );
-
-      const pendingIds = new Set(pendingItems.map((item) => item.id));
-      for (const id of visitedIds) {
-        if (!pendingIds.has(id)) visitedIds.delete(id);
-      }
-
-      const candidate = pendingItems.find((item) => !visitedIds.has(item.id));
-
-      if (candidate) {
-        const label = candidate.customId ?? candidate.id.slice(0, 7);
-        const entryId = startEntry(`Analisando ${label} - "${truncate(candidate.title, 60)}"`);
-
-        try {
-          const data = await analyzeActivityItemRef.current(candidate, activeProvider);
-          visitedIds.add(candidate.id);
-          const metric = `${data.analysis.score}/10`;
-
-          if (data.clickupStatusUpdate && data.analysis.score < 7) {
-            finishEntry(entryId, {
-              status: "ok",
-              description: `${label}: nota abaixo do limite — comentário adicionado e status alterado para "${data.clickupStatusUpdate}"`,
-              metric,
-            });
-          } else if (data.clickupStatusUpdate) {
-            finishEntry(entryId, {
-              status: "ok",
-              description: `${label}: nota dentro do esperado — status alterado para "${data.clickupStatusUpdate}"`,
-              metric,
-            });
-          } else {
-            finishEntry(entryId, {
-              status: "ok",
-              description: `${label}: nota registrada, nenhuma alteração de status necessária`,
-              metric,
-            });
-          }
-        } catch (err) {
-          console.warn("Falha na análise automática (será tentada novamente):", err);
-          finishEntry(entryId, {
-            status: "error",
-            description: `falha ao analisar ${label}: ${err instanceof Error ? err.message : "erro desconhecido"}`,
-          });
-        }
-      }
-
-      if (!cancelled) {
-        timeoutId = setTimeout(tick, AUTO_ANALYZE_INTERVAL_MS);
-      }
-    }
-
-    timeoutId = setTimeout(tick, AUTO_ANALYZE_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      clearTimeout(timeoutId);
-    };
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -1051,183 +965,94 @@ export function Dashboard() {
   }, [activityItems, dateRange]);
 
 
-  return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-16">
-      <motion.header
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-border bg-card px-6 py-8 sm:flex-row sm:items-start sm:justify-between sm:px-8"
-      >
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -left-24 -top-32 h-96 w-96 rounded-full bg-primary opacity-20 blur-3xl" />
-          <div className="absolute left-1/3 top-1/2 h-72 w-72 -translate-y-1/2 rounded-full bg-primary opacity-10 blur-3xl" />
-          <div className="absolute -bottom-32 right-0 h-96 w-96 rounded-full bg-primary opacity-10 blur-3xl" />
-        </div>
-
-        <div className="relative flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold text-foreground">Weenow 360</h1>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <StatusDot status={status} />
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.span
-                key={status}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                {status === "loading" && "sincronizando atividade..."}
-                {status === "ready" && "atividade sincronizada"}
-                {status === "error" && "erro ao sincronizar atividade"}
-              </motion.span>
-            </AnimatePresence>
-          </div>
-
-
-        </div>
-
-        <div className="relative flex flex-col items-end gap-2">
-          <div className="flex items-center gap-2">
-            <ProviderToggle value={provider} onChange={handleProviderChange} />
-            <UserButton />
-          </div>
-
-        </div>
-      </motion.header>
-
-      <PromptEditorModal open={promptEditorOpen} onClose={() => setPromptEditorOpen(false)} />
-
-      <FlowLog
-        entries={flowLog}
-        pendingCount={pendingDevelopmentCount}
-        doneLastHour={doneLastHour}
-      />
-
-      <motion.div
-        initial={{ opacity: 0, y: -6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.05 }}
-      >
-        <DateRangeFilter value={datePreset} onChange={setDatePreset} />
-      </motion.div>
-
-      <AnimatePresence>
-        {errors.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-2 text-xs text-red-700 dark:text-red-300"
-          >
-            {errors.join(" · ")}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence mode="wait">
-        {authors === null ? (
-          <motion.p
-            key="loading"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="text-sm text-muted-foreground/60"
-          >
-            carregando atividade...
-          </motion.p>
-        ) : filteredActivityItems.length === 0 ? (
-          <motion.p
-            key="empty"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="text-sm text-muted-foreground/60"
-          >
-            {activityItems.length === 0
-              ? "Nenhuma atividade encontrada. Cadastre um repositório abaixo."
-              : "Nenhuma atividade no período selecionado."}
-          </motion.p>
-        ) : (
-          <motion.div key="content" className="flex flex-col gap-8">
-            <ActivityTable
-              items={filteredActivityItems}
-              allItems={activityItems}
-              provider={provider}
-              analyzedActivities={filteredAnalyzedActivities}
-              projects={projects}
-              projectAnalyses={projectAnalyses}
-              pendingPrsByProject={pendingPrsByProject}
-              clickupStatuses={clickupStatuses}
-              dwellMap={dwellMap}
-              now={nowTick}
-              onActivityAnalyzed={fetchAnalyzed}
-              onProjectAnalyzed={fetchProjectAnalyses}
-              onTaskStatusUpdate={updateClickupTaskStatus}
-              onSyncStatuses={syncClickupStatuses}
-              syncingStatuses={syncingStatuses}
-              lastSyncedAt={lastSync}
-              projectNames={projectNames}
-              projectFilter={projectFilter}
-              projectCounts={projectCounts}
-              onProjectFilterChange={setProjectFilter}
-              canEditPrompts={canEditPrompts}
-              onOpenPrompts={() => setPromptEditorOpen(true)}
-            />
-
-            <StatusDwellChart
-              items={filteredActivityItems}
-              dwellMap={dwellMap}
-              onSeed={seedStatusDwell}
-              seeding={seedingDwell}
-              now={nowTick}
-            />
-
-            <CardsOpenedChart data={activityByDay.data} config={activityByDay.config} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <ProfessionalsManager
-        commits={allCommits}
-        professionals={professionals}
-        onChange={fetchProfessionals}
-      />
-
-      <ProjectsManager
-        projects={projects}
-        onChange={fetchProjects}
-        knownLocations={knownLocations}
-      />
-
-      <RepoManager onRepoChange={fetchActivity} />
-    </div>
-  );
+  return {
+    authors,
+    setAuthors,
+    errors,
+    setErrors,
+    status,
+    setStatus,
+    lastSync,
+    setLastSync,
+    provider,
+    setProvider,
+    analyzedActivities,
+    setAnalyzedActivities,
+    projectAnalyses,
+    setProjectAnalyses,
+    professionals,
+    setProfessionals,
+    clickupTasks,
+    setClickupTasks,
+    clickupStatuses,
+    setClickupStatuses,
+    projects,
+    setProjects,
+    datePreset,
+    setDatePreset,
+    projectFilter,
+    setProjectFilter,
+    repoPullRequests,
+    setRepoPullRequests,
+    flowLog,
+    setFlowLog,
+    canEditPrompts,
+    setCanEditPrompts,
+    promptEditorOpen,
+    setPromptEditorOpen,
+    user,
+    fetchProjects,
+    fetchAnalyzed,
+    fetchProjectAnalyses,
+    fetchPendingPullRequests,
+    fetchProfessionals,
+    statusDwell,
+    setStatusDwell,
+    statusEvents,
+    projectProgress,
+    seedingDwell,
+    setSeedingDwell,
+    fetchStatusDwell,
+    seedStatusDwell,
+    fetchClickupTasks,
+    fetchClickupStatuses,
+    updateClickupTaskStatus,
+    analyzeActivityItem,
+    handleProviderChange,
+    fetchActivity,
+    nowTick,
+    setNowTick,
+    syncingStatuses,
+    setSyncingStatuses,
+    syncClickupStatuses,
+    dwellMap,
+    allCommits,
+    knownLocations,
+    activityItems,
+    pendingDevelopmentCount,
+    doneLastHour,
+    projectNames,
+    pendingPrsByProject,
+    dateRange,
+    filteredActivityItems,
+    resolvedAnalyzedActivities,
+    filteredAnalyzedActivities,
+    activityByDay,
+    projectCounts,
+  };
 }
 
-function StatusDot({ status }: { status: Status }) {
-  const color = status === "ready" ? "#22c55e" : status === "error" ? "#ef4444" : "#eab308";
+export type MonitorValue = ReturnType<typeof useMonitorState>;
 
-  return (
-    <span className="relative flex h-2 w-2 items-center justify-center">
-      {status !== "error" && (
-        <motion.span
-          className="absolute h-2 w-2 rounded-full"
-          style={{ backgroundColor: color }}
-          animate={{ scale: [1, 1, 2.6], opacity: [0, 0.6, 0] }}
-          transition={{
-            repeat: Infinity,
-            duration: status === "loading" ? 1 : 1.8,
-            times: [0, 0.15, 1],
-            ease: "easeOut",
-          }}
-        />
-      )}
-      <motion.span
-        className="relative h-1.5 w-1.5 rounded-full"
-        animate={{ backgroundColor: color }}
-        transition={{ duration: 0.2 }}
-      />
-    </span>
-  );
+const MonitorContext = createContext<MonitorValue | null>(null);
+
+export function MonitorProvider({ children }: { children: React.ReactNode }) {
+  const value = useMonitorState();
+  return <MonitorContext.Provider value={value}>{children}</MonitorContext.Provider>;
+}
+
+export function useMonitor(): MonitorValue {
+  const value = useContext(MonitorContext);
+  if (!value) throw new Error("useMonitor fora do MonitorProvider");
+  return value;
 }

@@ -5,11 +5,12 @@ import {
   deleteChecklistsNamed,
   updateTaskStatus,
 } from "@/lib/clickup";
+import { VALIDATE_STATUS } from "@/lib/architect-gate";
 import type { AiProvider, AnalyzedActivityRecord, ReviewPayload } from "@/lib/types";
 
-export const REVIEW_QUEUE_STATUS = "dev finalizado";
+export const REVIEW_QUEUE_STATUS = "em qa";
 export const REVIEW_APPROVED_STATUS = "em qa";
-export const REVIEW_REJECTED_STATUS = "revisar dev";
+export const REVIEW_REJECTED_STATUS = VALIDATE_STATUS;
 export const REVIEW_THRESHOLD = 7;
 
 const CHECKLIST_NAME = "Pendências de revisão";
@@ -67,7 +68,7 @@ export async function applyReviewResult(params: {
   let statusError: string | null = null;
 
   // O status vem primeiro e num try proprio: se o checklist falhar, o card ainda
-  // precisa sair de "dev finalizado" — caso contrario a revisao fica gravada com
+  // precisa sair de "em qa" — caso contrario a revisao fica gravada com
   // a nota enquanto o card aparenta nunca ter sido revisado.
   try {
     await updateTaskStatus(params.activityId, targetStatus);

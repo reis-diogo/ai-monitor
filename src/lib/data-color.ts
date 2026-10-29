@@ -23,7 +23,7 @@ export function dataSurface(color: string, percent: number): string {
 
 // Dois niveis de enfase. Status que pede acao de alguem chama mais; o resto informa.
 // Sem isso, "1 bug" e "19 dev liberado" gritam no mesmo volume.
-const ACTION_STATUSES = new Set(["bug", "refinar po", "revisar dev", "impedido"]);
+const ACTION_STATUSES = new Set(["bug", "refinar po", "validar solução", "impedido"]);
 
 export function statusEmphasis(value: string): "action" | "info" {
   return ACTION_STATUSES.has(value.toLowerCase()) ? "action" : "info";

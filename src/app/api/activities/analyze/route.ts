@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeActivity } from "@/lib/ai";
 import { getCachedAnalysis, setCachedAnalysis } from "@/lib/analysis-cache";
-import { getCurrentUserEmail, isAllowedUser } from "@/lib/require-allowed-user";
-import { createTaskComment, updateTaskStatus } from "@/lib/clickup";
+import { isAllowedUser } from "@/lib/require-allowed-user";
 import type { ActivitySource, AiProvider, AnalyzedActivityRecord } from "@/lib/types";
 import { getCommitDiff } from "@/lib/commit-cache";
-
-const LOW_SCORE_THRESHOLD = 7;
-const PENDING_DEV_STATUS = "para desenvolver";
-const REFINE_STATUS = "refinar po";
-// Aprovado na qualidade o card nao vai direto para desenvolvimento: passa pelo
-// crivo do arquiteto, que decide entre "dev liberado" e "refinar po".
-const ARCHITECT_QUEUE_STATUS = "refinar arquiteto";
 
 function parseProvider(value: unknown): AiProvider {
   if (value === "openai" || value === "gemini") return value;
@@ -28,19 +20,6 @@ function str(value: unknown, fallback = ""): string {
 
 function numOrNull(value: unknown): number | null {
   return typeof value === "number" ? value : null;
-}
-
-async function flagLowScoreClickupTask(
-  record: AnalyzedActivityRecord,
-  mentionUserId: number | null,
-  performedByEmail: string | null
-) {
-  const registeredBy = performedByEmail ? `\n\nRegistrado por: ${performedByEmail}` : "";
-  const comment = `Análise de IA (${record.score}/10): ${record.critique}${registeredBy}`;
-  await Promise.all([
-    createTaskComment(record.id, comment, mentionUserId),
-    updateTaskStatus(record.id, REFINE_STATUS),
-  ]);
 }
 
 export async function POST(request: NextRequest) {
@@ -109,28 +88,7 @@ export async function POST(request: NextRequest) {
       reviewPayload: previous?.reviewPayload ?? null,
     });
 
-    let clickupStatusUpdate: string | null = null;
-    if (source === "clickup" && str(body?.status).toLowerCase() === PENDING_DEV_STATUS) {
-      if (record.score < LOW_SCORE_THRESHOLD) {
-        const mentionUserId = typeof body?.authorClickupId === "number" ? body.authorClickupId : null;
-        try {
-          const performedByEmail = await getCurrentUserEmail();
-          await flagLowScoreClickupTask(record, mentionUserId, performedByEmail);
-          clickupStatusUpdate = REFINE_STATUS;
-        } catch (clickupError) {
-          console.error("Erro ao sinalizar tarefa no ClickUp:", clickupError);
-        }
-      } else {
-        try {
-          await updateTaskStatus(record.id, ARCHITECT_QUEUE_STATUS);
-          clickupStatusUpdate = ARCHITECT_QUEUE_STATUS;
-        } catch (clickupError) {
-          console.error("Erro ao liberar tarefa no ClickUp:", clickupError);
-        }
-      }
-    }
-
-    return NextResponse.json({ analysis: record, cached: false, clickupStatusUpdate });
+    return NextResponse.json({ analysis: record, cached: false });
   } catch (error) {
     const messageText = error instanceof Error ? error.message : "Erro ao analisar atividade.";
     return NextResponse.json({ error: messageText }, { status: 502 });

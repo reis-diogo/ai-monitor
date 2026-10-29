@@ -4,7 +4,7 @@ import type { AiProvider } from "@/lib/types";
 
 const JOB_TTL_MS = 12 * 60 * 60 * 1000;
 
-export type LocalJobKind = "architect" | "review" | "dev";
+export type LocalJobKind = "architect" | "review" | "dev" | "po" | "revisao";
 
 export type LocalJob = {
   id: string;
