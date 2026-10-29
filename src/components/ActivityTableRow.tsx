@@ -23,7 +23,7 @@ import { dataColor } from "@/lib/data-color";
 
 const ARCHITECT_QUEUE_STATUS = "refinar arquiteto";
 const DEV_RELEASED_STATUS = "dev liberado";
-const REVIEW_QUEUE_STATUS = "dev finalizado";
+const REVIEW_QUEUE_STATUS = "em qa";
 
 type Status = "idle" | "loading" | "error";
 

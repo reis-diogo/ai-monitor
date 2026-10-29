@@ -35,7 +35,7 @@ const CLICKUP_ID_REGEX = /CLICKUP-\d+/i;
 const QA_STATUS = "em qa";
 // Status que o gate do revisor controla: o monitor de PR nao pode arrastar o card
 // para QA por cima deles, senao a entrega chega em QA sem ninguem ter conferido.
-const REVIEW_OWNED_STATUSES = ["dev finalizado", "validar solução"];
+const REVIEW_OWNED_STATUSES = ["em qa", "validar solução"];
 const DIFFICULTY_INTERVAL_MS = 30_000;
 // Desligada: a arquitetura passou a ser delegada para a IA local do usuario
 // (botao "arquitetar N local" em cada projeto). Volte para true para gastar

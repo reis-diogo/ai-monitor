@@ -34,7 +34,7 @@ const SKILL_OPTIONS: {
     command: "/revisar-entrega",
     headline: "revisar entregas direto do terminal",
     blurb:
-      'lista os projetos com cards em "dev finalizado", pergunta qual você quer e confere a entrega contra a especificação do arquiteto.',
+      'lista os projetos com cards em "em qa", pergunta qual você quer e confere a entrega contra a especificação do arquiteto.',
     needsToken: true,
   },
   {

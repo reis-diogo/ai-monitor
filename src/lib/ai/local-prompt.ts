@@ -235,7 +235,7 @@ export type DevPromptCard = LocalPromptCard & {
 };
 
 // O dev nao devolve nota nenhuma: o token dele serve so para o indicador de
-// progresso. Quem move o card para "dev finalizado" continua sendo o dev, porque
+// progresso. Quem move o card para "em qa" continua sendo o dev, porque
 // esse status e a afirmacao de que a entrega foi testada — nao de que o script rodou.
 export function buildLocalDevPrompt(params: {
   card: DevPromptCard;
@@ -256,9 +256,9 @@ ${buildProgressSection({
   progressUrl: params.progressUrl,
   token: params.token,
   examples: `"escolhendo a org", "lendo os metadados", "aplicando as mudanças", "fazendo o deploy", "validando na org"`,
-  closingNote: `Aqui não existe POST de resultado: o último POST, com \`"state":"done"\`, é o que encerra a etapa — ele apaga o indicador E move o card para "dev finalizado", entregando a implementação para o revisor.
+  closingNote: `Aqui não existe POST de resultado: o último POST, com \`"state":"done"\`, é o que encerra a etapa — ele apaga o indicador E move o card para "em qa", entregando a implementação para o revisor.
 
-Por isso ele não é automático. Antes de mandá-lo, mostre ao usuário o que você aplicou e **pergunte se ele testou e confirma o encerramento**. Só dispare com a resposta dele. "dev finalizado" significa que a entrega foi testada, não que o script rodou — se você mandar sozinho, o revisor vai conferir algo que ninguém olhou.
+Por isso ele não é automático. Antes de mandá-lo, mostre ao usuário o que você aplicou e **pergunte se ele testou e confirma o encerramento**. Só dispare com a resposta dele. "em qa" significa que a entrega foi testada, não que o script rodou — se você mandar sozinho, o revisor vai conferir algo que ninguém olhou.
 
 A resposta desse POST você confere: ela pode vir com HTTP 200 e \`statusError\` preenchido, quando o ClickUp recusa a mudança de status. Nesse caso mostre a mensagem ao usuário e avise que o card continua onde estava.`,
 })}`;
