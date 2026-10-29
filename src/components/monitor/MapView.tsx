@@ -145,11 +145,11 @@ function estimateRemaining(
   const elapsed = now - new Date(startedAt).getTime();
   if (!Number.isFinite(elapsed) || elapsed < 30_000) return null;
   const minutes = Math.ceil((elapsed * ((100 - percent) / percent)) / 60_000);
-  if (minutes < 1) return "menos de 1 min";
-  if (minutes < 60) return `~${minutes} min restantes`;
+  if (minutes < 1) return "< 1 min";
+  if (minutes < 60) return `~${minutes} min`;
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
-  return rest ? `~${hours}h ${rest}min restantes` : `~${hours}h restantes`;
+  return rest ? `~${hours}h ${rest}min` : `~${hours}h`;
 }
 
 function visibleCards(project: ProjectSummary): MonitorCard[] {
@@ -196,6 +196,7 @@ export function MapView() {
   const [clickupUrl, setClickupUrl] = useState<string | null>(null);
   const progressMap = useActivityProgress();
   const [newCardOpen, setNewCardOpen] = useState(false);
+  const [newCardProject, setNewCardProject] = useState<string | null>(null);
   const [pickedColor, setPickedColor] = useState<string | null>(null);
   const lastSendRef = useRef(0);
   const { user } = useUser();
@@ -709,9 +710,11 @@ export function MapView() {
         return {
           stage: card.stage,
           node: (
-            <div className="relative pt-3">
-              <MiniLaptop label="Em desenvolvimento" />
-              <span className="absolute -right-5 top-0">{worker}</span>
+            <div className="flex w-16 flex-col items-center pt-3">
+              <div className="relative">
+                <MiniLaptop label="Em desenvolvimento" />
+                <span className="absolute -right-5 top-0">{worker}</span>
+              </div>
             </div>
           ),
         };
@@ -728,12 +731,14 @@ export function MapView() {
     return {
       stage,
       node: (
-        <div className="relative pt-3">
-          <MiniLaptop label={label} failed={signal.state === "failed"} />
-          <span className="absolute -right-5 top-0">{worker}</span>
+        <div className="flex w-16 flex-col items-center pt-3">
+          <div className="relative">
+            <MiniLaptop label={label} failed={signal.state === "failed"} />
+            <span className="absolute -right-5 top-0">{worker}</span>
+          </div>
           {signal.percent !== null && (
             <div
-              className="absolute left-1/2 top-full mt-2 flex w-[110px] -translate-x-1/2 flex-col items-center gap-1 text-center"
+              className="mt-2 flex w-full flex-col items-center gap-1 text-center"
               title={`${signal.percent}% concluído`}
             >
               <AnimatedPercent
@@ -749,7 +754,10 @@ export function MapView() {
                 />
               </span>
               {eta && (
-                <span className="whitespace-nowrap text-[10px] leading-none text-muted-foreground">
+                <span
+                  className="whitespace-nowrap text-[10px] leading-none text-muted-foreground"
+                  title="Tempo estimado até o fim"
+                >
                   {eta}
                 </span>
               )}
@@ -1035,6 +1043,19 @@ export function MapView() {
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
+                            setNewCardProject(project.name);
+                            setNewCardOpen(true);
+                          }}
+                          title={`Nova tarefa em ${project.name}`}
+                          className="flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                        >
+                          <Icon name="add" size={14} />
+                          nova tarefa
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
                             refreshCards(project.name);
                           }}
                           disabled={refreshingProject === project.name}
@@ -1223,7 +1244,10 @@ export function MapView() {
         </span>
         <button
           type="button"
-          onClick={() => setNewCardOpen((value) => !value)}
+          onClick={() => {
+            setNewCardProject(null);
+            setNewCardOpen((value) => !value);
+          }}
           aria-pressed={newCardOpen}
           className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[9px] bg-primary px-3 text-[11px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
         >
@@ -1274,6 +1298,7 @@ export function MapView() {
         open={newCardOpen}
         onClose={() => setNewCardOpen(false)}
         onCreated={fetchClickupTasks}
+        defaultProject={newCardProject}
       />
 
       <div

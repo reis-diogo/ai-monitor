@@ -14,10 +14,12 @@ export function NewCardForm({
   open,
   onClose,
   onCreated,
+  defaultProject,
 }: {
   open: boolean;
   onClose: () => void;
   onCreated: () => void;
+  defaultProject?: string | null;
 }) {
   const [options, setOptions] = useState<Option[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -39,8 +41,13 @@ export function NewCardForm({
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return;
-        setOptions(data.projects ?? []);
+        const projects: Option[] = data.projects ?? [];
+        setOptions(projects);
         setLoadError(data.error ?? null);
+        const match = defaultProject
+          ? projects.find((option) => option.name.trim().toLowerCase() === defaultProject.trim().toLowerCase())
+          : null;
+        if (match) setProjectId(match.id);
       })
       .catch(() => {
         if (!cancelled) setLoadError("Não foi possível carregar os projetos.");
@@ -50,7 +57,7 @@ export function NewCardForm({
       cancelled = true;
       clearTimeout(focus);
     };
-  }, [open]);
+  }, [open, defaultProject]);
 
   useEffect(() => {
     if (!open) return;
