@@ -2,6 +2,7 @@ import type { ArchitectPayload } from "@/lib/types";
 
 export const APPROVED_STATUS = "dev liberado";
 export const REFINE_STATUS = "refinar po";
+export const VALIDATE_STATUS = "validar solução";
 export const APPROVAL_THRESHOLD = 7;
 
 // So a nota decide. Ponto em aberto num card de nota alta e resolvido pelo proprio
@@ -18,6 +19,6 @@ export function architectureReleased(
   payload: ArchitectPayload | null | undefined
 ): boolean {
   if (score === null || score === undefined) return false;
-  if (payload?.appliedStatus) return payload.appliedStatus === APPROVED_STATUS;
+  if (payload?.appliedStatus) return payload.appliedStatus === APPROVED_STATUS || payload.appliedStatus === VALIDATE_STATUS;
   return architectureApproves(score);
 }

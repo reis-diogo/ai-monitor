@@ -14,6 +14,8 @@ type ProgressRow = {
   kind: ProgressKind;
   stage: string;
   detail: string | null;
+  percent?: number | null;
+  started_at?: string | null;
   state: string;
   updated_at: string;
 };
@@ -24,6 +26,8 @@ function toProgress(row: ProgressRow): ActivityProgress {
     kind: row.kind,
     stage: row.stage,
     detail: row.detail,
+    percent: typeof row.percent === "number" ? row.percent : null,
+    startedAt: row.started_at ?? null,
     state: row.state === "failed" ? "failed" : "running",
     updatedAt: row.updated_at,
   };
@@ -34,21 +38,43 @@ export async function recordProgress(params: {
   kind: ProgressKind;
   stage: string;
   detail: string | null;
+  percent?: number | null;
   state: "running" | "failed";
 }): Promise<void> {
-  const { error } = await getSupabase()
+  const row = {
+    activity_id: params.activityId,
+    kind: params.kind,
+    stage: params.stage.slice(0, MAX_STAGE_LENGTH),
+    detail: params.detail ? params.detail.slice(0, MAX_DETAIL_LENGTH) : null,
+    state: params.state,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data: previous } = await getSupabase()
+    .from("activity_progress")
+    .select("kind, started_at, updated_at")
+    .eq("activity_id", params.activityId)
+    .maybeSingle();
+
+  const continuing =
+    previous &&
+    previous.kind === params.kind &&
+    previous.started_at &&
+    Date.now() - new Date(previous.updated_at).getTime() < PROGRESS_TTL_MS;
+  const startedAt = continuing ? previous.started_at : row.updated_at;
+
+  let { error } = await getSupabase()
     .from("activity_progress")
     .upsert(
-      {
-        activity_id: params.activityId,
-        kind: params.kind,
-        stage: params.stage.slice(0, MAX_STAGE_LENGTH),
-        detail: params.detail ? params.detail.slice(0, MAX_DETAIL_LENGTH) : null,
-        state: params.state,
-        updated_at: new Date().toISOString(),
-      },
+      { ...row, percent: params.percent ?? null, started_at: startedAt },
       { onConflict: "activity_id" }
     );
+
+  if (error) {
+    ({ error } = await getSupabase()
+      .from("activity_progress")
+      .upsert(row, { onConflict: "activity_id" }));
+  }
 
   if (error) throw new Error(`Erro ao registrar o progresso: ${error.message}`);
 }

@@ -4,6 +4,7 @@ import type { Professional, ProfessionalRole } from "@/lib/types";
 type ProfessionalRow = {
   author_name: string;
   role: ProfessionalRole;
+  is_architect: boolean | null;
   clickup_email: string | null;
   avatar_url: string | null;
   aliases: string[];
@@ -13,6 +14,7 @@ function rowToProfessional(row: ProfessionalRow): Professional {
   return {
     authorName: row.author_name,
     role: row.role,
+    ...(row.is_architect ? { isArchitect: true } : {}),
     ...(row.clickup_email ? { clickupEmail: row.clickup_email } : {}),
     ...(row.avatar_url ? { avatarUrl: row.avatar_url } : {}),
     ...(row.aliases && row.aliases.length > 0 ? { aliases: row.aliases } : {}),
@@ -28,6 +30,7 @@ export async function getProfessionals(): Promise<Professional[]> {
 export async function upsertProfessional(params: {
   authorName: string;
   role: ProfessionalRole;
+  isArchitect?: boolean;
   clickupEmail?: string;
   avatarUrl?: string;
 }): Promise<Professional[]> {
@@ -40,6 +43,7 @@ export async function upsertProfessional(params: {
   const row = {
     author_name: params.authorName,
     role: params.role,
+    ...(params.isArchitect !== undefined ? { is_architect: params.isArchitect } : {}),
     clickup_email: params.clickupEmail ?? (existing as ProfessionalRow | null)?.clickup_email ?? null,
     avatar_url: params.avatarUrl ?? (existing as ProfessionalRow | null)?.avatar_url ?? null,
     aliases: (existing as ProfessionalRow | null)?.aliases ?? [],

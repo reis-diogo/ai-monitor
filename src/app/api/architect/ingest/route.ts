@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { applyArchitectResult, loadExistingAnalysis } from "@/lib/architect-apply";
+import { applyArchitectResult, applyPoResult, applyRevisionResult, loadExistingAnalysis } from "@/lib/architect-apply";
+import type { AnalyzedActivityRecord } from "@/lib/types";
 import { applyReviewResult, type ReviewResultInput } from "@/lib/review-apply";
 import { markLocalJobReceived, resolveLocalJob } from "@/lib/local-jobs-store";
 import { clearProgress } from "@/lib/progress-store";
 import { readJsonBody } from "@/lib/read-json-body";
 import { fetchListTasks, fetchTeamMemberIdsByEmail } from "@/lib/clickup";
 import type { ArchitectResultInput } from "@/lib/architect-apply";
+import type { ClickUpTaskActivity } from "@/lib/types";
 
 function clampScore(value: unknown): number | null {
   // Recusa em vez de arredondar: 6.6 virando 7 cruzaria o limiar de aprovacao e
@@ -56,7 +58,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const kind = body?.kind === "review" ? "review" : "architect";
+  const kind =
+    job.kind === "po" || job.kind === "revisao"
+      ? job.kind
+      : body?.kind === "review"
+        ? "review"
+        : "architect";
   if (kind !== job.kind) {
     // O lote do dev cai aqui: ele nao devolve parecer nenhum, so progresso.
     const detail =
@@ -67,7 +74,7 @@ export async function POST(request: NextRequest) {
   }
 
   const existing = await loadExistingAnalysis(job.provider, activityId);
-  if (!existing) {
+  if (!existing && kind !== "po") {
     return NextResponse.json(
       { error: "Card ainda não possui análise de qualidade registrada." },
       { status: 400 }
@@ -75,14 +82,114 @@ export async function POST(request: NextRequest) {
   }
 
   let authorClickupId: number | null = null;
+  let cardTask: ClickUpTaskActivity | null = null;
   try {
     const listId = process.env.CLICKUP_LIST_ID;
     if (listId) {
       const tasks = await fetchListTasks(listId);
-      authorClickupId = tasks.find((task) => task.id === activityId)?.authorClickupId ?? null;
+      cardTask = tasks.find((task) => task.id === activityId) ?? null;
+      authorClickupId = cardTask?.authorClickupId ?? null;
     }
   } catch {
     authorClickupId = null;
+  }
+
+  if (kind === "po") {
+    const poReasoning = typeof body?.reasoning === "string" ? body.reasoning.trim() : "";
+    const poDevPrompt = typeof body?.devPrompt === "string" ? body.devPrompt.trim() : "";
+    if (!poReasoning) {
+      return NextResponse.json({ error: "Campo 'reasoning' é obrigatório." }, { status: 400 });
+    }
+    if (!poDevPrompt) {
+      return NextResponse.json({ error: "Campo 'devPrompt' é obrigatório." }, { status: 400 });
+    }
+
+    const now = new Date().toISOString();
+    const base: AnalyzedActivityRecord = existing ?? {
+      id: activityId,
+      source: "clickup",
+      intent: cardTask?.name ?? "",
+      score: 0,
+      critique: "",
+      provider: job.provider,
+      authorName: cardTask?.authorName ?? "",
+      authorAvatarUrl: cardTask?.authorAvatarUrl ?? null,
+      title: cardTask?.name ?? "",
+      url: cardTask?.url ?? "",
+      date: cardTask?.date ?? now,
+      location: cardTask?.location ?? job.project,
+      additions: null,
+      deletions: null,
+      analyzedAt: now,
+    };
+
+    try {
+      const applied = await applyPoResult({
+        provider: job.provider,
+        activityId,
+        existing: base,
+        result: {
+          reasoning: poReasoning,
+          nativeSolution: typeof body?.nativeSolution === "string" ? body.nativeSolution : "",
+          usesCustom: body?.usesCustom === true,
+          customJustification:
+            typeof body?.customJustification === "string" ? body.customJustification : "",
+          assumptions: strings(body?.assumptions),
+          metadataFindings: strings(body?.metadataFindings),
+          docReferences: docRefs(body?.docReferences),
+          devPrompt: poDevPrompt,
+          summary: typeof body?.summary === "string" ? body.summary.trim() : "",
+          flow: strings(body?.flow),
+        },
+      });
+      await markLocalJobReceived(job.id, activityId);
+      await clearProgress(activityId);
+      return NextResponse.json({
+        ok: true,
+        appliedStatus: applied.appliedStatus,
+        statusError: applied.statusError,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao registrar o parecer.";
+      return NextResponse.json({ error: message }, { status: 502 });
+    }
+  }
+
+  if (!existing) {
+    return NextResponse.json({ error: "Card sem análise registrada." }, { status: 400 });
+  }
+
+  if (kind === "revisao") {
+    const reasoning = typeof body?.reasoning === "string" ? body.reasoning.trim() : "";
+    const devPrompt = typeof body?.devPrompt === "string" ? body.devPrompt.trim() : "";
+    if (!reasoning) {
+      return NextResponse.json({ error: "Campo 'reasoning' é obrigatório." }, { status: 400 });
+    }
+    if (!devPrompt) {
+      return NextResponse.json({ error: "Campo 'devPrompt' é obrigatório." }, { status: 400 });
+    }
+
+    try {
+      const applied = await applyRevisionResult({
+        provider: job.provider,
+        activityId,
+        existing,
+        reasoning,
+        devPrompt,
+        summary: typeof body?.summary === "string" ? body.summary.trim() : "",
+        flow: strings(body?.flow),
+      });
+      await markLocalJobReceived(job.id, activityId);
+      await clearProgress(activityId);
+      return NextResponse.json({
+        ok: true,
+        appliedStatus: applied.appliedStatus,
+        statusError: applied.statusError,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao registrar a revisão.";
+      return NextResponse.json({ error: message }, { status: 502 });
+    }
   }
 
   if (kind === "review") {

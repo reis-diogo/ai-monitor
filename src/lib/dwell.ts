@@ -3,6 +3,7 @@ export const DWELL_STATUSES = [
   "refinar arquiteto",
   "dev liberado",
   "dev finalizado",
+  "validar solução",
   "em qa",
 ] as const;
 

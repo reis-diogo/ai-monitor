@@ -3,17 +3,24 @@ import { createLocalJob, type LocalJobKind } from "@/lib/local-jobs-store";
 import {
   buildLocalArchitectPrompt,
   buildLocalDevPrompt,
+  buildLocalPoPrompt,
   buildLocalReviewPrompt,
+  buildLocalRevisionPrompt,
   type LocalPromptCard,
   type ReviewPromptCard,
 } from "@/lib/ai/local-prompt";
 import { getPromptContent } from "@/lib/prompts-store";
-import { ARCHITECT_RESEARCH_PROMPT_KEY, REVIEW_PROMPT_KEY } from "@/lib/ai/schema";
+import {
+  ARCHITECT_RESEARCH_PROMPT_KEY,
+  ARCHITECT_STRUCTURE_PROMPT_KEY,
+  REVIEW_PROMPT_KEY,
+} from "@/lib/ai/schema";
 import { getCachedAnalysis } from "@/lib/analysis-cache";
 import { fetchListTasks, fetchTaskContent } from "@/lib/clickup";
 import { resolveSkillToken } from "@/lib/skill-tokens-store";
 import { ARCHITECT_QUEUE_STATUS } from "@/lib/architect-apply";
 import { REVIEW_QUEUE_STATUS } from "@/lib/review-apply";
+import { canDecideArchitecture } from "@/lib/architect-access";
 import { getCurrentUserEmail, isAllowedUser } from "@/lib/require-allowed-user";
 import { getProfessionals } from "@/lib/professionals-store";
 import { resolveMentionEmails } from "@/lib/mention-emails";
@@ -81,7 +88,13 @@ export async function POST(request: NextRequest) {
   const provider = parseProvider(body?.provider);
   let cards = parseCards(body?.cards);
   const kind: LocalJobKind =
-    body?.kind === "review" || body?.kind === "dev" ? body.kind : "architect";
+    body?.kind === "review" ||
+    body?.kind === "dev" ||
+    body?.kind === "po" ||
+    body?.kind === "revisao"
+      ? body.kind
+      : "architect";
+  const observation = typeof body?.observation === "string" ? body.observation.trim() : "";
   const projectAuthors: string[] = Array.isArray(body?.projectAuthors)
     ? body.projectAuthors.filter((name: unknown): name is string => typeof name === "string")
     : [];
@@ -91,9 +104,19 @@ export async function POST(request: NextRequest) {
   }
 
   const queueStatus = queueStatusFor(kind);
+  if (kind === "po" || kind === "revisao") cards = cards.slice(0, 1);
+
+  if (kind === "revisao") {
+    if (skill || !(await canDecideArchitecture())) {
+      return NextResponse.json({ error: "Só arquitetos podem pedir revisão." }, { status: 403 });
+    }
+    if (!observation) {
+      return NextResponse.json({ error: "A observação é obrigatória." }, { status: 400 });
+    }
+  }
 
   try {
-    if (!cards.length && kind !== "dev") {
+    if (!cards.length && kind !== "dev" && kind !== "po" && kind !== "revisao") {
       cards = await fetchQueueCards(project, queueStatus);
     }
 
@@ -130,7 +153,38 @@ export async function POST(request: NextRequest) {
 
     let prompt: string;
     let cardCount = cards.length;
-    if (kind === "dev") {
+    if (kind === "po") {
+      prompt = buildLocalPoPrompt({
+        project,
+        card: freshCards[0],
+        token,
+        ingestUrl,
+        progressUrl,
+        systemPrompt: await getPromptContent(ARCHITECT_STRUCTURE_PROMPT_KEY),
+      });
+    } else if (kind === "revisao") {
+      const card = freshCards[0];
+      const analysis = await getCachedAnalysis(provider, card.id);
+      const devPrompt = analysis?.architecturePayload?.devPrompt ?? "";
+
+      if (!devPrompt.trim()) {
+        return NextResponse.json(
+          { error: "Este card não tem prompt de desenvolvimento para revisar." },
+          { status: 400 }
+        );
+      }
+
+      prompt = buildLocalRevisionPrompt({
+        project,
+        card,
+        devPrompt,
+        observation,
+        token,
+        ingestUrl,
+        progressUrl,
+        systemPrompt: await getPromptContent(ARCHITECT_STRUCTURE_PROMPT_KEY),
+      });
+    } else if (kind === "dev") {
       // O prompt do dev ja foi escrito pelo arquiteto e esta gravado: aqui ele so
       // ganha o bloco de progresso, com um token proprio deste lote.
       const card = freshCards[0];

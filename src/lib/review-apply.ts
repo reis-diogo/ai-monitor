@@ -5,11 +5,12 @@ import {
   deleteChecklistsNamed,
   updateTaskStatus,
 } from "@/lib/clickup";
+import { VALIDATE_STATUS } from "@/lib/architect-gate";
 import type { AiProvider, AnalyzedActivityRecord, ReviewPayload } from "@/lib/types";
 
 export const REVIEW_QUEUE_STATUS = "dev finalizado";
 export const REVIEW_APPROVED_STATUS = "em qa";
-export const REVIEW_REJECTED_STATUS = "revisar dev";
+export const REVIEW_REJECTED_STATUS = VALIDATE_STATUS;
 export const REVIEW_THRESHOLD = 7;
 
 const CHECKLIST_NAME = "Pendências de revisão";

@@ -33,6 +33,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Campo 'stage' é obrigatório." }, { status: 400 });
   }
 
+  const rawPercent = typeof body?.percent === "number" ? body.percent : null;
+  const percent =
+    rawPercent !== null && Number.isFinite(rawPercent)
+      ? Math.min(100, Math.max(0, Math.round(rawPercent)))
+      : null;
+
   const detail = typeof body?.detail === "string" && body.detail.trim() ? body.detail.trim() : null;
 
   try {
@@ -60,9 +66,10 @@ export async function POST(request: NextRequest) {
 
     await recordProgress({
       activityId,
-      kind: job.kind,
+      kind: job.kind === "po" || job.kind === "revisao" ? "architect" : job.kind,
       stage,
       detail,
+      percent,
       state: body?.state === "failed" ? "failed" : "running",
     });
     return NextResponse.json({ ok: true });

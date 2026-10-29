@@ -1,4 +1,9 @@
-import type { ClickUpTaskActivity } from "@/lib/types";
+import type {
+  ClickUpTaskActivity,
+  ProjectProgress,
+  ProjectStatusCount,
+  StatusEvent,
+} from "@/lib/types";
 
 const CLICKUP_API = "https://api.clickup.com/api/v2";
 
@@ -54,7 +59,10 @@ type ClickUpTaskResponse = {
   text_content?: string;
   url: string;
   date_created: string;
+  date_closed?: string | null;
+  date_done?: string | null;
   creator: ClickUpUser;
+  assignees?: { username: string | null; email: string }[];
   folder?: { name: string };
   space?: { name: string };
   custom_fields?: ClickUpDropdownField[];
@@ -101,6 +109,13 @@ async function fetchAllListTasks(listId: string): Promise<ClickUpTaskResponse[]>
   return tasks;
 }
 
+function closedAt(task: ClickUpTaskResponse): string | null {
+  const raw = task.date_closed ?? task.date_done;
+  if (!raw) return null;
+  const ms = Number(raw);
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+}
+
 export async function fetchListTasks(listId: string): Promise<ClickUpTaskActivity[]> {
   const [list, tasks] = await Promise.all([
     clickupFetch(`/list/${listId}`) as Promise<ClickUpListResponse>,
@@ -121,9 +136,11 @@ export async function fetchListTasks(listId: string): Promise<ClickUpTaskActivit
     authorClickupId: task.creator.id,
     url: task.url,
     date: new Date(Number(task.date_created)).toISOString(),
+    dateClosed: closedAt(task),
     location: resolveProjectName(task) ?? fallbackLocation,
     status: task.status.status,
     statusColor: task.status.color,
+    assignees: (task.assignees ?? []).map((user) => user.username ?? user.email),
   }));
 }
 
@@ -134,6 +151,12 @@ export async function fetchListStatuses(
   return list.statuses
     .sort((a, b) => a.orderindex - b.orderindex)
     .map((s) => ({ status: s.status, color: s.color }));
+}
+
+export async function uploadTaskAttachment(taskId: string, file: Blob, filename: string): Promise<void> {
+  const form = new FormData();
+  form.append("attachment", file, filename);
+  await clickupFetch(`/task/${taskId}/attachment`, { method: "POST", body: form });
 }
 
 export async function updateTaskStatus(taskId: string, status: string): Promise<void> {
@@ -270,4 +293,194 @@ export async function fetchTaskStatusSince(taskId: string): Promise<string | nul
 
   const epoch = Number(since);
   return Number.isFinite(epoch) ? new Date(epoch).toISOString() : null;
+}
+
+const BULK_STATUS_LIMIT = 100;
+
+export async function fetchChangedTasks(
+  listId: string,
+  sinceMs: number
+): Promise<{ id: string; updated: number }[]> {
+  const changed: { id: string; updated: number }[] = [];
+  const since = sinceMs > 0 ? `&date_updated_gt=${sinceMs}` : "";
+
+  for (let page = 0; page < TASKS_PAGE_LIMIT; page++) {
+    const data = (await clickupFetch(
+      `/list/${listId}/task?include_closed=true&order_by=updated&page=${page}${since}`
+    )) as { tasks?: { id: string; date_updated: string }[]; last_page?: boolean };
+
+    const batch = data.tasks ?? [];
+    for (const task of batch) changed.push({ id: task.id, updated: Number(task.date_updated) });
+
+    if (data.last_page === true || batch.length === 0) break;
+  }
+
+  return changed;
+}
+
+type ClickUpStatusHistory = {
+  status: string;
+  total_time?: { since?: string };
+};
+
+export async function fetchStatusEvents(taskIds: string[]): Promise<StatusEvent[]> {
+  const events: StatusEvent[] = [];
+
+  for (let start = 0; start < taskIds.length; start += BULK_STATUS_LIMIT) {
+    const query = taskIds
+      .slice(start, start + BULK_STATUS_LIMIT)
+      .map((id) => `task_ids=${encodeURIComponent(id)}`)
+      .join("&");
+
+    const data = (await clickupFetch(`/task/bulk_time_in_status/task_ids?${query}`)) as Record<
+      string,
+      { status_history?: ClickUpStatusHistory[] }
+    > | null;
+
+    for (const [taskId, entry] of Object.entries(data ?? {})) {
+      for (const step of entry.status_history ?? []) {
+        const epoch = Number(step.total_time?.since);
+        if (!Number.isFinite(epoch) || epoch <= 0) continue;
+        events.push({ taskId, status: step.status.toLowerCase(), at: new Date(epoch).toISOString() });
+      }
+    }
+  }
+
+  return events;
+}
+
+const PROGRESS_LIST_NAME = "executivo";
+
+let progressListId: string | null = null;
+
+async function resolveProgressListId(listId: string): Promise<string | null> {
+  if (progressListId) return progressListId;
+
+  const list = (await clickupFetch(`/list/${listId}`)) as { folder?: { id?: string } };
+  const folderId = list.folder?.id;
+  if (!folderId) return null;
+
+  const folder = (await clickupFetch(`/folder/${folderId}/list`)) as {
+    lists?: { id: string; name: string }[];
+  };
+  const match = folder.lists?.find((item) => item.name.trim().toLowerCase() === PROGRESS_LIST_NAME);
+  progressListId = match?.id ?? null;
+  return progressListId;
+}
+
+type ClickUpProgressField = {
+  name: string;
+  type: string;
+  value?: { percent_completed?: number } | null;
+};
+
+type ClickUpExecutiveTask = {
+  id: string;
+  name: string;
+  parent?: string | null;
+  status: { status: string; color: string };
+  custom_fields?: ClickUpProgressField[];
+};
+
+export async function fetchProjectProgress(listId: string): Promise<ProjectProgress[]> {
+  const progressList = await resolveProgressListId(listId);
+  if (!progressList) return [];
+
+  const tasks: ClickUpExecutiveTask[] = [];
+  for (let page = 0; page < TASKS_PAGE_LIMIT; page++) {
+    const data = (await clickupFetch(
+      `/list/${progressList}/task?include_closed=true&subtasks=true&page=${page}`
+    )) as { tasks?: ClickUpExecutiveTask[]; last_page?: boolean };
+    const batch = data.tasks ?? [];
+    tasks.push(...batch);
+    if (data.last_page === true || batch.length === 0) break;
+  }
+
+  const byId = new Map(tasks.map((task) => [task.id, task]));
+  const rootOf = (task: ClickUpExecutiveTask): string => {
+    let current = task;
+    for (let depth = 0; depth < 10 && current.parent && byId.has(current.parent); depth++) {
+      current = byId.get(current.parent) as ClickUpExecutiveTask;
+    }
+    return current.id;
+  };
+
+  const counts = new Map<string, Map<string, ProjectStatusCount>>();
+  for (const task of tasks) {
+    if (!task.parent) continue;
+    const root = rootOf(task);
+    const group = counts.get(root) ?? new Map<string, ProjectStatusCount>();
+    const key = task.status.status.toLowerCase();
+    const entry = group.get(key) ?? { status: key, color: task.status.color, count: 0 };
+    entry.count += 1;
+    group.set(key, entry);
+    counts.set(root, group);
+  }
+
+  return tasks
+    .filter((task) => !task.parent)
+    .flatMap((task) => {
+      const field = task.custom_fields?.find((item) => item.type === "manual_progress");
+      if (!field) return [];
+      const ratio = Number(field.value?.percent_completed ?? 0);
+      return [
+        {
+          name: task.name,
+          percent: Math.round((Number.isFinite(ratio) ? ratio : 0) * 100),
+          statuses: [...(counts.get(task.id)?.values() ?? [])].sort((a, b) => b.count - a.count),
+        },
+      ];
+    });
+}
+
+export class ClickUpInputError extends Error {}
+
+export type ProjectOption = { id: string; name: string };
+
+type ClickUpFieldsResponse = {
+  fields?: {
+    id: string;
+    name: string;
+    type: string;
+    type_config?: { options?: { id: string; name: string }[] };
+  }[];
+};
+
+async function fetchProjectField(listId: string): Promise<{ id: string; options: ProjectOption[] }> {
+  const data = (await clickupFetch(`/list/${listId}/field`)) as ClickUpFieldsResponse;
+  const field = data.fields?.find(
+    (item) => item.type === "drop_down" && item.name.toLowerCase() === "projeto"
+  );
+  if (!field) throw new Error("Campo Projeto não encontrado na lista do ClickUp.");
+  return {
+    id: field.id,
+    options: (field.type_config?.options ?? []).map((option) => ({ id: option.id, name: option.name })),
+  };
+}
+
+export async function fetchProjectOptions(listId: string): Promise<ProjectOption[]> {
+  return (await fetchProjectField(listId)).options;
+}
+
+export async function createListTask(
+  listId: string,
+  input: { name: string; description: string; projectId: string }
+): Promise<{ id: string; customId: string | null; url: string }> {
+  const field = await fetchProjectField(listId);
+  if (!field.options.some((option) => option.id === input.projectId)) {
+    throw new ClickUpInputError("Projeto inválido.");
+  }
+
+  const data = (await clickupFetch(`/list/${listId}/task`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: input.name,
+      markdown_description: input.description,
+      status: "refinar po",
+      custom_fields: [{ id: field.id, value: input.projectId }],
+    }),
+  })) as { id: string; custom_id?: string | null; url: string };
+
+  return { id: data.id, customId: data.custom_id ?? null, url: data.url };
 }

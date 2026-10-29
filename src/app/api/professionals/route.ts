@@ -4,7 +4,7 @@ import {
   removeProfessional,
   upsertProfessional,
 } from "@/lib/professionals-store";
-import { isAllowedUser } from "@/lib/require-allowed-user";
+import { isAllowedUser, isPromptEditor } from "@/lib/require-allowed-user";
 
 export async function GET() {
   if (!(await isAllowedUser())) {
@@ -29,14 +29,20 @@ export async function POST(request: NextRequest) {
   const role = body?.role;
   const clickupEmail = body?.clickupEmail;
   const avatarUrl = body?.avatarUrl;
+  const isArchitect = typeof body?.isArchitect === "boolean" ? body.isArchitect : undefined;
 
   if (typeof authorName !== "string" || !authorName.trim() || (role !== "dev" && role !== "po")) {
     return NextResponse.json({ error: "Dados inválidos." }, { status: 400 });
   }
 
+  if (isArchitect !== undefined && !(await isPromptEditor())) {
+    return NextResponse.json({ error: "Só o admin define quem é arquiteto." }, { status: 403 });
+  }
+
   const professionals = await upsertProfessional({
     authorName: authorName.trim(),
     role,
+    isArchitect,
     clickupEmail:
       typeof clickupEmail === "string" && clickupEmail.trim() ? clickupEmail.trim() : undefined,
     avatarUrl: typeof avatarUrl === "string" && avatarUrl.trim() ? avatarUrl.trim() : undefined,

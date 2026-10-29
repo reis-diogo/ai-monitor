@@ -53,9 +53,29 @@ export type ClickUpTaskActivity = {
   authorClickupId: number | null;
   url: string;
   date: string;
+  dateClosed: string | null;
   location: string;
   status: string;
   statusColor: string;
+  assignees: string[];
+};
+
+export type ProjectStatusCount = {
+  status: string;
+  color: string | null;
+  count: number;
+};
+
+export type ProjectProgress = {
+  name: string;
+  percent: number;
+  statuses: ProjectStatusCount[];
+};
+
+export type StatusEvent = {
+  taskId: string;
+  status: string;
+  at: string;
 };
 
 export type ClickUpStatusOption = {
@@ -83,6 +103,7 @@ export type ActivityItem = {
   deletions: number | null;
   status: string | null;
   statusColor: string | null;
+  assignees?: string[];
 };
 
 export type CommitAnalysis = {
@@ -141,6 +162,8 @@ export type ArchitectPayload = {
   docReferences: ArchitectDocReference[];
   devPrompt: string;
   research: string;
+  summary?: string;
+  flow?: string[];
   appliedStatus?: string | null;
   // A listagem devolve o parecer sem os campos longos; este marcador diz que existe
   // devPrompt gravado sem carregar os ~640 KB dele para dentro da tela.
@@ -159,6 +182,7 @@ export type ProfessionalRole = "dev" | "po";
 export type Professional = {
   authorName: string;
   role: ProfessionalRole;
+  isArchitect?: boolean;
   clickupEmail?: string;
   avatarUrl?: string;
   aliases?: string[];
@@ -187,6 +211,8 @@ export type ActivityProgress = {
   kind: ProgressKind;
   stage: string;
   detail: string | null;
+  percent: number | null;
+  startedAt: string | null;
   state: "running" | "failed";
   updatedAt: string;
 };
