@@ -2,7 +2,7 @@ import { getSupabase } from "@/lib/supabase";
 
 export type ProjectSource = {
   id: string;
-  projectName: string;
+  projectName: string | null;
   listId: string;
   label: string | null;
   webhookId: string | null;
@@ -29,7 +29,7 @@ export type ActivityEvent = {
 
 type SourceRow = {
   id: string;
-  project_name: string;
+  project_name: string | null;
   clickup_list_id: string;
   label: string | null;
   webhook_id: string | null;
@@ -69,7 +69,7 @@ export async function findSourceByWebhook(
 }
 
 export async function addSource(input: {
-  projectName: string;
+  projectName: string | null;
   listId: string;
   label: string | null;
   webhook: { id: string; secret: string } | null;

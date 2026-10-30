@@ -37,9 +37,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
-  const projectName = typeof body?.projectName === "string" ? body.projectName.trim() : "";
   const listId = parseListId(typeof body?.list === "string" ? body.list : "");
-  if (!projectName) return NextResponse.json({ error: "Informe o projeto." }, { status: 400 });
   if (!listId) {
     return NextResponse.json(
       { error: "Cole o link da lista do ClickUp ou o id numérico dela." },
@@ -73,7 +71,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const source = await addSource({ projectName, listId, label, webhook });
+    const source = await addSource({ projectName: null, listId, label, webhook });
     return NextResponse.json({ source, webhookError }, { status: 201 });
   } catch (error) {
     if (webhook) await deleteWebhook(webhook.id).catch(() => {});
