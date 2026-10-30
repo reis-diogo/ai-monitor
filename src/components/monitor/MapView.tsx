@@ -851,7 +851,6 @@ export function MapView() {
     flyToPoint(wx, wy, cam.z);
   }
 
-  const level = openKeys.length ? "detalhes" : "projetos";
   const transition = anim ? `transform .6s ${EASE}` : "none";
   const grid = 28 * cam.z;
 
@@ -1260,10 +1259,6 @@ export function MapView() {
             className="min-w-0 flex-1 border-none bg-transparent text-xs outline-none placeholder:text-faint"
           />
         </div>
-        <span className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[9px] border border-line-input bg-card px-3 text-[11px] text-muted-foreground">
-          <Icon name="layers" size={16} />
-          {level}
-        </span>
         <CursorColorPicker color={myColor} onChange={chooseColor} />
         <button
           type="button"

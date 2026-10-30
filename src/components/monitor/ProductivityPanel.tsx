@@ -36,7 +36,7 @@ export function ProductivityPanel({
   const [project, setProject] = useState("");
   const [people, setPeople] = useState<PersonSummary[] | null>(null);
   const [allowed, setAllowed] = useState(true);
-  const [sources, setSources] = useState<{ listId: string; label: string }[]>([]);
+  const [sources, setSources] = useState<{ listId: string; label: string; url?: string | null }[]>([]);
   const [list, setList] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
@@ -129,19 +129,35 @@ export function ProductivityPanel({
 
       {sources.length > 0 && (
         <div className="flex flex-wrap gap-2 text-[13px]">
-          {[{ listId: "", label: "todas as origens" }, ...sources].map((item) => (
-            <button
+          {[{ listId: "", label: "todas as origens", url: null }, ...sources].map((item) => (
+            <div
               key={item.listId}
-              type="button"
-              onClick={() => setList(item.listId)}
-              className={`h-9 rounded-lg border px-3 transition-colors ${
+              className={`flex h-9 items-center rounded-lg border transition-colors ${
                 list === item.listId
                   ? "border-primary text-foreground"
                   : "border-line-input text-muted-foreground hover:border-primary"
               }`}
             >
-              {item.label}
-            </button>
+              <button
+                type="button"
+                onClick={() => setList(item.listId)}
+                className={`h-full px-3 ${item.url ? "pr-2" : ""}`}
+              >
+                {item.label}
+              </button>
+              {item.url && (
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="Abrir a lista no ClickUp"
+                  aria-label="Abrir a lista no ClickUp"
+                  className="flex h-full items-center pl-0.5 pr-2.5 text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <Icon name="open_in_new" size={14} />
+                </a>
+              )}
+            </div>
           ))}
         </div>
       )}

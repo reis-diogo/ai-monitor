@@ -280,11 +280,19 @@ export async function fetchTaskAttachments(
   }));
 }
 
-export async function fetchListWebUrl(listId: string): Promise<string> {
+export async function fetchWorkspaceId(): Promise<string> {
   const data = (await clickupFetch("/team")) as { teams?: { id: string }[] };
   const teamId = data.teams?.[0]?.id;
   if (!teamId) throw new Error("Workspace do ClickUp não encontrado.");
+  return teamId;
+}
+
+export function listWebUrl(teamId: string, listId: string): string {
   return `https://app.clickup.com/${teamId}/v/li/${listId}`;
+}
+
+export async function fetchListWebUrl(listId: string): Promise<string> {
+  return listWebUrl(await fetchWorkspaceId(), listId);
 }
 
 type ClickUpTeamMember = {
