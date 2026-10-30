@@ -1148,6 +1148,7 @@ export function MapView() {
                             <PipelineSteps
                               stage={card.stage}
                               compact
+                              bug={card.status === "bug"}
                               times={stageTimes.get(card.id)}
                               live={liveFor(card)}
                             />
