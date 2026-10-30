@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  Bug,
   Check,
   X,
   ChevronDown,
@@ -45,6 +46,7 @@ const ICONS: Record<string, LucideIcon> = {
   account_box: SquareUser,
   add: Plus,
   back: ArrowLeft,
+  bug: Bug,
   architecture: DraftingCompass,
   avg_time: Timer,
   check: Check,

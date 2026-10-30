@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import { Icon } from "@/components/monitor/Icon";
-import { STAGES, STAGE_DONE } from "@/lib/monitor/model";
+import { STAGES, STAGE_DONE, formatSpan } from "@/lib/monitor/model";
 
 const LABELS = [...STAGES, ""];
 
@@ -10,9 +10,13 @@ export function PipelineSteps({
   stage,
   compact = false,
   live,
+  times,
+  bug = false,
 }: {
   stage: number;
+  bug?: boolean;
   compact?: boolean;
+  times?: (number | null)[];
   live?: { stage: number; node: React.ReactNode };
 }) {
   const active = Boolean(live);
@@ -20,9 +24,12 @@ export function PipelineSteps({
   const radius = compact ? 7 : 8;
   const fill = Math.min(stage, STAGE_DONE) / STAGES.length;
   const lineTop = box / 2 - 1;
+  const measured = times?.filter((ms): ms is number => ms !== null && ms > 0) ?? [];
+  const slowest = measured.length > 1 ? Math.max(...measured) : null;
+  const timeRow = times ? 14 : 0;
 
   return (
-    <div className="relative" style={{ height: box + 22 + (live ? 128 : 0), marginInline: 24 }}>
+    <div className="relative" style={{ height: box + 22 + timeRow + (bug ? 12 : 0) + (live ? 128 : 0), marginInline: 24 }}>
       <div
         className="absolute h-0.5 rounded-sm bg-track"
         style={{ left: box / 2, right: box / 2, top: lineTop }}
@@ -58,6 +65,7 @@ export function PipelineSteps({
         const last = index === STAGES.length;
         const done = index < stage || (last && stage >= STAGE_DONE);
         const current = !last && index === stage;
+        const flagged = bug && current;
         const left = `calc(${box / 2}px + (100% - ${box}px) * ${index / STAGES.length})`;
 
         return (
@@ -80,16 +88,20 @@ export function PipelineSteps({
                   ? last
                     ? "color-mix(in srgb, var(--ok) 22%, var(--surface-raised))"
                     : "var(--step-done-bg)"
-                  : current
-                    ? "color-mix(in srgb, var(--primary) 16%, var(--surface-raised))"
-                    : "var(--surface-raised)",
+                  : flagged
+                    ? "color-mix(in srgb, var(--danger) 16%, var(--surface-raised))"
+                    : current
+                      ? "color-mix(in srgb, var(--primary) 16%, var(--surface-raised))"
+                      : "var(--surface-raised)",
                 borderColor: done
                   ? last
                     ? "color-mix(in srgb, var(--ok) 70%, var(--surface-raised))"
                     : "var(--step-done-border)"
-                  : current
-                    ? "var(--primary)"
-                    : last
+                  : flagged
+                    ? "var(--danger)"
+                    : current
+                      ? "var(--primary)"
+                      : last
                       ? "color-mix(in srgb, var(--ok) 38%, var(--surface-raised))"
                       : "var(--line-input)",
                 color: done
@@ -105,10 +117,14 @@ export function PipelineSteps({
               {done ? (
                 <Icon name="check" size={compact ? 15 : 17} className="relative" />
               ) : current ? (
-                <span
-                  className="relative size-2 rounded-full bg-primary"
-                  style={active ? { animation: "monitor-pulse 1.8s infinite" } : undefined}
-                />
+                flagged ? (
+                  <Icon name="bug" size={compact ? 14 : 16} className="relative text-danger" />
+                ) : (
+                  <span
+                    className="relative size-2 rounded-full bg-primary"
+                    style={active ? { animation: "monitor-pulse 1.8s infinite" } : undefined}
+                  />
+                )
               ) : null}
             </span>
             <span
@@ -120,6 +136,24 @@ export function PipelineSteps({
             >
               {label}
             </span>
+            {flagged && (
+              <span className="text-[10px] font-bold uppercase leading-none text-danger">bug</span>
+            )}
+            {times && !last && (
+              <span
+                className="text-[10px] font-medium tabular-nums"
+                style={{
+                  minHeight: 12,
+                  color:
+                    slowest !== null && times[index] === slowest
+                      ? "var(--warn)"
+                      : "var(--faint)",
+                }}
+                title={times[index] ? `Tempo em ${STAGES[index]}` : undefined}
+              >
+                {times[index] ? formatSpan(times[index]) : ""}
+              </span>
+            )}
           </div>
         );
       })}
@@ -129,7 +163,7 @@ export function PipelineSteps({
           style={{
             left: `calc(${box / 2}px + (100% - ${box}px) * ${live.stage / STAGES.length})`,
             transform: "translateX(-50%)",
-            top: box + 24,
+            top: box + 24 + timeRow + (bug ? 12 : 0),
           }}
         >
           {live.node}

@@ -765,7 +765,7 @@ export function CardDetailModal({
                 )}
               </div>
             )}
-            {released && (
+            {(released || status === "bug") && (
               <button
                 type="button"
                 onClick={advanceToQa}
@@ -779,7 +779,9 @@ export function CardDetailModal({
                 />
                 {qaState === "error"
                   ? "Falhou, tente de novo"
-                  : "Avançar para QA"}
+                  : status === "bug"
+                    ? "Corrigido, enviar para QA"
+                    : "Avançar para QA"}
               </button>
             )}
             {inQa && (
