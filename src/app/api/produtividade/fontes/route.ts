@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createListWebhook, deleteWebhook, fetchListName } from "@/lib/clickup";
+import {
+  createListWebhook,
+  deleteWebhook,
+  fetchListName,
+  fetchWorkspaceId,
+  listWebUrl,
+} from "@/lib/clickup";
 import { addSource, listSources, removeSource, setSourceNickname } from "@/lib/productivity-store";
 import { isPromptEditor } from "@/lib/require-allowed-user";
 
@@ -24,7 +30,14 @@ export async function GET() {
     return NextResponse.json({ error: "Só o admin vê isto." }, { status: 403 });
   }
   try {
-    return NextResponse.json({ sources: await listSources() });
+    const sources = await listSources();
+    const teamId = await fetchWorkspaceId().catch(() => null);
+    return NextResponse.json({
+      sources: sources.map((source) => ({
+        ...source,
+        url: teamId ? listWebUrl(teamId, source.listId) : null,
+      })),
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro ao listar as listas.";
     return NextResponse.json({ error: message }, { status: 502 });

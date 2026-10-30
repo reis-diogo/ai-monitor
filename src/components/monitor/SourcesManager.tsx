@@ -5,7 +5,7 @@ import { Icon } from "@/components/monitor/Icon";
 import type { ProjectSource } from "@/lib/productivity-store";
 
 export function SourcesManager() {
-  const [sources, setSources] = useState<ProjectSource[] | null>(null);
+  const [sources, setSources] = useState<(ProjectSource & { url?: string | null })[] | null>(null);
   const [allowed, setAllowed] = useState(true);
   const [list, setList] = useState("");
   const [saving, setSaving] = useState(false);
@@ -124,7 +124,19 @@ export function SourcesManager() {
                 </span>
                 {source.nickname && source.label && ` (${source.label})`}
                 {" · "}
-                {source.listId}
+                {source.url ? (
+                  <a
+                    href={source.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="Abrir a lista no ClickUp"
+                    className="text-link underline-offset-2 hover:underline"
+                  >
+                    {source.listId}
+                  </a>
+                ) : (
+                  source.listId
+                )}
               </span>
             )}
             {editing !== source.id && (

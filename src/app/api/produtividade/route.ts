@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fetchWorkspaceId, listWebUrl } from "@/lib/clickup";
 import { fetchProductivity, listSources } from "@/lib/productivity-store";
 import { isPromptEditor } from "@/lib/require-allowed-user";
 
@@ -14,19 +15,21 @@ export async function GET(request: NextRequest) {
   const listId = request.nextUrl.searchParams.get("list") || null;
 
   try {
-    const [people, sources] = await Promise.all([
+    const [people, sources, teamId] = await Promise.all([
       fetchProductivity({
         sinceIso: new Date(Date.now() - days * DAY_MS).toISOString(),
         project,
         listId,
       }),
       listSources(),
+      fetchWorkspaceId().catch(() => null),
     ]);
     return NextResponse.json({
       people,
       sources: sources.map((source) => ({
         listId: source.listId,
         label: source.nickname ?? source.label ?? source.listId,
+        url: teamId ? listWebUrl(teamId, source.listId) : null,
       })),
     });
   } catch (error) {
