@@ -8,13 +8,17 @@ export function getBrowserSupabase(): SupabaseClient | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-  client =
-    url && key
-      ? createClient(url, key, {
-          auth: { persistSession: false, autoRefreshToken: false },
-          realtime: { params: { eventsPerSecond: 10 } },
-        })
-      : null;
+  try {
+    client =
+      url && key
+        ? createClient(url, key, {
+            auth: { persistSession: false, autoRefreshToken: false },
+            realtime: { params: { eventsPerSecond: 10 } },
+          })
+        : null;
+  } catch {
+    client = null;
+  }
 
   return client;
 }

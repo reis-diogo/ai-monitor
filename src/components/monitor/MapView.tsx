@@ -7,6 +7,9 @@ import { useActivityProgress } from "@/lib/use-activity-progress";
 import { useStageTimes } from "@/lib/use-stage-times";
 import { useCardStarts } from "@/lib/use-card-starts";
 import { Icon } from "@/components/monitor/Icon";
+import { ProductivityPanel } from "@/components/monitor/ProductivityPanel";
+import { OnlineAvatar } from "@/components/monitor/OnlineAvatar";
+import { OnlineModal } from "@/components/monitor/OnlineModal";
 import { CursorColorPicker } from "@/components/monitor/CursorColorPicker";
 import { LiveCursors } from "@/components/monitor/LiveCursors";
 import {
@@ -201,6 +204,9 @@ export function MapView() {
   const [newCardOpen, setNewCardOpen] = useState(false);
   const [newCardProject, setNewCardProject] = useState<string | null>(null);
   const [pickedColor, setPickedColor] = useState<string | null>(null);
+  const [myAvatar, setMyAvatar] = useState<string | null>(null);
+  const [onlineOpen, setOnlineOpen] = useState(false);
+  const [hiddenMice, setHiddenMice] = useState<string[]>([]);
   const lastSendRef = useRef(0);
   const { user } = useUser();
   const myName =
@@ -347,7 +353,7 @@ export function MapView() {
     };
   }, [projects, openKeys, nodes]);
 
-  const remote = useRemoteCursors(myName, myColor);
+  const remote = useRemoteCursors(myName, myColor, myAvatar);
 
   useEffect(() => {
     fetch("/api/clickup/list-url")
@@ -367,6 +373,29 @@ export function MapView() {
     });
     return () => cancelAnimationFrame(frame);
   }, []);
+
+  useEffect(() => {
+    fetch("/api/clickup/me")
+      .then((res) => res.json())
+      .then((data) =>
+        setMyAvatar(typeof data?.avatar === "string" ? data.avatar : null),
+      )
+      .catch(() => setMyAvatar(null));
+    const frame = requestAnimationFrame(() => {
+      try {
+        const saved = window.localStorage.getItem("monitor:hidden-mice");
+        if (saved) setHiddenMice(JSON.parse(saved));
+      } catch {}
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  function saveHidden(next: string[]) {
+    setHiddenMice(next);
+    try {
+      window.localStorage.setItem("monitor:hidden-mice", JSON.stringify(next));
+    } catch {}
+  }
 
   function chooseColor(color: string) {
     setPickedColor(color);
@@ -1193,7 +1222,18 @@ export function MapView() {
                 );
               })}
             </AnimatePresence>
-            <LiveCursors cursors={remote.cursors} zoom={cam.z} />
+            <ProductivityPanel
+              x={layout.width + GAP}
+              y={TITLE_H}
+              projects={projectNames}
+              now={nowTick}
+            />
+            <LiveCursors
+              cursors={remote.cursors.filter(
+                (cursor) => !hiddenMice.includes(cursor.name),
+              )}
+              zoom={cam.z}
+            />
           </div>
         </div>
       </div>
@@ -1225,29 +1265,25 @@ export function MapView() {
           {level}
         </span>
         <CursorColorPicker color={myColor} onChange={chooseColor} />
-        <span
-          className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-[9px] border border-line-input bg-card px-3 text-[11px] text-muted-foreground"
-          title={
-            remote.online.length
-              ? remote.online.map((person) => person.name).join(", ")
-              : "só você por aqui"
-          }
+        <button
+          type="button"
+          onClick={() => setOnlineOpen(true)}
+          title="Escolher quais mouses ver"
+          className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-[9px] border border-line-input bg-card px-3 text-[11px] text-muted-foreground transition-colors hover:border-primary"
         >
-          <span className="flex -space-x-1">
-            <span
-              className="size-3 rounded-full border border-card"
-              style={{ background: myColor }}
-            />
+          <span className="flex -space-x-1.5">
+            <OnlineAvatar name={myName} color={myColor} src={myAvatar} />
             {remote.online.slice(0, 4).map((person) => (
-              <span
+              <OnlineAvatar
                 key={person.id}
-                className="size-3 rounded-full border border-card"
-                style={{ background: person.color }}
+                name={person.name}
+                color={person.color}
+                src={person.avatar}
               />
             ))}
           </span>
           {remote.online.length + 1} online
-        </span>
+        </button>
         <button
           type="button"
           onClick={() => {
@@ -1285,6 +1321,22 @@ export function MapView() {
         </div>
       )}
 
+      <OnlineModal
+        open={onlineOpen}
+        people={remote.online}
+        hidden={new Set(hiddenMice)}
+        onToggle={(name) =>
+          saveHidden(
+            hiddenMice.includes(name)
+              ? hiddenMice.filter((item) => item !== name)
+              : [...hiddenMice, name],
+          )
+        }
+        onAll={(visible) =>
+          saveHidden(visible ? [] : remote.online.map((person) => person.name))
+        }
+        onClose={() => setOnlineOpen(false)}
+      />
       <CardDetailModal
         key={detailCard?.id ?? "none"}
         onDecided={updateClickupTaskStatus}

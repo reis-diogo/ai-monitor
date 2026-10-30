@@ -14,7 +14,7 @@ export type CursorState = {
   seen?: number;
 };
 
-export type OnlinePerson = { id: string; name: string; color: string };
+export type OnlinePerson = { id: string; name: string; color: string; avatar: string | null };
 
 export type CursorBounds = { x: number; y: number; w: number; h: number };
 
@@ -39,18 +39,18 @@ export function defaultCursorColor(name: string): string {
   return CURSOR_COLORS[hash % CURSOR_COLORS.length];
 }
 
-export function useRemoteCursors(name: string, color: string) {
+export function useRemoteCursors(name: string, color: string, avatar: string | null = null) {
   const [clientId] = useState(() => crypto.randomUUID());
   const [cursors, setCursors] = useState<CursorState[]>([]);
   const [online, setOnline] = useState<OnlinePerson[]>([]);
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const selfRef = useRef({ name, color });
+  const selfRef = useRef({ name, color, avatar });
 
   useEffect(() => {
-    selfRef.current = { name, color };
+    selfRef.current = { name, color, avatar };
     const channel = channelRef.current;
-    if (channel && name) void channel.track({ name, color });
-  }, [name, color]);
+    if (channel && name) void channel.track({ name, color, avatar });
+  }, [name, color, avatar]);
 
   useEffect(() => {
     const supabase = getBrowserSupabase();
@@ -70,11 +70,16 @@ export function useRemoteCursors(name: string, color: string) {
         ]);
       })
       .on("presence", { event: "sync" }, () => {
-        const state = channel.presenceState<{ name: string; color: string }>();
+        const state = channel.presenceState<{ name: string; color: string; avatar?: string | null }>();
         setOnline(
           Object.entries(state)
             .filter(([id]) => id !== clientId)
-            .map(([id, metas]) => ({ id, name: metas[0]?.name ?? "—", color: metas[0]?.color ?? "#94a3b8" }))
+            .map(([id, metas]) => ({
+              id,
+              name: metas[0]?.name ?? "—",
+              color: metas[0]?.color ?? "#94a3b8",
+              avatar: metas[0]?.avatar ?? null,
+            }))
         );
       })
       .on("presence", { event: "leave" }, ({ key }) => {
