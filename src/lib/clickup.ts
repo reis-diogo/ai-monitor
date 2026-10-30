@@ -530,12 +530,14 @@ type ClickUpFieldsResponse = {
   }[];
 };
 
-async function fetchProjectField(listId: string): Promise<{ id: string; options: ProjectOption[] }> {
+async function fetchProjectField(
+  listId: string
+): Promise<{ id: string; options: ProjectOption[] } | null> {
   const data = (await clickupFetch(`/list/${listId}/field`)) as ClickUpFieldsResponse;
   const field = data.fields?.find(
     (item) => item.type === "drop_down" && item.name.toLowerCase() === "projeto"
   );
-  if (!field) throw new Error("Campo Projeto não encontrado na lista do ClickUp.");
+  if (!field) return null;
   return {
     id: field.id,
     options: (field.type_config?.options ?? []).map((option) => ({ id: option.id, name: option.name })),
@@ -543,17 +545,42 @@ async function fetchProjectField(listId: string): Promise<{ id: string; options:
 }
 
 export async function fetchProjectOptions(listId: string): Promise<ProjectOption[]> {
-  return (await fetchProjectField(listId)).options;
+  const field = await fetchProjectField(listId);
+  if (!field) throw new Error("Campo Projeto não encontrado na lista do ClickUp.");
+  return field.options;
+}
+
+export async function fetchListFirstStatus(listId: string): Promise<string | null> {
+  const list = (await clickupFetch(`/list/${listId}`)) as ClickUpListResponse;
+  const first = [...(list.statuses ?? [])].sort((a, b) => a.orderindex - b.orderindex)[0];
+  return first?.status ?? null;
+}
+
+export async function fetchNewCardSetup(
+  listId: string
+): Promise<{ projects: ProjectOption[] | null; firstStatus: string | null }> {
+  const [field, firstStatus] = await Promise.all([
+    fetchProjectField(listId),
+    fetchListFirstStatus(listId),
+  ]);
+  return { projects: field ? field.options : null, firstStatus };
 }
 
 export async function createListTask(
   listId: string,
-  input: { name: string; description: string; projectId: string }
-): Promise<{ id: string; customId: string | null; url: string }> {
+  input: {
+    name: string;
+    description: string;
+    projectId: string | null;
+    startDate: number | null;
+    dueDate: number | null;
+  }
+): Promise<{ id: string; customId: string | null; url: string; status: string | null }> {
   const field = await fetchProjectField(listId);
-  if (!field.options.some((option) => option.id === input.projectId)) {
+  if (field && !field.options.some((option) => option.id === input.projectId)) {
     throw new ClickUpInputError("Projeto inválido.");
   }
+  const status = await fetchListFirstStatus(listId);
 
   const data = (await clickupFetch(`/list/${listId}/task`, {
     method: "POST",
@@ -561,12 +588,14 @@ export async function createListTask(
     body: JSON.stringify({
       name: input.name,
       markdown_description: input.description,
-      status: "refinar po",
-      custom_fields: [{ id: field.id, value: input.projectId }],
+      ...(status ? { status } : {}),
+      ...(input.startDate ? { start_date: input.startDate, start_date_time: false } : {}),
+      ...(input.dueDate ? { due_date: input.dueDate, due_date_time: false } : {}),
+      ...(field ? { custom_fields: [{ id: field.id, value: input.projectId }] } : {}),
     }),
   })) as { id: string; custom_id?: string | null; url: string };
 
-  return { id: data.id, customId: data.custom_id ?? null, url: data.url };
+  return { id: data.id, customId: data.custom_id ?? null, url: data.url, status };
 }
 
 const WEBHOOK_EVENTS = [
@@ -611,6 +640,107 @@ export async function fetchListName(listId: string): Promise<string | null> {
 
 export async function deleteWebhook(webhookId: string): Promise<void> {
   await clickupFetch(`/webhook/${webhookId}`, { method: "DELETE" });
+}
+
+export type HistoryTask = {
+  id: string;
+  customId: string | null;
+  title: string;
+  project: string | null;
+  createdAt: number;
+  creator: { id: string; name: string; email: string | null } | null;
+};
+
+export type HistoryComment = {
+  id: string;
+  at: number;
+  text: string;
+  author: { id: string; name: string; email: string | null } | null;
+};
+
+const REQUEST_GAP_MS = 750;
+let nextSlot = 0;
+
+async function paced(): Promise<void> {
+  const now = Date.now();
+  const slot = Math.max(now, nextSlot);
+  nextSlot = slot + REQUEST_GAP_MS;
+  if (slot > now) await new Promise((resolve) => setTimeout(resolve, slot - now));
+}
+
+async function clickupFetchRetry(path: string): Promise<unknown> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await paced();
+      return await clickupFetch(path);
+    } catch (error) {
+      const limited = error instanceof Error && error.message.includes("(429)");
+      if (!limited || attempt >= 4) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 15000 * (attempt + 1)));
+    }
+  }
+}
+
+export async function fetchListTasksUpdatedSince(
+  listId: string,
+  sinceMs: number
+): Promise<HistoryTask[]> {
+  const tasks: HistoryTask[] = [];
+  for (let page = 0; page < TASKS_PAGE_LIMIT; page++) {
+    const data = (await clickupFetchRetry(
+      `/list/${listId}/task?include_closed=true&subtasks=true&date_updated_gt=${sinceMs}&page=${page}`
+    )) as { tasks?: ClickUpTaskResponse[]; last_page?: boolean };
+    for (const task of data.tasks ?? []) {
+      const name = task.creator?.username || task.creator?.email;
+      tasks.push({
+        id: task.id,
+        customId: task.custom_id ?? null,
+        title: task.name,
+        project: resolveProjectName(task),
+        createdAt: Number(task.date_created),
+        creator: name
+          ? { id: String(task.creator.id), name, email: task.creator.email ?? null }
+          : null,
+      });
+    }
+    if (data.last_page !== false) break;
+  }
+  return tasks;
+}
+
+export async function fetchTaskCommentsSince(
+  taskId: string,
+  sinceMs: number
+): Promise<HistoryComment[]> {
+  const comments: HistoryComment[] = [];
+  let cursor: { start: string; startId: string } | null = null;
+  for (let page = 0; page < 8; page++) {
+    const query: string = cursor ? `?start=${cursor.start}&start_id=${cursor.startId}` : "";
+    const data = (await clickupFetchRetry(`/task/${taskId}/comment${query}`)) as {
+      comments?: {
+        id: string;
+        date: string;
+        comment_text?: string;
+        user?: { id: number; username?: string | null; email?: string | null };
+      }[];
+    };
+    const batch = data.comments ?? [];
+    for (const item of batch) {
+      const name = item.user?.username || item.user?.email;
+      comments.push({
+        id: String(item.id),
+        at: Number(item.date),
+        text: (item.comment_text ?? "").slice(0, 280),
+        author: name
+          ? { id: String(item.user?.id), name, email: item.user?.email ?? null }
+          : null,
+      });
+    }
+    const oldest = batch[batch.length - 1];
+    if (batch.length < 25 || !oldest || Number(oldest.date) < sinceMs) break;
+    cursor = { start: oldest.date, startId: String(oldest.id) };
+  }
+  return comments.filter((comment) => comment.at >= sinceMs);
 }
 
 export async function fetchTaskSummary(

@@ -5,7 +5,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { Icon } from "@/components/monitor/Icon";
 
 type Option = { id: string; name: string };
-type Created = { id: string; customId: string | null; url: string };
+type ListOption = { listId: string; label: string };
+type Created = { id: string; customId: string | null; url: string; status: string | null };
 
 const FIELD =
   "w-full rounded-[9px] border border-line-input bg-surface-raised px-3 text-sm text-foreground outline-none transition-colors placeholder:text-faint focus:border-primary";
@@ -21,7 +22,12 @@ export function NewCardForm({
   onCreated: () => void;
   defaultProject?: string | null;
 }) {
-  const [options, setOptions] = useState<Option[]>([]);
+  const [lists, setLists] = useState<ListOption[]>([]);
+  const [listId, setListId] = useState("");
+  const [options, setOptions] = useState<Option[] | null>(null);
+  const [firstStatus, setFirstStatus] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState("");
+  const [dueDate, setDueDate] = useState("");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [projectId, setProjectId] = useState("");
   const [name, setName] = useState("");
@@ -37,27 +43,35 @@ export function NewCardForm({
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    fetch("/api/clickup/new-card")
+    const query = listId ? `?list=${encodeURIComponent(listId)}` : "";
+    fetch(`/api/clickup/new-card${query}`)
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return;
-        const projects: Option[] = data.projects ?? [];
+        const projects: Option[] | null = data.projects ?? null;
+        setLists(data.lists ?? []);
+        if (!listId && data.listId) setListId(data.listId);
         setOptions(projects);
+        setFirstStatus(data.firstStatus ?? null);
         setLoadError(data.error ?? null);
-        const match = defaultProject
-          ? projects.find((option) => option.name.trim().toLowerCase() === defaultProject.trim().toLowerCase())
-          : null;
-        if (match) setProjectId(match.id);
+        const match =
+          defaultProject && projects
+            ? projects.find(
+                (option) =>
+                  option.name.trim().toLowerCase() === defaultProject.trim().toLowerCase(),
+              )
+            : null;
+        setProjectId(match ? match.id : "");
       })
       .catch(() => {
-        if (!cancelled) setLoadError("Não foi possível carregar os projetos.");
+        if (!cancelled) setLoadError("Não foi possível carregar as listas.");
       });
     const focus = setTimeout(() => nameRef.current?.focus(), 180);
     return () => {
       cancelled = true;
       clearTimeout(focus);
     };
-  }, [open, defaultProject]);
+  }, [open, defaultProject, listId]);
 
   useEffect(() => {
     if (!open) return;
@@ -77,7 +91,7 @@ export function NewCardForm({
       const res = await fetch("/api/clickup/new-card", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, description, projectId }),
+        body: JSON.stringify({ name, description, projectId, listId, startDate, dueDate }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -103,6 +117,8 @@ export function NewCardForm({
     setCopied(false);
     setName("");
     setDescription("");
+    setStartDate("");
+    setDueDate("");
     setError(null);
     setTimeout(() => nameRef.current?.focus(), 50);
   }
@@ -116,7 +132,8 @@ export function NewCardForm({
     }
   }
 
-  const ready = name.trim().length > 0 && projectId !== "" && !sending;
+  const ready =
+    name.trim().length > 0 && listId !== "" && (options === null || projectId !== "") && !sending;
 
   return (
     <AnimatePresence>
@@ -149,7 +166,7 @@ export function NewCardForm({
               <div className="flex flex-col gap-1 rounded-xl border border-line-card bg-surface-raised p-4 text-sm">
                 <span className="font-semibold text-ok">Card criado no ClickUp</span>
                 <span className="text-muted-foreground">
-                  {created.customId ?? created.id} · status &ldquo;refinar po&rdquo;
+                  {created.customId ?? created.id} · status &ldquo;{created.status ?? "padrão da lista"}&rdquo;
                 </span>
               </div>
               {prompt ? (
@@ -193,20 +210,41 @@ export function NewCardForm({
           ) : (
             <form onSubmit={submit} className="flex flex-col gap-3.5">
               <label className="flex flex-col gap-1.5 text-xs text-muted-foreground">
-                Projeto
+                Link monitorado
                 <select
-                  value={projectId}
-                  onChange={(event) => setProjectId(event.target.value)}
+                  value={listId}
+                  onChange={(event) => {
+                    setOptions(null);
+                    setFirstStatus(null);
+                    setListId(event.target.value);
+                  }}
                   className={`${FIELD} h-10`}
                 >
-                  <option value="">Escolha o projeto</option>
-                  {options.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.name}
+                  {lists.length === 0 && <option value="">Nenhum link monitorado</option>}
+                  {lists.map((item) => (
+                    <option key={item.listId} value={item.listId}>
+                      {item.label}
                     </option>
                   ))}
                 </select>
               </label>
+              {options && (
+                <label className="flex flex-col gap-1.5 text-xs text-muted-foreground">
+                  Projeto
+                  <select
+                    value={projectId}
+                    onChange={(event) => setProjectId(event.target.value)}
+                    className={`${FIELD} h-10`}
+                  >
+                    <option value="">Escolha o projeto</option>
+                    {options.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <label className="flex flex-col gap-1.5 text-xs text-muted-foreground">
                 Título
                 <input
@@ -229,6 +267,29 @@ export function NewCardForm({
                 />
               </label>
 
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1.5 text-xs text-muted-foreground">
+                  Início
+                  <input
+                    type="date"
+                    value={startDate}
+                    max={dueDate || undefined}
+                    onChange={(event) => setStartDate(event.target.value)}
+                    className={`${FIELD} h-10`}
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5 text-xs text-muted-foreground">
+                  Fim
+                  <input
+                    type="date"
+                    value={dueDate}
+                    min={startDate || undefined}
+                    onChange={(event) => setDueDate(event.target.value)}
+                    className={`${FIELD} h-10`}
+                  />
+                </label>
+              </div>
+
               {(error || loadError) && (
                 <span className="text-xs text-danger">{error ?? loadError}</span>
               )}
@@ -242,7 +303,8 @@ export function NewCardForm({
                 {sending ? "Criando…" : "Criar card"}
               </button>
               <span className="text-[11px] text-faint">
-                Cria uma tarefa real na lista Atividades do ClickUp, com status &ldquo;refinar po&rdquo;.
+                Cria uma tarefa real na lista escolhida do ClickUp
+                {firstStatus ? <>, no primeiro status &ldquo;{firstStatus}&rdquo;</> : ""}.
               </span>
             </form>
           )}
