@@ -36,6 +36,8 @@ export function ProductivityPanel({
   const [project, setProject] = useState("");
   const [people, setPeople] = useState<PersonSummary[] | null>(null);
   const [allowed, setAllowed] = useState(true);
+  const [sources, setSources] = useState<{ listId: string; label: string }[]>([]);
+  const [list, setList] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -46,6 +48,7 @@ export function ProductivityPanel({
     setLoading(true);
     const query = new URLSearchParams({ days: String(days) });
     if (project) query.set("project", project);
+    if (list) query.set("list", list);
     fetch(`/api/produtividade?${query}`)
       .then(async (res) => {
         if (res.status === 403) {
@@ -53,7 +56,10 @@ export function ProductivityPanel({
           return;
         }
         const data = await res.json();
-        if (!cancelled) setPeople(data.people ?? []);
+        if (!cancelled) {
+          setPeople(data.people ?? []);
+          setSources(data.sources ?? []);
+        }
       })
       .catch(() => {
         if (!cancelled) setPeople([]);
@@ -64,7 +70,7 @@ export function ProductivityPanel({
     return () => {
       cancelled = true;
     };
-  }, [days, project, reload]);
+  }, [days, project, list, reload]);
 
   if (!allowed) return null;
 
@@ -120,6 +126,25 @@ export function ProductivityPanel({
           </button>
         </div>
       </div>
+
+      {sources.length > 0 && (
+        <div className="flex flex-wrap gap-2 text-[13px]">
+          {[{ listId: "", label: "todas as origens" }, ...sources].map((item) => (
+            <button
+              key={item.listId}
+              type="button"
+              onClick={() => setList(item.listId)}
+              className={`h-9 rounded-lg border px-3 transition-colors ${
+                list === item.listId
+                  ? "border-primary text-foreground"
+                  : "border-line-input text-muted-foreground hover:border-primary"
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {people === null ? (
         <span className="text-sm text-muted-foreground">Carregando…</span>

@@ -5,6 +5,7 @@ export type ProjectSource = {
   projectName: string | null;
   listId: string;
   label: string | null;
+  nickname: string | null;
   webhookId: string | null;
 };
 
@@ -32,6 +33,7 @@ type SourceRow = {
   project_name: string | null;
   clickup_list_id: string;
   label: string | null;
+  nickname: string | null;
   webhook_id: string | null;
   webhook_secret?: string | null;
 };
@@ -42,6 +44,7 @@ function toSource(row: SourceRow): ProjectSource {
     projectName: row.project_name,
     listId: row.clickup_list_id,
     label: row.label,
+    nickname: row.nickname,
     webhookId: row.webhook_id,
   };
 }
@@ -49,7 +52,7 @@ function toSource(row: SourceRow): ProjectSource {
 export async function listSources(): Promise<ProjectSource[]> {
   const { data, error } = await getSupabase()
     .from("project_sources")
-    .select("id, project_name, clickup_list_id, label, webhook_id")
+    .select("id, project_name, clickup_list_id, label, nickname, webhook_id")
     .order("project_name");
   if (error) throw new Error(`Erro ao listar as listas: ${error.message}`);
   return (data ?? []).map((row) => toSource(row as SourceRow));
@@ -60,7 +63,7 @@ export async function findSourceByWebhook(
 ): Promise<(ProjectSource & { secret: string }) | null> {
   const { data, error } = await getSupabase()
     .from("project_sources")
-    .select("id, project_name, clickup_list_id, label, webhook_id, webhook_secret")
+    .select("id, project_name, clickup_list_id, label, nickname, webhook_id, webhook_secret")
     .eq("webhook_id", webhookId)
     .maybeSingle();
   if (error || !data) return null;
@@ -83,10 +86,18 @@ export async function addSource(input: {
       webhook_id: input.webhook?.id ?? null,
       webhook_secret: input.webhook?.secret ?? null,
     })
-    .select("id, project_name, clickup_list_id, label, webhook_id")
+    .select("id, project_name, clickup_list_id, label, nickname, webhook_id")
     .single();
   if (error) throw new Error(`Erro ao cadastrar a lista: ${error.message}`);
   return toSource(data as SourceRow);
+}
+
+export async function setSourceNickname(id: string, nickname: string | null): Promise<void> {
+  const { error } = await getSupabase()
+    .from("project_sources")
+    .update({ nickname })
+    .eq("id", id);
+  if (error) throw new Error(`Erro ao salvar o apelido: ${error.message}`);
 }
 
 export async function setSourceWebhook(
@@ -174,6 +185,7 @@ const TIMELINE_LIMIT = 60;
 export async function fetchProductivity(params: {
   sinceIso: string;
   project: string | null;
+  listId: string | null;
 }): Promise<PersonSummary[]> {
   let query = getSupabase()
     .from("activity_events")
@@ -184,6 +196,7 @@ export async function fetchProductivity(params: {
     .order("occurred_at", { ascending: false })
     .limit(5000);
   if (params.project) query = query.eq("project_name", params.project);
+  if (params.listId) query = query.eq("list_id", params.listId);
 
   const { data, error } = await query;
   if (error) throw new Error(`Erro ao ler a produtividade: ${error.message}`);
