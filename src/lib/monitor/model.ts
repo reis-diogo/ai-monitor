@@ -62,7 +62,12 @@ export type MonitorCard = {
 
 export type DwellLookup = Map<string, { since: string | null }>;
 
-export function buildCards(items: ActivityItem[], dwell: DwellLookup, now: number): MonitorCard[] {
+export function buildCards(
+  items: ActivityItem[],
+  dwell: DwellLookup,
+  now: number,
+  starts: Record<string, string> = {}
+): MonitorCard[] {
   const cards: MonitorCard[] = [];
 
   for (const item of items) {
@@ -70,7 +75,8 @@ export function buildCards(items: ActivityItem[], dwell: DwellLookup, now: numbe
 
     const since = dwell.get(item.id)?.since ?? null;
     const elapsed = since ? now - new Date(since).getTime() : null;
-    const age = now - new Date(item.date).getTime();
+    const begin = starts[item.id] ?? (stageOf(item.status) > 0 ? item.date : null);
+    const age = begin ? now - new Date(begin).getTime() : NaN;
 
     cards.push({
       id: item.id,

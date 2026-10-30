@@ -22,7 +22,7 @@ export function PipelineSteps({
   const lineTop = box / 2 - 1;
 
   return (
-    <div className="relative w-full" style={{ height: box + 22 + (live ? 128 : 0) }}>
+    <div className="relative" style={{ height: box + 22 + (live ? 128 : 0), marginInline: 24 }}>
       <div
         className="absolute h-0.5 rounded-sm bg-track"
         style={{ left: box / 2, right: box / 2, top: lineTop }}
@@ -128,7 +128,7 @@ export function PipelineSteps({
           className="absolute"
           style={{
             left: `calc(${box / 2}px + (100% - ${box}px) * ${live.stage / STAGES.length})`,
-            transform: live.stage === 0 ? `translateX(-${box / 2}px)` : "translateX(-50%)",
+            transform: "translateX(-50%)",
             top: box + 24,
           }}
         >

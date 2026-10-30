@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveLocalJob } from "@/lib/local-jobs-store";
 import { clearProgress, fetchProgress, recordProgress } from "@/lib/progress-store";
+import { markStarted } from "@/lib/started-store";
 import { isAllowedUser } from "@/lib/require-allowed-user";
 import { readJsonBody } from "@/lib/read-json-body";
 import { updateTaskStatus } from "@/lib/clickup";
@@ -72,6 +73,7 @@ export async function POST(request: NextRequest) {
       percent,
       state: body?.state === "failed" ? "failed" : "running",
     });
+    await markStarted(activityId).catch(() => {});
     return NextResponse.json({ ok: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro ao registrar o progresso.";
