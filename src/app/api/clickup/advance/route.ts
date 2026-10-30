@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateTaskStatus } from "@/lib/clickup";
+import { clearProgress } from "@/lib/progress-store";
 import { readJsonBody } from "@/lib/read-json-body";
 import { isAllowedUser } from "@/lib/require-allowed-user";
 
@@ -18,6 +19,7 @@ export async function POST(request: NextRequest) {
 
   try {
     await updateTaskStatus(id, QA_STATUS);
+    await clearProgress(id).catch(() => {});
     return NextResponse.json({ ok: true, status: QA_STATUS });
   } catch (error) {
     const message =

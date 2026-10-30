@@ -268,6 +268,18 @@ export async function fetchTaskContent(
 }
 
 
+export async function fetchTaskAttachments(
+  taskId: string
+): Promise<{ id: string; title: string }[]> {
+  const task = (await clickupFetch(`/task/${taskId}`)) as {
+    attachments?: { id: string; title?: string | null }[];
+  };
+  return (task.attachments ?? []).map((item) => ({
+    id: item.id,
+    title: item.title || "Anexo sem nome",
+  }));
+}
+
 export async function fetchListWebUrl(listId: string): Promise<string> {
   const data = (await clickupFetch("/team")) as { teams?: { id: string }[] };
   const teamId = data.teams?.[0]?.id;

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useMonitor } from "@/components/Dashboard";
 import { useActivityProgress } from "@/lib/use-activity-progress";
+import { useCardStarts } from "@/lib/use-card-starts";
 import { Icon } from "@/components/monitor/Icon";
 import { CursorColorPicker } from "@/components/monitor/CursorColorPicker";
 import { LiveCursors } from "@/components/monitor/LiveCursors";
@@ -195,6 +196,7 @@ export function MapView() {
   const [notFound, setNotFound] = useState(false);
   const [clickupUrl, setClickupUrl] = useState<string | null>(null);
   const progressMap = useActivityProgress();
+  const cardStarts = useCardStarts();
   const [newCardOpen, setNewCardOpen] = useState(false);
   const [newCardProject, setNewCardProject] = useState<string | null>(null);
   const [pickedColor, setPickedColor] = useState<string | null>(null);
@@ -210,8 +212,8 @@ export function MapView() {
   const [nodes, setNodes] = useState<string[]>([]);
 
   const allCards = useMemo(
-    () => buildCards(activityItems, dwellMap, nowTick),
-    [activityItems, dwellMap, nowTick],
+    () => buildCards(activityItems, dwellMap, nowTick, cardStarts),
+    [activityItems, dwellMap, nowTick, cardStarts],
   );
   const progressCards = allCards;
   const workload = useMemo(() => {
@@ -1129,7 +1131,7 @@ export function MapView() {
                               <span
                                 className="ml-auto flex shrink-0 items-center gap-1 text-sm font-semibold"
                                 style={{ color: spanColor(card, limits) }}
-                                title={`Desde a criação no ClickUp${
+                                title={`${card.ageMs === null ? "Conta a partir da primeira interação do PO" : "Desde a primeira interação"}${
                                   card.elapsedMs !== null
                                     ? ` · nesta etapa: ${formatSpan(card.elapsedMs)}`
                                     : ""

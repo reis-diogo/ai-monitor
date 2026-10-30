@@ -73,6 +73,7 @@ export function CardDetailModal({
     "idle" | "loading" | "copied" | "error"
   >("idle");
   const [copied, setCopied] = useState(false);
+  const [titleCopied, setTitleCopied] = useState(false);
   const [promptState, setPromptState] = useState<
     "idle" | "loading" | "copied" | "error"
   >("idle");
@@ -87,6 +88,17 @@ export function CardDetailModal({
       setTimeout(() => setCopied(false), 1800);
     } catch {
       setCopied(false);
+    }
+  }
+
+  async function copyTitle() {
+    if (!card) return;
+    try {
+      await navigator.clipboard.writeText(card.title);
+      setTitleCopied(true);
+      setTimeout(() => setTitleCopied(false), 1800);
+    } catch {
+      setTitleCopied(false);
     }
   }
 
@@ -121,6 +133,24 @@ export function CardDetailModal({
   }
 
   const cardId = card?.id;
+  const [attachments, setAttachments] = useState<{ id: string; title: string }[]>([]);
+
+  useEffect(() => {
+    if (!cardId) return;
+    let cancelled = false;
+    fetch(`/api/clickup/tasks/${encodeURIComponent(cardId)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setAttachments(data?.attachments ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setAttachments([]);
+      });
+    return () => {
+      cancelled = true;
+      setAttachments([]);
+    };
+  }, [cardId]);
   const loadReview = card
     ? (decided ?? card.status).toLowerCase() === VALIDATE_STATUS
     : false;
@@ -383,9 +413,23 @@ export function CardDetailModal({
                 <span className="text-sm font-bold text-link">
                   {card.customId}
                 </span>
-                <h2 className="m-0 text-lg font-semibold leading-snug">
-                  {card.title}
-                </h2>
+                <div className="flex items-start gap-2">
+                  <h2 className="m-0 text-lg font-semibold leading-snug">
+                    {card.title}
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={copyTitle}
+                    aria-label="Copiar título"
+                    title="Copiar título"
+                    className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <Icon
+                      name={titleCopied ? "check" : "content_copy"}
+                      size={14}
+                    />
+                  </button>
+                </div>
               </div>
               <button
                 type="button"
@@ -412,6 +456,37 @@ export function CardDetailModal({
                 {card.owner}
               </span>
             </div>
+            {stageOf(status) === 0 && (
+              <div className="flex shrink-0 items-start gap-3 rounded-xl border border-line-card bg-surface-raised p-4">
+                <div className="max-h-56 min-w-0 flex-1 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-text-soft">
+                  {description.trim() || "Sem descrição."}
+                </div>
+                <button
+                  type="button"
+                  onClick={copy}
+                  className="flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-line-input bg-card px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+                >
+                  <Icon name={copied ? "check" : "content_copy"} size={14} />
+                  {copied ? "Copiado" : "Copiar"}
+                </button>
+              </div>
+            )}
+            {attachments.length > 0 && (
+              <div className="flex shrink-0 flex-col gap-1.5">
+                <span className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                  Anexos ({attachments.length})
+                </span>
+                {attachments.map((item) => (
+                  <span
+                    key={item.id}
+                    className="flex items-center gap-2 text-xs text-text-soft"
+                  >
+                    <Icon name="attach_file" size={14} />
+                    <span className="min-w-0 truncate">{item.title}</span>
+                  </span>
+                ))}
+              </div>
+            )}
             {stageOf(status) === 0 && (
               <button
                 type="button"

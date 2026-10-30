@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { APPROVED_STATUS, REFINE_STATUS } from "@/lib/architect-gate";
 import { canDecideArchitecture } from "@/lib/architect-access";
 import { createTaskComment, updateTaskStatus } from "@/lib/clickup";
+import { clearProgress } from "@/lib/progress-store";
 import { readJsonBody } from "@/lib/read-json-body";
 import { getCurrentUserEmail, isAllowedUser } from "@/lib/require-allowed-user";
 
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest) {
       );
     }
     await updateTaskStatus(id, status);
+    await clearProgress(id).catch(() => {});
     return NextResponse.json({ ok: true, status });
   } catch (error) {
     const message =
