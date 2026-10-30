@@ -348,7 +348,7 @@ export async function fetchChangedTasks(
 
 type ClickUpStatusHistory = {
   status: string;
-  total_time?: { since?: string };
+  total_time?: { since?: string; by_minute?: number };
 };
 
 export async function fetchStatusEvents(taskIds: string[]): Promise<StatusEvent[]> {
@@ -375,6 +375,37 @@ export async function fetchStatusEvents(taskIds: string[]): Promise<StatusEvent[
   }
 
   return events;
+}
+
+export type StatusMinutes = Record<string, Record<string, number>>;
+
+export async function fetchStatusMinutes(taskIds: string[]): Promise<StatusMinutes> {
+  const result: StatusMinutes = {};
+
+  for (let start = 0; start < taskIds.length; start += BULK_STATUS_LIMIT) {
+    const query = taskIds
+      .slice(start, start + BULK_STATUS_LIMIT)
+      .map((id) => `task_ids=${encodeURIComponent(id)}`)
+      .join("&");
+
+    const data = (await clickupFetch(`/task/bulk_time_in_status/task_ids?${query}`)) as Record<
+      string,
+      { status_history?: ClickUpStatusHistory[] }
+    > | null;
+
+    for (const [taskId, entry] of Object.entries(data ?? {})) {
+      const byStatus: Record<string, number> = {};
+      for (const step of entry.status_history ?? []) {
+        const minutes = Number(step.total_time?.by_minute);
+        if (!Number.isFinite(minutes) || minutes < 0) continue;
+        const key = step.status.toLowerCase();
+        byStatus[key] = (byStatus[key] ?? 0) + minutes;
+      }
+      result[taskId] = byStatus;
+    }
+  }
+
+  return result;
 }
 
 const PROGRESS_LIST_NAME = "executivo";

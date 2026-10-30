@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import { Icon } from "@/components/monitor/Icon";
-import { STAGES, STAGE_DONE } from "@/lib/monitor/model";
+import { STAGES, STAGE_DONE, formatSpan } from "@/lib/monitor/model";
 
 const LABELS = [...STAGES, ""];
 
@@ -10,9 +10,11 @@ export function PipelineSteps({
   stage,
   compact = false,
   live,
+  times,
 }: {
   stage: number;
   compact?: boolean;
+  times?: (number | null)[];
   live?: { stage: number; node: React.ReactNode };
 }) {
   const active = Boolean(live);
@@ -20,9 +22,12 @@ export function PipelineSteps({
   const radius = compact ? 7 : 8;
   const fill = Math.min(stage, STAGE_DONE) / STAGES.length;
   const lineTop = box / 2 - 1;
+  const measured = times?.filter((ms): ms is number => ms !== null && ms > 0) ?? [];
+  const slowest = measured.length > 1 ? Math.max(...measured) : null;
+  const timeRow = times ? 14 : 0;
 
   return (
-    <div className="relative" style={{ height: box + 22 + (live ? 128 : 0), marginInline: 24 }}>
+    <div className="relative" style={{ height: box + 22 + timeRow + (live ? 128 : 0), marginInline: 24 }}>
       <div
         className="absolute h-0.5 rounded-sm bg-track"
         style={{ left: box / 2, right: box / 2, top: lineTop }}
@@ -120,6 +125,21 @@ export function PipelineSteps({
             >
               {label}
             </span>
+            {times && !last && (
+              <span
+                className="text-[10px] font-medium tabular-nums"
+                style={{
+                  minHeight: 12,
+                  color:
+                    slowest !== null && times[index] === slowest
+                      ? "var(--warn)"
+                      : "var(--faint)",
+                }}
+                title={times[index] ? `Tempo em ${STAGES[index]}` : undefined}
+              >
+                {times[index] ? formatSpan(times[index]) : ""}
+              </span>
+            )}
           </div>
         );
       })}
@@ -129,7 +149,7 @@ export function PipelineSteps({
           style={{
             left: `calc(${box / 2}px + (100% - ${box}px) * ${live.stage / STAGES.length})`,
             transform: "translateX(-50%)",
-            top: box + 24,
+            top: box + 24 + timeRow,
           }}
         >
           {live.node}

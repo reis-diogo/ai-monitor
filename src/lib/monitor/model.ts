@@ -32,6 +32,16 @@ const STAGE_BY_STATUS: Record<string, number> = {
   "deploy produção": 5,
 };
 
+export function stageDurations(minutesByStatus: Record<string, number>): (number | null)[] {
+  const totals: (number | null)[] = STAGES.map(() => null);
+  for (const [status, minutes] of Object.entries(minutesByStatus)) {
+    const index = STAGE_BY_STATUS[status];
+    if (index === undefined) continue;
+    totals[index] = (totals[index] ?? 0) + minutes * 60000;
+  }
+  return totals;
+}
+
 export function isDoneStatus(status: string): boolean {
   return DONE_STATUSES.has(status.toLowerCase());
 }

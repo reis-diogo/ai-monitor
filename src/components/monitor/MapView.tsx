@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useMonitor } from "@/components/Dashboard";
 import { useActivityProgress } from "@/lib/use-activity-progress";
+import { useStageTimes } from "@/lib/use-stage-times";
 import { useCardStarts } from "@/lib/use-card-starts";
 import { Icon } from "@/components/monitor/Icon";
 import { CursorColorPicker } from "@/components/monitor/CursorColorPicker";
@@ -216,6 +217,7 @@ export function MapView() {
     [activityItems, dwellMap, nowTick, cardStarts],
   );
   const progressCards = allCards;
+  const stageTimes = useStageTimes(useMemo(() => allCards.map((card) => card.id), [allCards]));
   const workload = useMemo(() => {
     const since = nowTick - RECENT_WINDOW_MS;
     const byId = new Map(activityItems.map((item) => [item.id, item]));
@@ -1146,6 +1148,7 @@ export function MapView() {
                             <PipelineSteps
                               stage={card.stage}
                               compact
+                              times={stageTimes.get(card.id)}
                               live={liveFor(card)}
                             />
                           </div>
