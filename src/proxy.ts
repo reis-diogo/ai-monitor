@@ -14,6 +14,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/architect/queue",
   "/api/architect/jobs",
   "/api/ai-activity/events",
+  "/api/clickup/webhook",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

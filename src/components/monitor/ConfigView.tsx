@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import { useMonitor } from "@/components/Dashboard";
 import { Icon } from "@/components/monitor/Icon";
 import { ProfessionalsManager } from "@/components/ProfessionalsManager";
+import { SourcesManager } from "@/components/monitor/SourcesManager";
 import { ProjectsManager } from "@/components/ProjectsManager";
 import { PromptEditorModal } from "@/components/PromptEditorModal";
 import { ProviderToggle } from "@/components/ProviderToggle";
@@ -285,6 +286,7 @@ export function ConfigView({ onClose }: { onClose: () => void }) {
             onChange={m.fetchProjects}
             knownLocations={m.knownLocations}
           />
+          <SourcesManager projectNames={m.projects.map((project) => project.name)} />
           <RepoManager onRepoChange={m.fetchActivity} />
         </div>
       )}

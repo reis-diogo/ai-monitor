@@ -265,16 +265,10 @@ function useMonitorState() {
   }
 
   const fetchActivity = useCallback(async () => {
-    try {
-      const res = await fetch("/api/activity");
-      const data = await res.json();
-      setAuthors(data.authors);
-      setErrors(data.errors ?? []);
-      setStatus("ready");
-      setLastSync(new Date());
-    } catch {
-      setStatus("error");
-    }
+    setAuthors([]);
+    setErrors([]);
+    setStatus("ready");
+    setLastSync(new Date());
   }, []);
 
   useEffect(() => {

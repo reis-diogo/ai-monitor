@@ -287,7 +287,9 @@ export async function fetchListWebUrl(listId: string): Promise<string> {
   return `https://app.clickup.com/${teamId}/v/li/${listId}`;
 }
 
-type ClickUpTeamMember = { user: { id: number; email?: string | null } };
+type ClickUpTeamMember = {
+  user: { id: number; email?: string | null; profilePicture?: string | null };
+};
 
 /**
  * Mapa email -> id de usuario do ClickUp. Mencionar alguem exige o id numerico, e
@@ -306,6 +308,21 @@ export async function fetchTeamMemberIdsByEmail(): Promise<Map<string, number>> 
     }
   }
   return map;
+}
+
+export async function fetchTeamMemberAvatar(email: string): Promise<string | null> {
+  const data = (await clickupFetch("/team")) as {
+    teams?: { members?: ClickUpTeamMember[] }[];
+  };
+  const wanted = email.trim().toLowerCase();
+  for (const team of data.teams ?? []) {
+    for (const member of team.members ?? []) {
+      if (member.user.email?.trim().toLowerCase() === wanted) {
+        return member.user.profilePicture ?? null;
+      }
+    }
+  }
+  return null;
 }
 
 type ClickUpTimeInStatus = {
@@ -542,4 +559,59 @@ export async function createListTask(
   })) as { id: string; custom_id?: string | null; url: string };
 
   return { id: data.id, customId: data.custom_id ?? null, url: data.url };
+}
+
+const WEBHOOK_EVENTS = [
+  "taskCreated",
+  "taskStatusUpdated",
+  "taskCommentPosted",
+  "taskAssigneeUpdated",
+];
+
+async function fetchTeamId(): Promise<string> {
+  const data = (await clickupFetch("/team")) as { teams?: { id: string }[] };
+  const teamId = data.teams?.[0]?.id;
+  if (!teamId) throw new Error("Workspace do ClickUp não encontrado.");
+  return teamId;
+}
+
+export async function createListWebhook(
+  listId: string,
+  endpoint: string
+): Promise<{ id: string; secret: string }> {
+  const teamId = await fetchTeamId();
+  const data = (await clickupFetch(`/team/${teamId}/webhook`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ endpoint, events: WEBHOOK_EVENTS, list_id: Number(listId) }),
+  })) as { id?: string; webhook?: { id?: string; secret?: string } };
+
+  const id = data.webhook?.id ?? data.id;
+  const secret = data.webhook?.secret;
+  if (!id || !secret) throw new Error("O ClickUp não devolveu o webhook criado.");
+  return { id, secret };
+}
+
+export async function fetchListName(listId: string): Promise<string | null> {
+  try {
+    const list = (await clickupFetch(`/list/${listId}`)) as { name?: string };
+    return list.name ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteWebhook(webhookId: string): Promise<void> {
+  await clickupFetch(`/webhook/${webhookId}`, { method: "DELETE" });
+}
+
+export async function fetchTaskSummary(
+  taskId: string
+): Promise<{ title: string; customId: string | null } | null> {
+  try {
+    const task = (await clickupFetch(`/task/${taskId}`)) as { name: string; custom_id?: string | null };
+    return { title: task.name, customId: task.custom_id ?? null };
+  } catch {
+    return null;
+  }
 }
