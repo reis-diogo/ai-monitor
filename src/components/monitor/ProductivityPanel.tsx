@@ -8,6 +8,25 @@ import type { PersonSummary } from "@/lib/productivity-store";
 
 export const PANEL_W = 920;
 
+function toneOf(status: string | null): string {
+  const name = (status ?? "").toLowerCase();
+  if (/^(para|aguard)/.test(name)) return "bg-surface-raised text-muted-foreground ring-1 ring-line-input";
+  if (/conclu|finaliz|done|complete/.test(name)) return "bg-ok/15 text-ok";
+  if (/bug|bloque|cancel|reprov/.test(name)) return "bg-warn/15 text-warn";
+  if (/andamento|desenvolv|progress/.test(name)) return "bg-primary/15 text-link";
+  return "bg-surface-raised text-muted-foreground ring-1 ring-line-input";
+}
+
+function StatusBadge({ status }: { status: string | null }) {
+  return (
+    <span
+      className={`shrink-0 rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${toneOf(status)}`}
+    >
+      {status ?? "—"}
+    </span>
+  );
+}
+
 const PERIODS = [
   { days: 7, label: "7 dias" },
   { days: 30, label: "30 dias" },
@@ -228,15 +247,23 @@ export function ProductivityPanel({
                               {item.project}
                             </span>
                           </div>
-                          <div className="flex items-baseline gap-3 text-text-soft">
+                          <div className="flex items-center gap-3 text-text-soft">
                             <span className="w-20 shrink-0 text-faint">
                               há {formatSpan(Math.max(now - new Date(item.at).getTime(), 0))}
                             </span>
-                            <span className="min-w-0 flex-1 truncate">
-                              {KIND_LABEL[item.kind]}
-                              {item.kind === "status" && ` ${item.from ?? "—"} → ${item.to ?? "—"}`}
-                              {item.kind === "comment" && item.detail ? `: ${item.detail}` : ""}
-                            </span>
+                            {item.kind === "status" ? (
+                              <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                                <span>moveu</span>
+                                <StatusBadge status={item.from} />
+                                <span className="text-faint">→</span>
+                                <StatusBadge status={item.to} />
+                              </span>
+                            ) : (
+                              <span className="min-w-0 flex-1 truncate">
+                                {KIND_LABEL[item.kind]}
+                                {item.kind === "comment" && item.detail ? `: ${item.detail}` : ""}
+                              </span>
+                            )}
                           </div>
                         </div>
                       ))}
