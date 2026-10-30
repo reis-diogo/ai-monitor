@@ -5,7 +5,10 @@ import { isPromptEditor } from "@/lib/require-allowed-user";
 
 function parseListId(value: string): string | null {
   const text = value.trim();
-  const fromUrl = text.match(/\/v\/li\/(\d+)/) ?? text.match(/\/li\/(\d+)/);
+  const fromUrl =
+    text.match(/\/v\/l\/\d+-(\d+)-\d+/) ??
+    text.match(/\/v\/li\/(\d+)/) ??
+    text.match(/\/li\/(\d+)/);
   if (fromUrl) return fromUrl[1];
   return /^\d{5,}$/.test(text) ? text : null;
 }
@@ -49,7 +52,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error:
-          "O ClickUp não reconhece esse id como uma lista. Abra a lista no ClickUp e copie o link, que termina em /v/li/<número>.",
+          "O ClickUp não reconhece esse id como uma lista. Abra a lista no ClickUp e copie o link dela.",
       },
       { status: 400 },
     );

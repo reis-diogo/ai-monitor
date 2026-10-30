@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
         actorName: name,
         actorEmail: user?.email ?? null,
         listId: source.listId,
-        projectName: source.projectName,
+        projectName: summary?.project ?? source.projectName,
         taskId,
         taskCustomId: summary?.customId ?? null,
         taskTitle: summary?.title ?? null,
