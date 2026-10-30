@@ -607,10 +607,14 @@ export async function deleteWebhook(webhookId: string): Promise<void> {
 
 export async function fetchTaskSummary(
   taskId: string
-): Promise<{ title: string; customId: string | null } | null> {
+): Promise<{ title: string; customId: string | null; project: string | null } | null> {
   try {
-    const task = (await clickupFetch(`/task/${taskId}`)) as { name: string; custom_id?: string | null };
-    return { title: task.name, customId: task.custom_id ?? null };
+    const task = (await clickupFetch(`/task/${taskId}`)) as ClickUpTaskResponse;
+    return {
+      title: task.name,
+      customId: task.custom_id ?? null,
+      project: resolveProjectName(task),
+    };
   } catch {
     return null;
   }
