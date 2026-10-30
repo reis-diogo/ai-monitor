@@ -4,10 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Icon } from "@/components/monitor/Icon";
 import type { ProjectSource } from "@/lib/productivity-store";
 
-export function SourcesManager({ projectNames }: { projectNames: string[] }) {
+export function SourcesManager() {
   const [sources, setSources] = useState<ProjectSource[] | null>(null);
   const [allowed, setAllowed] = useState(true);
-  const [project, setProject] = useState("");
   const [list, setList] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -34,14 +33,14 @@ export function SourcesManager({ projectNames }: { projectNames: string[] }) {
   if (!allowed) return null;
 
   async function add() {
-    if (saving || !project || !list.trim()) return;
+    if (saving || !list.trim()) return;
     setSaving(true);
     setMessage(null);
     try {
       const res = await fetch("/api/produtividade/fontes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectName: project, list }),
+        body: JSON.stringify({ list }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Erro ao cadastrar.");
@@ -62,25 +61,13 @@ export function SourcesManager({ projectNames }: { projectNames: string[] }) {
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h3 className="m-0 text-base font-semibold">Listas do ClickUp por projeto</h3>
+        <h3 className="m-0 text-base font-semibold">Links do ClickUp monitorados</h3>
         <span className="text-xs text-muted-foreground">
-          Cada lista cadastrada passa a ter as ações das pessoas (abrir card, mover de status,
-          comentar) registradas para a visão de produtividade.
+          Tudo o que acontece nesses links (abrir card, mover de status, comentar) é registrado
+          para a visão de produtividade. O projeto de cada ação vem do próprio card.
         </span>
       </div>
       <div className="flex flex-wrap gap-2">
-        <select
-          value={project}
-          onChange={(event) => setProject(event.target.value)}
-          className="h-10 rounded-lg border border-line-input bg-card px-3 text-sm"
-        >
-          <option value="">projeto…</option>
-          {projectNames.map((name) => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
         <input
           value={list}
           onChange={(event) => setList(event.target.value)}
@@ -90,7 +77,7 @@ export function SourcesManager({ projectNames }: { projectNames: string[] }) {
         <button
           type="button"
           onClick={add}
-          disabled={saving || !project || !list.trim()}
+          disabled={saving || !list.trim()}
           className="flex h-10 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-50"
         >
           <Icon name={saving ? "progress_activity" : "add"} size={16} className={saving ? "animate-spin" : undefined} />
@@ -104,9 +91,10 @@ export function SourcesManager({ projectNames }: { projectNames: string[] }) {
             key={source.id}
             className="flex items-center gap-3 rounded-xl border border-line-card bg-surface-raised px-4 py-2.5 text-sm"
           >
-            <span className="font-medium">{source.projectName}</span>
             <span className="text-muted-foreground">
-              {source.label ?? "lista"} · {source.listId}
+              <span className="font-medium text-foreground">{source.label ?? "Lista"}</span>
+              {" · "}
+              {source.listId}
             </span>
             <span
               className={`ml-auto rounded-full px-2 py-0.5 text-[11px] font-semibold ${

@@ -37,9 +37,13 @@ export function ProductivityPanel({
   const [people, setPeople] = useState<PersonSummary[] | null>(null);
   const [allowed, setAllowed] = useState(true);
   const [open, setOpen] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
     const query = new URLSearchParams({ days: String(days) });
     if (project) query.set("project", project);
     fetch(`/api/produtividade?${query}`)
@@ -53,11 +57,14 @@ export function ProductivityPanel({
       })
       .catch(() => {
         if (!cancelled) setPeople([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [days, project]);
+  }, [days, project, reload]);
 
   if (!allowed) return null;
 
@@ -97,6 +104,20 @@ export function ProductivityPanel({
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            onClick={() => setReload((value) => value + 1)}
+            disabled={loading}
+            aria-label="Atualizar"
+            title="Atualizar"
+            className="flex size-9 items-center justify-center rounded-lg border border-line-input text-muted-foreground transition-colors hover:border-primary hover:text-foreground disabled:opacity-60"
+          >
+            <Icon
+              name="refresh"
+              size={16}
+              className={loading ? "animate-spin" : undefined}
+            />
+          </button>
         </div>
       </div>
 
@@ -153,18 +174,29 @@ export function ProductivityPanel({
                     </div>
                     <div className="flex flex-col gap-1.5">
                       {person.timeline.map((item, index) => (
-                        <div key={index} className="flex items-baseline gap-3">
-                          <span className="w-20 shrink-0 text-faint">
-                            há {formatSpan(Math.max(now - new Date(item.at).getTime(), 0))}
-                          </span>
-                          <span className="font-semibold text-link">{item.card}</span>
-                          <span className="min-w-0 flex-1 truncate text-text-soft">
-                            {KIND_LABEL[item.kind]}
-                            {item.kind === "status" && ` ${item.from ?? "—"} → ${item.to ?? "—"}`}
-                            {item.kind === "comment" && item.detail ? `: ${item.detail}` : ""}
-                            {item.title ? ` · ${item.title}` : ""}
-                          </span>
-                          <span className="shrink-0 text-faint">{item.project}</span>
+                        <div
+                          key={index}
+                          className="flex flex-col gap-0.5 rounded-lg border border-line-card px-3 py-2"
+                        >
+                          <div className="flex items-baseline gap-3">
+                            <span className="shrink-0 font-semibold text-link">{item.card}</span>
+                            <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-foreground">
+                              {item.title ?? "Sem título"}
+                            </span>
+                            <span className="shrink-0 rounded-full border border-line-input px-2.5 py-0.5 text-muted-foreground">
+                              {item.project}
+                            </span>
+                          </div>
+                          <div className="flex items-baseline gap-3 text-text-soft">
+                            <span className="w-20 shrink-0 text-faint">
+                              há {formatSpan(Math.max(now - new Date(item.at).getTime(), 0))}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate">
+                              {KIND_LABEL[item.kind]}
+                              {item.kind === "status" && ` ${item.from ?? "—"} → ${item.to ?? "—"}`}
+                              {item.kind === "comment" && item.detail ? `: ${item.detail}` : ""}
+                            </span>
+                          </div>
                         </div>
                       ))}
                     </div>

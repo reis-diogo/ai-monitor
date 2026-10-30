@@ -286,7 +286,7 @@ export function ConfigView({ onClose }: { onClose: () => void }) {
             onChange={m.fetchProjects}
             knownLocations={m.knownLocations}
           />
-          <SourcesManager projectNames={m.projects.map((project) => project.name)} />
+          <SourcesManager />
           <RepoManager onRepoChange={m.fetchActivity} />
         </div>
       )}
