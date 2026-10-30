@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createListWebhook, deleteWebhook, fetchListName } from "@/lib/clickup";
-import { addSource, listSources, removeSource } from "@/lib/productivity-store";
+import { addSource, listSources, removeSource, setSourceNickname } from "@/lib/productivity-store";
 import { isPromptEditor } from "@/lib/require-allowed-user";
 
 function parseListId(value: string): string | null {
@@ -93,6 +93,24 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro ao remover a lista.";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  if (!(await isPromptEditor())) {
+    return NextResponse.json({ error: "Só o admin edita listas." }, { status: 403 });
+  }
+  const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
+  const id = typeof body?.id === "string" ? body.id : "";
+  if (!id) return NextResponse.json({ error: "Informe a lista." }, { status: 400 });
+  const nickname = typeof body?.nickname === "string" ? body.nickname.trim().slice(0, 60) : "";
+
+  try {
+    await setSourceNickname(id, nickname || null);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erro ao salvar o apelido.";
     return NextResponse.json({ error: message }, { status: 502 });
   }
 }

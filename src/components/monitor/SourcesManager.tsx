@@ -9,6 +9,8 @@ export function SourcesManager() {
   const [allowed, setAllowed] = useState(true);
   const [list, setList] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
   const [message, setMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -53,6 +55,16 @@ export function SourcesManager() {
     setSaving(false);
   }
 
+  async function saveNickname(id: string) {
+    setEditing(null);
+    await fetch("/api/produtividade/fontes", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, nickname: draft }),
+    });
+    await load();
+  }
+
   async function remove(id: string) {
     await fetch(`/api/produtividade/fontes?id=${encodeURIComponent(id)}`, { method: "DELETE" });
     await load();
@@ -91,11 +103,44 @@ export function SourcesManager() {
             key={source.id}
             className="flex items-center gap-3 rounded-xl border border-line-card bg-surface-raised px-4 py-2.5 text-sm"
           >
-            <span className="text-muted-foreground">
-              <span className="font-medium text-foreground">{source.label ?? "Lista"}</span>
-              {" · "}
-              {source.listId}
-            </span>
+            {editing === source.id ? (
+              <input
+                autoFocus
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                onBlur={() => saveNickname(source.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") event.currentTarget.blur();
+                  if (event.key === "Escape") setEditing(null);
+                }}
+                placeholder={source.label ?? "Apelido"}
+                maxLength={60}
+                className="h-8 w-56 rounded-lg border border-line-input bg-card px-2 text-sm"
+              />
+            ) : (
+              <span className="text-muted-foreground">
+                <span className="font-medium text-foreground">
+                  {source.nickname ?? source.label ?? "Lista"}
+                </span>
+                {source.nickname && source.label && ` (${source.label})`}
+                {" · "}
+                {source.listId}
+              </span>
+            )}
+            {editing !== source.id && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDraft(source.nickname ?? "");
+                  setEditing(source.id);
+                }}
+                aria-label="Dar apelido"
+                title="Dar apelido"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Icon name="edit_note" size={16} />
+              </button>
+            )}
             <span
               className={`ml-auto rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                 source.webhookId ? "bg-ok/15 text-ok" : "bg-warn/15 text-warn"
