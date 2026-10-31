@@ -11,6 +11,7 @@ export function SourcesManager() {
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [importing, setImporting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -55,6 +56,33 @@ export function SourcesManager() {
     setSaving(false);
   }
 
+  async function importHistory() {
+    if (importing) return;
+    setImporting(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/produtividade/historico", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Erro ao importar o histórico.");
+      const results = data.results as {
+        label: string;
+        created: number;
+        comments: number;
+        error?: string;
+      }[];
+      const created = results.reduce((sum, item) => sum + item.created, 0);
+      const comments = results.reduce((sum, item) => sum + item.comments, 0);
+      const failed = results.filter((item) => item.error).map((item) => item.label);
+      setMessage(
+        `Importado: ${created} cards criados e ${comments} comentários.` +
+          (failed.length ? ` Falhou em: ${failed.join(", ")}.` : ""),
+      );
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Erro ao importar o histórico.");
+    }
+    setImporting(false);
+  }
+
   async function saveNickname(id: string) {
     setEditing(null);
     await fetch("/api/produtividade/fontes", {
@@ -95,6 +123,25 @@ export function SourcesManager() {
           <Icon name={saving ? "progress_activity" : "add"} size={16} className={saving ? "animate-spin" : undefined} />
           Adicionar
         </button>
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={importHistory}
+          disabled={importing || !sources?.length}
+          className="flex h-9 items-center gap-1.5 rounded-lg border border-line-input px-3 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-foreground disabled:opacity-50"
+        >
+          <Icon
+            name={importing ? "progress_activity" : "history"}
+            size={14}
+            className={importing ? "animate-spin" : undefined}
+          />
+          {importing ? "Importando…" : "Importar histórico (90 dias)"}
+        </button>
+        <span className="text-xs text-muted-foreground">
+          Traz cards criados e comentários anteriores ao cadastro. Movimentos de status só contam
+          a partir do cadastro.
+        </span>
       </div>
       {message && <span className="text-xs text-muted-foreground">{message}</span>}
       <div className="flex flex-col gap-2">

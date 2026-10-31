@@ -7,6 +7,7 @@ export type ProjectSource = {
   label: string | null;
   nickname: string | null;
   webhookId: string | null;
+  createdAt: string | null;
 };
 
 export type ActivityKind = "created" | "status" | "comment" | "assignee";
@@ -35,6 +36,7 @@ type SourceRow = {
   label: string | null;
   nickname: string | null;
   webhook_id: string | null;
+  created_at?: string | null;
   webhook_secret?: string | null;
 };
 
@@ -46,13 +48,14 @@ function toSource(row: SourceRow): ProjectSource {
     label: row.label,
     nickname: row.nickname,
     webhookId: row.webhook_id,
+    createdAt: row.created_at ?? null,
   };
 }
 
 export async function listSources(): Promise<ProjectSource[]> {
   const { data, error } = await getSupabase()
     .from("project_sources")
-    .select("id, project_name, clickup_list_id, label, nickname, webhook_id")
+    .select("id, project_name, clickup_list_id, label, nickname, webhook_id, created_at")
     .order("project_name");
   if (error) throw new Error(`Erro ao listar as listas: ${error.message}`);
   return (data ?? []).map((row) => toSource(row as SourceRow));
