@@ -158,6 +158,7 @@ export type PersonSummary = {
   commented: number;
   total: number;
   byProject: Record<string, number>;
+  byDay: Record<string, { created: number; moved: number; commented: number }>;
   timeline: {
     at: string;
     kind: ActivityKind;
@@ -184,6 +185,10 @@ type EventRow = {
 };
 
 const TIMELINE_LIMIT = 60;
+
+function dayKey(iso: string): string {
+  return new Date(iso).toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
+}
 
 export async function fetchProductivity(params: {
   sinceIso: string;
@@ -215,6 +220,7 @@ export async function fetchProductivity(params: {
         commented: 0,
         total: 0,
         byProject: {},
+        byDay: {},
         timeline: [],
       } satisfies PersonSummary);
     people.set(row.actor_name, person);
@@ -223,6 +229,10 @@ export async function fetchProductivity(params: {
     else if (row.kind === "status") person.moved += 1;
     else if (row.kind === "comment") person.commented += 1;
     person.total += 1;
+    const day = (person.byDay[dayKey(row.occurred_at)] ??= { created: 0, moved: 0, commented: 0 });
+    if (row.kind === "created") day.created += 1;
+    else if (row.kind === "status") day.moved += 1;
+    else if (row.kind === "comment") day.commented += 1;
     person.byProject[row.project_name] = (person.byProject[row.project_name] ?? 0) + 1;
     if (person.timeline.length < TIMELINE_LIMIT) {
       person.timeline.push({
