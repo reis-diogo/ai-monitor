@@ -85,6 +85,9 @@ function DailyChart({
           const entry = person.byDay[active.key];
           return {
             name: person.name,
+            created: entry?.created ?? 0,
+            moved: entry?.moved ?? 0,
+            commented: entry?.commented ?? 0,
             count: entry ? entry.created + entry.moved + entry.commented : 0,
           };
         })
@@ -128,8 +131,26 @@ function DailyChart({
                 key={item.name}
                 className="flex items-center justify-between gap-4"
               >
-                <span className="whitespace-nowrap text-foreground">{item.name}</span>
-                <span className="font-semibold tabular-nums">{item.count}</span>
+                <span className="whitespace-nowrap text-foreground">
+                  {item.name}
+                </span>
+                <span className="flex items-center gap-2 tabular-nums">
+                  {SERIES.map((serie) => (
+                    <span
+                      key={serie.key}
+                      className={`flex items-center gap-1 ${item[serie.key] ? "" : "opacity-30"}`}
+                    >
+                      <span
+                        className="size-2 rounded-sm"
+                        style={{ background: serie.color }}
+                      />
+                      {item[serie.key]}
+                    </span>
+                  ))}
+                  <span className="w-6 text-right font-semibold">
+                    {item.count}
+                  </span>
+                </span>
               </div>
             ))}
           </div>
