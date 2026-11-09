@@ -51,7 +51,7 @@ const GAP = 140;
 const CARD_H = 148;
 const RECENT_WINDOW_MS = 5 * 60 * 60 * 1000;
 const HEAD_H = 410;
-const MAX_CARDS = 6;
+const BASE_CARDS = 6;
 const TITLE_H = 130;
 const KIND_STAGE = { architect: 1, dev: 2, review: 3 } as const;
 const DEV_STAGE = KIND_STAGE.dev;
@@ -158,9 +158,9 @@ function estimateRemaining(
 }
 
 function visibleCards(project: ProjectSummary): MonitorCard[] {
-  return [...project.cards]
-    .sort((a, b) => (b.elapsedMs ?? -1) - (a.elapsedMs ?? -1))
-    .slice(0, MAX_CARDS);
+  return [...project.cards].sort(
+    (a, b) => (b.elapsedMs ?? -1) - (a.elapsedMs ?? -1),
+  );
 }
 
 export function MapView() {
@@ -223,7 +223,9 @@ export function MapView() {
     [activityItems, dwellMap, nowTick, cardStarts],
   );
   const progressCards = allCards;
-  const stageTimes = useStageTimes(useMemo(() => allCards.map((card) => card.id), [allCards]));
+  const stageTimes = useStageTimes(
+    useMemo(() => allCards.map((card) => card.id), [allCards]),
+  );
   const workload = useMemo(() => {
     const since = nowTick - RECENT_WINDOW_MS;
     const byId = new Map(activityItems.map((item) => [item.id, item]));
@@ -287,13 +289,33 @@ export function MapView() {
   const layout = useMemo(() => {
     const cols = Math.max(1, Math.ceil(Math.sqrt(projects.length)));
     const rows = Math.max(1, Math.ceil(projects.length / cols));
-    const maxCards = Math.max(
-      1,
-      ...projects.map((project) => visibleCards(project).length),
+    const regionH = HEAD_H + BASE_CARDS * CARD_H;
+    const heightOf = (project: ProjectSummary) =>
+      openKeys.includes(project.name)
+        ? HEAD_H + Math.max(BASE_CARDS, visibleCards(project).length) * CARD_H
+        : regionH;
+    const rowH = Array.from({ length: rows }, (_, row) =>
+      Math.max(
+        regionH,
+        ...projects
+          .slice(row * cols, (row + 1) * cols)
+          .map((project) => heightOf(project)),
+      ),
     );
-    const regionH = HEAD_H + maxCards * CARD_H;
-    const gridH = rows * (regionH + GAP) - GAP;
-    const pos: { x: number; y: number; w: number }[] = [];
+    const rowY: number[] = [];
+    let cursorY = TITLE_H;
+    for (let row = 0; row < rows; row++) {
+      rowY[row] = cursorY;
+      cursorY += rowH[row] + GAP;
+    }
+    const gridH = cursorY - GAP - TITLE_H;
+    const pos: {
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      bottom: number;
+    }[] = [];
     let gridW = REGION_W;
     for (let row = 0; row < rows; row++) {
       let x = 0;
@@ -301,7 +323,13 @@ export function MapView() {
         const index = row * cols + col;
         if (index >= projects.length) break;
         const w = openKeys.includes(projects[index].name) ? OPEN_W : REGION_W;
-        pos[index] = { x, y: TITLE_H + row * (regionH + GAP), w };
+        pos[index] = {
+          x,
+          y: rowY[row],
+          w,
+          h: heightOf(projects[index]),
+          bottom: rowY[row] + rowH[row],
+        };
         x += w + GAP;
       }
       gridW = Math.max(gridW, x - GAP);
@@ -330,7 +358,7 @@ export function MapView() {
         cursor = x + NODE_W + GAP;
         nodePos.set(item.name, {
           x,
-          y: dir === "up" ? p.y - gap - NODE_H : p.y + regionH + gap,
+          y: dir === "up" ? p.y - gap - NODE_H : p.bottom + gap,
           dir,
           anchorX: p.x + p.w / 2,
           gap,
@@ -668,7 +696,7 @@ export function MapView() {
 
   function focusProject(index: number) {
     const p = layout.pos[index];
-    flyTo(p.x, p.y, p.w, layout.regionH, 0.92);
+    flyTo(p.x, p.y, p.w, p.h, 0.92);
   }
 
   function toggleNode(name: string) {
@@ -891,9 +919,7 @@ export function MapView() {
             {projects.map((project, index) => {
               const health = healthStyle(project);
               const pos = layout.pos[index];
-              const allShown = visibleCards(project);
-              const shown = allShown;
-              const hidden = project.pending - shown.length;
+              const shown = visibleCards(project);
               const progress = progressOf(project.name, projectProgress);
               const percent = progress?.percent ?? null;
               const isOpen = openKeys.includes(project.name);
@@ -927,7 +953,7 @@ export function MapView() {
                   }`}
                   style={{
                     width: pos.w,
-                    height: layout.regionH,
+                    height: pos.h,
                     left: pos.x,
                     top: pos.y,
                     zIndex: isOpen ? 10 : undefined,
@@ -1182,12 +1208,6 @@ export function MapView() {
                             />
                           </div>
                         ))}
-                        {hidden > 0 && (
-                          <span className="px-1 text-[13px] text-faint">
-                            + {hidden} {hidden === 1 ? "card" : "cards"} neste
-                            projeto
-                          </span>
-                        )}
                       </div>
                     </>
                   )}
@@ -1370,7 +1390,7 @@ export function MapView() {
                 left: layout.offX + pos.x * layout.scale,
                 top: layout.offY + pos.y * layout.scale,
                 width: pos.w * layout.scale,
-                height: layout.regionH * layout.scale,
+                height: pos.h * layout.scale,
                 background: health.soft,
                 border: `1px solid color-mix(in srgb, ${health.color} 33%, transparent)`,
               }}
