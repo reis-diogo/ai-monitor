@@ -25,7 +25,7 @@ export function NewCardForm({
   const [lists, setLists] = useState<ListOption[]>([]);
   const [listId, setListId] = useState("");
   const [options, setOptions] = useState<Option[] | null>(null);
-  const [firstStatus, setFirstStatus] = useState<string | null>(null);
+  const [initialStatus, setInitialStatus] = useState<string | null>(null);
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -52,7 +52,7 @@ export function NewCardForm({
         setLists(data.lists ?? []);
         if (!listId && data.listId) setListId(data.listId);
         setOptions(projects);
-        setFirstStatus(data.firstStatus ?? null);
+        setInitialStatus(data.initialStatus ?? null);
         setLoadError(data.error ?? null);
         const match =
           defaultProject && projects
@@ -215,7 +215,7 @@ export function NewCardForm({
                   value={listId}
                   onChange={(event) => {
                     setOptions(null);
-                    setFirstStatus(null);
+                    setInitialStatus(null);
                     setListId(event.target.value);
                   }}
                   className={`${FIELD} h-10`}
@@ -304,7 +304,7 @@ export function NewCardForm({
               </button>
               <span className="text-[11px] text-faint">
                 Cria uma tarefa real na lista escolhida do ClickUp
-                {firstStatus ? <>, no primeiro status &ldquo;{firstStatus}&rdquo;</> : ""}.
+                {initialStatus ? <>, no status &ldquo;{initialStatus}&rdquo;</> : ""}.
               </span>
             </form>
           )}

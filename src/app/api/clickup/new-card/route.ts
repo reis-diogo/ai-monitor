@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       lists[0]?.listId ??
       null;
     if (!listId || !lists.some((item) => item.listId === listId)) {
-      return NextResponse.json({ lists, listId: null, projects: null, firstStatus: null });
+      return NextResponse.json({ lists, listId: null, projects: null, initialStatus: null });
     }
     const setup = await fetchNewCardSetup(listId);
     return NextResponse.json({ lists, listId, ...setup });
