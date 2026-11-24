@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { ClickUpInputError, createListTask, fetchNewCardSetup } from "@/lib/clickup";
 import { listSources } from "@/lib/productivity-store";
 import { readJsonBody } from "@/lib/read-json-body";
-import { isAllowedUser, getCurrentUserEmail } from "@/lib/require-allowed-user";
 import { createLocalJob } from "@/lib/local-jobs-store";
-import { buildLocalPoPrompt } from "@/lib/ai/local-prompt";
+import { buildProgressSection } from "@/lib/ai/local-prompt";
+import { isAllowedUser, getCurrentUserEmail } from "@/lib/require-allowed-user";
 import { getPromptContent } from "@/lib/prompts-store";
-import { ARCHITECT_STRUCTURE_PROMPT_KEY } from "@/lib/ai/schema";
+import { ARCHITECT_RESEARCH_PROMPT_KEY } from "@/lib/ai/schema";
 import { REFINE_STATUS } from "@/lib/architect-gate";
 
 const MAX_NAME = 200;
@@ -95,6 +95,14 @@ export async function POST(request: NextRequest) {
       listId === process.env.CLICKUP_LIST_ID && task.status?.toLowerCase() === REFINE_STATUS;
     if (refinesWithArchitect) {
       try {
+        // Juncao literal: o prompt que esta na tela, mais o card. Sem molde proprio e
+        // sem nada gerado aqui — o que o usuario editar na aba do arquiteto e
+        // exatamente o que ele cola no editor.
+        const architectPrompt = await getPromptContent(ARCHITECT_RESEARCH_PROMPT_KEY);
+        const label = task.customId ?? task.id;
+
+        // O lote existe so pelo token do progresso: aqui nao ha POST de resultado, e a
+        // IA local nao tem outro jeito de dizer que esta trabalhando neste card.
         const { token } = await createLocalJob({
           provider: "anthropic",
           project: projectName,
@@ -104,16 +112,21 @@ export async function POST(request: NextRequest) {
           mentionEmails: [],
         });
         const origin = (process.env.APP_PUBLIC_URL || request.nextUrl.origin).replace(/\/+$/, "");
-        prompt = buildLocalPoPrompt({
-          project: projectName,
-          card: { id: task.id, customId: task.customId, title: name, content: description },
-          token,
-          ingestUrl: `${origin}/api/architect/ingest`,
-          progressUrl: `${origin}/api/architect/progress`,
-          systemPrompt: await getPromptContent(ARCHITECT_STRUCTURE_PROMPT_KEY),
-        });
+
+        prompt = [
+          architectPrompt.trim(),
+          `## Card\n\n${label}\nactivityId: ${task.id}\nProjeto: ${projectName}\nTítulo: ${name}\n\n${
+            description || "(sem descrição)"
+          }`,
+          buildProgressSection({
+            progressUrl: `${origin}/api/architect/progress`,
+            token,
+            examples: `"escolhendo a org", "lendo os metadados", "conversando com o P.O.", "escrevendo o prompt do dev"`,
+            closingNote: `Aqui não existe POST de resultado: mande \`"state":"done"\` no último POST, quando terminar, senão o indicador fica aceso até expirar sozinho.`,
+          }),
+        ].join("\n\n---\n\n");
       } catch (error) {
-        promptError = error instanceof Error ? error.message : "Erro ao gerar o prompt do arquiteto.";
+        promptError = error instanceof Error ? error.message : "Erro ao ler o prompt do arquiteto.";
       }
     }
 

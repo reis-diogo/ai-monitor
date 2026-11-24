@@ -15,7 +15,7 @@ type ProgressSectionParams = {
 // A tela nao consegue enxergar a IA local: ela roda no terminal do usuario, sem
 // callback nenhum. O indicador ao vivo da linha do card so existe porque o proprio
 // prompt manda avisar a cada etapa.
-function buildProgressSection(params: ProgressSectionParams): string {
+export function buildProgressSection(params: ProgressSectionParams): string {
   return `## Como avisar o app do que você está fazendo
 
 Enquanto você trabalha, o card mostra um indicador ao vivo no monitor. Ele só se mexe se você avisar. Mande um POST curto ANTES de começar cada etapa:
