@@ -4,6 +4,7 @@ import type {
   ProjectStatusCount,
   StatusEvent,
 } from "@/lib/types";
+import { REFINE_STATUS } from "@/lib/architect-gate";
 
 const CLICKUP_API = "https://api.clickup.com/api/v2";
 
@@ -556,14 +557,29 @@ export async function fetchListFirstStatus(listId: string): Promise<string | nul
   return first?.status ?? null;
 }
 
+// Na lista monitorada o card nasce em "refinar po", nao no primeiro status: e o
+// estado em que o arquiteto atua, e e o que destrava a geracao do prompt na criacao.
+// Fora dela nao existe esteira nossa, entao vale o primeiro status da propria lista.
+export async function resolveNewCardStatus(listId: string): Promise<string | null> {
+  const list = (await clickupFetch(`/list/${listId}`)) as ClickUpListResponse;
+  const statuses = list.statuses ?? [];
+
+  if (listId === process.env.CLICKUP_LIST_ID) {
+    const refine = statuses.find((status) => status.status.toLowerCase() === REFINE_STATUS);
+    if (refine) return refine.status;
+  }
+
+  return [...statuses].sort((a, b) => a.orderindex - b.orderindex)[0]?.status ?? null;
+}
+
 export async function fetchNewCardSetup(
   listId: string
-): Promise<{ projects: ProjectOption[] | null; firstStatus: string | null }> {
-  const [field, firstStatus] = await Promise.all([
+): Promise<{ projects: ProjectOption[] | null; initialStatus: string | null }> {
+  const [field, initialStatus] = await Promise.all([
     fetchProjectField(listId),
-    fetchListFirstStatus(listId),
+    resolveNewCardStatus(listId),
   ]);
-  return { projects: field ? field.options : null, firstStatus };
+  return { projects: field ? field.options : null, initialStatus };
 }
 
 export async function createListTask(
@@ -580,7 +596,7 @@ export async function createListTask(
   if (field && !field.options.some((option) => option.id === input.projectId)) {
     throw new ClickUpInputError("Projeto inválido.");
   }
-  const status = await fetchListFirstStatus(listId);
+  const status = await resolveNewCardStatus(listId);
 
   const data = (await clickupFetch(`/list/${listId}/task`, {
     method: "POST",
