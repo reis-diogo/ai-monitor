@@ -113,8 +113,10 @@ export async function POST(request: NextRequest) {
         });
         const origin = (process.env.APP_PUBLIC_URL || request.nextUrl.origin).replace(/\/+$/, "");
 
+        // Card e progresso vem ANTES do prompt do arquiteto. Ele tem 30 mil caracteres:
+        // instrucao operacional colocada depois disso vira rodape e nao e executada —
+        // foi o que aconteceu, os primeiros cards nao mandaram progresso nenhum.
         prompt = [
-          architectPrompt.trim(),
           `## Card\n\n${label}\nactivityId: ${task.id}\nProjeto: ${projectName}\nTítulo: ${name}\n\n${
             description || "(sem descrição)"
           }`,
@@ -124,6 +126,7 @@ export async function POST(request: NextRequest) {
             examples: `"escolhendo a org", "lendo os metadados", "conversando com o P.O.", "escrevendo o prompt do dev"`,
             closingNote: `Aqui não existe POST de resultado: mande \`"state":"done"\` no último POST, quando terminar, senão o indicador fica aceso até expirar sozinho.`,
           }),
+          architectPrompt.trim(),
         ].join("\n\n---\n\n");
       } catch (error) {
         promptError = error instanceof Error ? error.message : "Erro ao ler o prompt do arquiteto.";
