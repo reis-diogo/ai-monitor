@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { applyArchitectResult, applyPoResult, applyRevisionResult, loadExistingAnalysis } from "@/lib/architect-apply";
+import {
+  applyArchitectResult,
+  applyPoResearchResult,
+  applyPoResult,
+  applyRevisionResult,
+  loadExistingAnalysis,
+} from "@/lib/architect-apply";
 import type { AnalyzedActivityRecord } from "@/lib/types";
 import { applyReviewResult, type ReviewResultInput } from "@/lib/review-apply";
 import { markLocalJobReceived, resolveLocalJob } from "@/lib/local-jobs-store";
@@ -59,7 +65,7 @@ export async function POST(request: NextRequest) {
   }
 
   const kind =
-    job.kind === "po" || job.kind === "revisao"
+    job.kind === "po" || job.kind === "po_pesquisa" || job.kind === "revisao"
       ? job.kind
       : body?.kind === "review"
         ? "review"
@@ -157,6 +163,64 @@ export async function POST(request: NextRequest) {
 
   if (!existing) {
     return NextResponse.json({ error: "Card sem análise registrada." }, { status: 400 });
+  }
+
+  // Etapa de pesquisa: so o que o P.O. decidiu. Sem devPrompt — quem escreve e a
+  // arquitetura, que e justamente para onde o card vai daqui.
+  if (kind === "po_pesquisa") {
+    const reasoning = typeof body?.reasoning === "string" ? body.reasoning.trim() : "";
+    if (!reasoning) {
+      return NextResponse.json({ error: "Campo 'reasoning' é obrigatório." }, { status: 400 });
+    }
+
+    const now = new Date().toISOString();
+    const base: AnalyzedActivityRecord = existing ?? {
+      id: activityId,
+      source: "clickup",
+      intent: cardTask?.name ?? "",
+      score: 0,
+      critique: "",
+      provider: job.provider,
+      authorName: cardTask?.authorName ?? "",
+      authorAvatarUrl: cardTask?.authorAvatarUrl ?? null,
+      title: cardTask?.name ?? "",
+      url: cardTask?.url ?? "",
+      date: cardTask?.date ?? now,
+      location: cardTask?.location ?? job.project,
+      additions: null,
+      deletions: null,
+      analyzedAt: now,
+    };
+
+    try {
+      const applied = await applyPoResearchResult({
+        provider: job.provider,
+        activityId,
+        existing: base,
+        result: {
+          reasoning,
+          nativeSolution: typeof body?.nativeSolution === "string" ? body.nativeSolution : "",
+          usesCustom: body?.usesCustom === true,
+          customJustification:
+            typeof body?.customJustification === "string" ? body.customJustification : "",
+          assumptions: strings(body?.assumptions),
+          metadataFindings: strings(body?.metadataFindings),
+          docReferences: docRefs(body?.docReferences),
+          ...(typeof body?.summary === "string" ? { summary: body.summary } : {}),
+          ...(Array.isArray(body?.flow) ? { flow: strings(body.flow) } : {}),
+        },
+      });
+      await markLocalJobReceived(job.id, activityId);
+      await clearProgress(activityId);
+      return NextResponse.json({
+        ok: true,
+        appliedStatus: applied.appliedStatus,
+        statusError: applied.statusError,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao registrar o parecer.";
+      return NextResponse.json({ error: message }, { status: 502 });
+    }
   }
 
   if (kind === "revisao") {

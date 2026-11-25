@@ -67,7 +67,10 @@ export async function POST(request: NextRequest) {
 
     await recordProgress({
       activityId,
-      kind: job.kind === "po" || job.kind === "revisao" ? "architect" : job.kind,
+      kind:
+        job.kind === "po" || job.kind === "po_pesquisa" || job.kind === "revisao"
+          ? "architect"
+          : job.kind,
       stage,
       detail,
       percent,

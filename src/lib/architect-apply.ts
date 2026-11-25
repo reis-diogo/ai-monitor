@@ -157,6 +157,58 @@ export async function applyPoResult(params: {
   return { record, appliedStatus, statusError };
 }
 
+// Etapa so de pesquisa: o P.O. respondeu tudo, mas nada tecnico foi decidido ainda.
+// Por isso nao existe devPrompt aqui e o card segue para a arquitetura, e nao para
+// validacao. E tambem por isso nao gravamos nota: quem avalia e a etapa seguinte.
+export type PoResearchResultInput = Omit<
+  PoResultInput,
+  "devPrompt" | "architecture" | "ambiguities"
+>;
+
+export async function applyPoResearchResult(params: {
+  provider: AiProvider;
+  activityId: string;
+  result: PoResearchResultInput;
+  existing: AnalyzedActivityRecord;
+}): Promise<{ record: AnalyzedActivityRecord; appliedStatus: string | null; statusError: string | null }> {
+  const { result } = params;
+
+  let appliedStatus: string | null = null;
+  let statusError: string | null = null;
+
+  try {
+    await updateTaskStatus(params.activityId, ARCHITECT_QUEUE_STATUS);
+    appliedStatus = ARCHITECT_QUEUE_STATUS;
+  } catch (error) {
+    statusError = error instanceof Error ? error.message : "Erro ao aplicar status no ClickUp.";
+  }
+
+  const payload: ArchitectPayload = {
+    nativeSolution: result.nativeSolution,
+    usesCustom: result.usesCustom,
+    customJustification: result.customJustification,
+    ambiguities: [],
+    assumptions: result.assumptions,
+    metadataFindings: result.metadataFindings,
+    docReferences: result.docReferences,
+    devPrompt: "",
+    research: result.research ?? "",
+    ...(result.summary ? { summary: result.summary } : {}),
+    ...(result.flow?.length ? { flow: result.flow } : {}),
+    appliedStatus,
+  };
+
+  const record: AnalyzedActivityRecord = {
+    ...params.existing,
+    architectureReasoning: result.reasoning,
+    architecturePayload: payload,
+  };
+
+  await setCachedAnalysis(params.provider, params.activityId, record);
+
+  return { record, appliedStatus, statusError };
+}
+
 export async function applyRevisionResult(params: {
   provider: AiProvider;
   activityId: string;

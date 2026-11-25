@@ -3,7 +3,7 @@ import { ClickUpInputError, createListTask, fetchNewCardSetup } from "@/lib/clic
 import { listSources } from "@/lib/productivity-store";
 import { readJsonBody } from "@/lib/read-json-body";
 import { createLocalJob } from "@/lib/local-jobs-store";
-import { buildProgressSection } from "@/lib/ai/local-prompt";
+import { buildPoResearchResultSection, buildProgressSection } from "@/lib/ai/local-prompt";
 import { isAllowedUser, getCurrentUserEmail } from "@/lib/require-allowed-user";
 import { getPromptContent } from "@/lib/prompts-store";
 import { ARCHITECT_RESEARCH_PROMPT_KEY } from "@/lib/ai/schema";
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
           project: projectName,
           activityIds: [task.id],
           createdBy: await getCurrentUserEmail(),
-          kind: "po",
+          kind: "po_pesquisa",
           mentionEmails: [],
         });
         const origin = (process.env.APP_PUBLIC_URL || request.nextUrl.origin).replace(/\/+$/, "");
@@ -125,6 +125,11 @@ export async function POST(request: NextRequest) {
             token,
             examples: `"escolhendo a org", "lendo os metadados", "conversando com o P.O.", "escrevendo o prompt do dev"`,
             closingNote: `Aqui não existe POST de resultado: mande \`"state":"done"\` no último POST, quando terminar, senão o indicador fica aceso até expirar sozinho.`,
+          }),
+          buildPoResearchResultSection({
+            ingestUrl: `${origin}/api/architect/ingest`,
+            token,
+            activityId: task.id,
           }),
           architectPrompt.trim(),
         ].join("\n\n---\n\n");
