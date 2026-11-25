@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Icon } from "@/components/monitor/Icon";
+import { ARCHITECT_QUEUE_STATUS } from "@/lib/architect-apply";
 import {
   APPROVED_STATUS,
   REFINE_STATUS,
@@ -74,6 +75,9 @@ export function CardDetailModal({
   >("idle");
   const [copied, setCopied] = useState(false);
   const [titleCopied, setTitleCopied] = useState(false);
+  const [architectState, setArchitectState] = useState<
+    "idle" | "loading" | "copied" | "error"
+  >("idle");
   const [promptState, setPromptState] = useState<
     "idle" | "loading" | "copied" | "error"
   >("idle");
@@ -99,6 +103,39 @@ export function CardDetailModal({
       setTimeout(() => setTitleCopied(false), 1800);
     } catch {
       setTitleCopied(false);
+    }
+  }
+
+  // Etapa seguinte a do P.O.: aqui sai o devPrompt, que e o que o botao "Copiar
+  // prompt do dev" passa a encontrar quando o card chega em "dev liberado".
+  async function createArchitectPrompt() {
+    if (!card || architectState === "loading") return;
+    setArchitectState("loading");
+    try {
+      const res = await fetch("/api/architect/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "architect",
+          project: card.project,
+          cards: [
+            {
+              id: card.id,
+              customId: card.customId,
+              title: card.title,
+              content: description,
+            },
+          ],
+        }),
+      });
+      const data = await res.json();
+      const prompt = data?.prompt;
+      if (!res.ok || typeof prompt !== "string" || !prompt.trim())
+        throw new Error("sem prompt");
+      await navigator.clipboard.writeText(prompt);
+      setArchitectState("copied");
+    } catch {
+      setArchitectState("error");
     }
   }
 
@@ -384,6 +421,7 @@ export function CardDetailModal({
     solution?.summary?.trim() || shorten(solution?.nativeSolution ?? "");
   const steps = solution?.flow ?? [];
   const released = status === APPROVED_STATUS;
+  const needsArchitect = status === ARCHITECT_QUEUE_STATUS;
   const inQa = status === "em qa";
 
   return (
@@ -512,6 +550,33 @@ export function CardDetailModal({
                   : promptState === "error"
                     ? "Falhou, tente de novo"
                     : "Criar prompt"}
+              </button>
+            )}
+            {needsArchitect && (
+              <button
+                type="button"
+                onClick={createArchitectPrompt}
+                disabled={architectState === "loading"}
+                className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-[10px] bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
+              >
+                <Icon
+                  name={
+                    architectState === "copied"
+                      ? "check"
+                      : architectState === "loading"
+                        ? "progress_activity"
+                        : "architecture"
+                  }
+                  size={16}
+                  className={
+                    architectState === "loading" ? "animate-spin" : undefined
+                  }
+                />
+                {architectState === "copied"
+                  ? "Prompt copiado"
+                  : architectState === "error"
+                    ? "Falhou, tente de novo"
+                    : "Criar prompt do arquiteto"}
               </button>
             )}
             {stageOf(status) === 2 && (

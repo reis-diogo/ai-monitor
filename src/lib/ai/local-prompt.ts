@@ -452,3 +452,49 @@ JSON
 
 O app move o card para "dev liberado" assim que o POST chegar. Confira a resposta: ela pode vir com HTTP 200 e \`statusError\` preenchido — a revisão foi gravada, mas o ClickUp recusou a mudança de status. Nesse caso mostre a mensagem ao usuário; não trate como sucesso. Se o POST responder erro, mostre a resposta.`;
 }
+
+// Fecha a etapa de pesquisa: o P.O. respondeu, o card vai para a arquitetura. Nao ha
+// devPrompt aqui de proposito — quem escreve o prompt do dev e a etapa seguinte, e
+// pedi-lo agora produziria implementacao decidida sem arquiteto nenhum ter olhado.
+export function buildPoResearchResultSection(params: {
+  ingestUrl: string;
+  token: string;
+  activityId: string;
+}): string {
+  return `## Como encerrar e mandar o card para a arquitetura
+
+Quando o P.O. tiver respondido TODAS as perguntas da seção 8 e você tiver mostrado a ele o resumo do que ficou decidido, faça este POST. Ele move o card para "refinar arquiteto".
+
+\`\`\`bash
+curl -sS -X POST '${params.ingestUrl}' \\
+  -H 'Content-Type: application/json' \\
+  -d @- <<'JSON'
+{
+  "token": "${params.token}",
+  "activityId": "${params.activityId}",
+  "reasoning": "",
+  "summary": "",
+  "nativeSolution": "",
+  "usesCustom": false,
+  "customJustification": "",
+  "assumptions": [],
+  "metadataFindings": [],
+  "docReferences": [{ "title": "", "url": "" }]
+}
+JSON
+\`\`\`
+
+- \`reasoning\` — o que ficou decidido na conversa, já com as respostas do P.O. incorporadas. É o que o arquiteto vai ler.
+- \`summary\` — uma frase com a solução padrão escolhida.
+- \`nativeSolution\` — a solução da seção 4, pela hierarquia dos princípios.
+- \`usesCustom\` / \`customJustification\` — só \`true\` se a seção 6 provou que o padrão não atende.
+- \`assumptions\` — as premissas da lista "Seguimos assim, salvo objeção", mais o que o P.O. decidiu nas perguntas.
+- \`metadataFindings\` — o que você leu na org, incluindo os desvios da seção 7.
+- \`docReferences\` — a documentação oficial que você citou.
+
+Não mande \`devPrompt\`: esta etapa não escreve instrução de implementação, e o campo não é aceito aqui.
+
+**Só envie com a confirmação do P.O.** Se ele quiser parar antes de tudo estar esclarecido, não mande nada — o card fica onde está, e a conversa continua depois.
+
+Se a resposta vier com \`statusError\` preenchido, o parecer foi gravado mas o ClickUp recusou a mudança de status: mostre a mensagem ao usuário.`;
+}
