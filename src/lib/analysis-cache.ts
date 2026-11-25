@@ -11,7 +11,7 @@ type AnalysisCacheRow = {
   activity_id: string;
   source: AnalyzedActivityRecord["source"];
   intent: string;
-  score: number;
+  score: number | null;
   critique: string;
   author_name: string;
   author_avatar_url: string | null;

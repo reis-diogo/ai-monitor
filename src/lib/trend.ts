@@ -52,7 +52,12 @@ function buildDailyTrend(records: AnalyzedActivityRecord[], daysBack: number): T
     const inDay = records.filter((r) => dayKey(new Date(r.date)) === bucket.key);
     if (inDay.length > 0) {
       bucket.count = inDay.length;
-      bucket.averageScore = inDay.reduce((sum, r) => sum + r.score, 0) / inDay.length;
+      // Card sem nota nao entra na media: incluir como zero puxaria a curva para baixo
+      // por algo que nunca foi avaliado.
+      const scoredDay = inDay.filter((r) => r.score !== null);
+      bucket.averageScore = scoredDay.length
+        ? scoredDay.reduce((sum, r) => sum + (r.score ?? 0), 0) / scoredDay.length
+        : 0;
       bucket.records = inDay;
     }
   }
@@ -79,7 +84,10 @@ function buildMonthlyTrend(records: AnalyzedActivityRecord[], monthsBack: number
     const inMonth = records.filter((r) => monthKey(new Date(r.date)) === bucket.key);
     if (inMonth.length > 0) {
       bucket.count = inMonth.length;
-      bucket.averageScore = inMonth.reduce((sum, r) => sum + r.score, 0) / inMonth.length;
+      const scoredMonth = inMonth.filter((r) => r.score !== null);
+      bucket.averageScore = scoredMonth.length
+        ? scoredMonth.reduce((sum, r) => sum + (r.score ?? 0), 0) / scoredMonth.length
+        : 0;
       bucket.records = inMonth;
     }
   }

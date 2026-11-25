@@ -207,17 +207,19 @@ export function ActivityTableRow({
         <td className="py-2 pr-3">
           {analysis ? (
             <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => onSelect(analysis)}
-                title="Ver detalhamento da análise"
-                className="flex items-center gap-1 rounded-full px-2 py-0.5 font-mono font-medium hover:underline"
-                style={{
-                  color: dataColor(scoreColor(analysis.score).color),
-                  backgroundColor: scoreColor(analysis.score).bg,
-                }}
-              >
-                qlt {analysis.score}/10
-              </button>
+              {analysis.score !== null && (
+                <button
+                  onClick={() => onSelect(analysis)}
+                  title="Ver detalhamento da análise"
+                  className="flex items-center gap-1 rounded-full px-2 py-0.5 font-mono font-medium hover:underline"
+                  style={{
+                    color: dataColor(scoreColor(analysis.score).color),
+                    backgroundColor: scoreColor(analysis.score).bg,
+                  }}
+                >
+                  qlt {analysis.score}/10
+                </button>
+              )}
               {analysis.difficulty !== null && analysis.difficulty !== undefined && (
                 <button
                   onClick={() => onSelectDifficulty(analysis)}

@@ -78,12 +78,14 @@ export function CommitAnalysisModal({
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span
-                className="flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[11px] font-medium"
-                style={{ color: dataColor(scoreColor(record.score).color), backgroundColor: scoreColor(record.score).bg }}
-              >
-                qlt {record.score}/10
-              </span>
+              {record.score !== null && (
+                <span
+                  className="flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[11px] font-medium"
+                  style={{ color: dataColor(scoreColor(record.score).color), backgroundColor: scoreColor(record.score).bg }}
+                >
+                  qlt {record.score}/10
+                </span>
+              )}
               <span className="text-[11px] text-muted-foreground/60">
                 análise via {PROVIDER_LABEL[record.provider]} · {record.authorName}
               </span>

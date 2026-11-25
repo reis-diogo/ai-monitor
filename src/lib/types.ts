@@ -110,7 +110,9 @@ export type ActivityItem = {
 
 export type CommitAnalysis = {
   intent: string;
-  score: number;
+  // Nulo quando o card nunca passou pela analise de qualidade: e diferente de ter
+  // sido avaliado e tirado zero.
+  score: number | null;
   critique: string;
   provider: AiProvider;
 };

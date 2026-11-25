@@ -75,7 +75,7 @@ function PendingAnalysisRow({
         </span>
         <span className="shrink-0 text-muted-foreground/60">{item.authorName}</span>
 
-        {analysis ? (
+        {analysis && analysis.score !== null ? (
           <span
             className="flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-mono font-medium"
             style={{

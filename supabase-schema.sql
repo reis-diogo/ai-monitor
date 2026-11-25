@@ -50,7 +50,8 @@ create table if not exists analysis_cache (
   activity_id text not null,
   source text not null check (source in ('commit', 'clickup')),
   intent text not null,
-  score int not null,
+  -- Nulo quando o card nunca passou pela analise de qualidade.
+  score int,
   critique text not null,
   author_name text not null,
   author_avatar_url text,
