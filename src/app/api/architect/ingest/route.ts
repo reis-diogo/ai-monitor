@@ -80,12 +80,6 @@ export async function POST(request: NextRequest) {
   }
 
   const existing = await loadExistingAnalysis(job.provider, activityId);
-  if (!existing && kind !== "po") {
-    return NextResponse.json(
-      { error: "Card ainda não possui análise de qualidade registrada." },
-      { status: 400 }
-    );
-  }
 
   let authorClickupId: number | null = null;
   let cardTask: ClickUpTaskActivity | null = null;
@@ -100,6 +94,28 @@ export async function POST(request: NextRequest) {
     authorClickupId = null;
   }
 
+  // Card criado pelo formulario nunca passou pela analise de qualidade, que e de outro
+  // fluxo. Exigi-la aqui travava a esteira inteira no primeiro parecer: o registro e
+  // sintetizado a partir do card e as etapas seguintes preenchem o resto.
+  const now = new Date().toISOString();
+  const base: AnalyzedActivityRecord = existing ?? {
+    id: activityId,
+    source: "clickup",
+    intent: cardTask?.name ?? "",
+    score: null,
+    critique: "",
+    provider: job.provider,
+    authorName: cardTask?.authorName ?? "",
+    authorAvatarUrl: cardTask?.authorAvatarUrl ?? null,
+    title: cardTask?.name ?? "",
+    url: cardTask?.url ?? "",
+    date: cardTask?.date ?? now,
+    location: cardTask?.location ?? job.project,
+    additions: null,
+    deletions: null,
+    analyzedAt: now,
+  };
+
   if (kind === "po") {
     const poReasoning = typeof body?.reasoning === "string" ? body.reasoning.trim() : "";
     const poDevPrompt = typeof body?.devPrompt === "string" ? body.devPrompt.trim() : "";
@@ -110,24 +126,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Campo 'devPrompt' é obrigatório." }, { status: 400 });
     }
 
-    const now = new Date().toISOString();
-    const base: AnalyzedActivityRecord = existing ?? {
-      id: activityId,
-      source: "clickup",
-      intent: cardTask?.name ?? "",
-      score: 0,
-      critique: "",
-      provider: job.provider,
-      authorName: cardTask?.authorName ?? "",
-      authorAvatarUrl: cardTask?.authorAvatarUrl ?? null,
-      title: cardTask?.name ?? "",
-      url: cardTask?.url ?? "",
-      date: cardTask?.date ?? now,
-      location: cardTask?.location ?? job.project,
-      additions: null,
-      deletions: null,
-      analyzedAt: now,
-    };
 
     try {
       const applied = await applyPoResult({
@@ -161,10 +159,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  if (!existing) {
-    return NextResponse.json({ error: "Card sem análise registrada." }, { status: 400 });
-  }
-
   // Etapa de pesquisa: so o que o P.O. decidiu. Sem devPrompt — quem escreve e a
   // arquitetura, que e justamente para onde o card vai daqui.
   if (kind === "po_pesquisa") {
@@ -173,24 +167,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Campo 'reasoning' é obrigatório." }, { status: 400 });
     }
 
-    const now = new Date().toISOString();
-    const base: AnalyzedActivityRecord = existing ?? {
-      id: activityId,
-      source: "clickup",
-      intent: cardTask?.name ?? "",
-      score: 0,
-      critique: "",
-      provider: job.provider,
-      authorName: cardTask?.authorName ?? "",
-      authorAvatarUrl: cardTask?.authorAvatarUrl ?? null,
-      title: cardTask?.name ?? "",
-      url: cardTask?.url ?? "",
-      date: cardTask?.date ?? now,
-      location: cardTask?.location ?? job.project,
-      additions: null,
-      deletions: null,
-      analyzedAt: now,
-    };
 
     try {
       const applied = await applyPoResearchResult({
@@ -237,7 +213,7 @@ export async function POST(request: NextRequest) {
       const applied = await applyRevisionResult({
         provider: job.provider,
         activityId,
-        existing,
+        existing: base,
         reasoning,
         devPrompt,
         summary: typeof body?.summary === "string" ? body.summary.trim() : "",
@@ -300,7 +276,7 @@ export async function POST(request: NextRequest) {
         activityId,
         result: reviewResult,
         mentionUserIds,
-        existing,
+        existing: base,
       });
       await markLocalJobReceived(job.id, activityId);
       await clearProgress(activityId);
@@ -348,7 +324,7 @@ export async function POST(request: NextRequest) {
       activityId,
       result,
       authorClickupId,
-      existing,
+      existing: base,
     });
 
     await markLocalJobReceived(job.id, activityId);

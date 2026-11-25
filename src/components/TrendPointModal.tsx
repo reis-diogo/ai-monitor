@@ -54,15 +54,17 @@ export function TrendPointModal({
                   whileHover={{ backgroundColor: "var(--accent)" }}
                   className="flex cursor-pointer items-center gap-2 rounded-lg border border-border/50 p-2.5 text-xs"
                 >
-                  <span
-                    className="flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-mono font-medium"
-                    style={{
-                      color: dataColor(scoreColor(record.score).color),
-                      backgroundColor: scoreColor(record.score).bg,
-                    }}
-                  >
-                    qlt {record.score}/10
-                  </span>
+                  {record.score !== null && (
+                    <span
+                      className="flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-mono font-medium"
+                      style={{
+                        color: dataColor(scoreColor(record.score).color),
+                        backgroundColor: scoreColor(record.score).bg,
+                      }}
+                    >
+                      qlt {record.score}/10
+                    </span>
+                  )}
                   <span className="min-w-0 flex-1 truncate text-foreground">
                     {truncate(record.title, 40)}
                   </span>
