@@ -158,8 +158,8 @@ export async function applyPoResult(params: {
 }
 
 // Etapa so de pesquisa: o P.O. respondeu tudo, mas nada tecnico foi decidido ainda.
-// Por isso nao existe devPrompt aqui e o card segue para a arquitetura, e nao para
-// validacao. E tambem por isso nao gravamos nota: quem avalia e a etapa seguinte.
+// Daqui o card vai para validacao, onde alguem aprova a solucao antes de liberar o
+// desenvolvimento. Nao gravamos nota nem devPrompt: nada tecnico foi avaliado.
 export type PoResearchResultInput = Omit<
   PoResultInput,
   "devPrompt" | "architecture" | "ambiguities"
@@ -177,8 +177,8 @@ export async function applyPoResearchResult(params: {
   let statusError: string | null = null;
 
   try {
-    await updateTaskStatus(params.activityId, ARCHITECT_QUEUE_STATUS);
-    appliedStatus = ARCHITECT_QUEUE_STATUS;
+    await updateTaskStatus(params.activityId, VALIDATE_STATUS);
+    appliedStatus = VALIDATE_STATUS;
   } catch (error) {
     statusError = error instanceof Error ? error.message : "Erro ao aplicar status no ClickUp.";
   }

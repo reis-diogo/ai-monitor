@@ -461,9 +461,9 @@ export function buildPoResearchResultSection(params: {
   token: string;
   activityId: string;
 }): string {
-  return `## Como encerrar e mandar o card para a arquitetura
+  return `## Como encerrar e mandar o card para validação
 
-Quando o P.O. tiver respondido TODAS as perguntas da seção 8 e você tiver mostrado a ele o resumo do que ficou decidido, faça este POST. Ele move o card para "refinar arquiteto".
+Quando o P.O. tiver respondido TODAS as perguntas da seção 8 e você tiver mostrado a ele o resumo do que ficou decidido, faça este POST. Ele move o card para "validar solução", onde a solução é aprovada antes de liberar o desenvolvimento.
 
 \`\`\`bash
 curl -sS -X POST '${params.ingestUrl}' \\
@@ -484,7 +484,7 @@ curl -sS -X POST '${params.ingestUrl}' \\
 JSON
 \`\`\`
 
-- \`reasoning\` — o que ficou decidido na conversa, já com as respostas do P.O. incorporadas. É o que o arquiteto vai ler.
+- \`reasoning\` — o que ficou decidido na conversa, já com as respostas do P.O. incorporadas. É o que aparece na tela de validação.
 - \`summary\` — uma frase com a solução padrão escolhida.
 - \`nativeSolution\` — a solução da seção 4, pela hierarquia dos princípios.
 - \`usesCustom\` / \`customJustification\` — só \`true\` se a seção 6 provou que o padrão não atende.
